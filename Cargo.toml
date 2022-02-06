@@ -10,6 +10,8 @@ clap = { version = "3.0.14", features = ["derive"] }
 regex = "1.5"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", features = ["json", "stream"] }
 tokio = { version = "1.16.1", features = ["full"] }
 anyhow = "1.0.52"
+indicatif = "0.16.2"
+futures-util = "0.3.14"
