@@ -38,7 +38,7 @@ async fn parse_version(mut version: String) -> Result<String, Box<dyn std::error
         "nightly" | "stable" => Ok(version),
         _ => {
             let regex = Regex::new(r"[0-9]*\.[0-9]*\.[0-9]*").unwrap();
-            if regex.is_match(&*version) {
+            if regex.is_match(version.as_str()) {
                 if !version.contains("v") {
                     version = format!("v{}", version);
                 }
