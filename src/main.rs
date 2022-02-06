@@ -1,14 +1,18 @@
 extern crate core;
 
+use std::borrow::Borrow;
+use anyhow::{anyhow, Result};
 use clap::{arg, App, Arg, ArgMatches};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::cmp::min;
 use std::fs::File;
-use std::io::{Error, ErrorKind};
+use std::io::{Error, ErrorKind, Read};
 use std::num::ParseFloatError;
 use std::process::{exit, Command};
 use tokio::io::AsyncWriteExt;
-use anyhow::{anyhow, Result};
+use futures_util::stream::StreamExt;
+use indicatif::{ProgressBar, ProgressStyle};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -55,13 +59,31 @@ async fn download_version(version: &str) -> Result<()> {
 
     match response {
         Ok(response) => {
-            let response_bytes = response.bytes().await?;
-            if String::from_utf8_lossy(&response_bytes) != "Not Found" {
+            let total_size = response.content_length().unwrap();
+            let response_status = response.status();
+            let mut response_bytes = response.bytes_stream();
+            if  response_status == 200 {
+                let pb = ProgressBar::new(total_size);
+                pb.set_style(ProgressStyle::default_bar()
+                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
+                    .progress_chars("█  "));
+                pb.set_message(format!("Downloading..."));
                 let mut file =
                     tokio::fs::File::create(format!("{}.{}", version, get_file_type().await))
                         .await?;
-                file.write_all(&response_bytes).await;
-                println!("Successfully downloaded version {}", version);
+
+                let mut downloaded: u64 = 0;
+
+                while let Some(item) = response_bytes.next().await {
+                    let chunk = item.or(anyhow::private::Err(anyhow::Error::msg("hello")))?;
+                    file.write(&chunk).await;
+                    let new = min(downloaded + (chunk.len() as u64), total_size);
+                    downloaded = new;
+                    pb.set_position(new);
+
+                }
+
+                pb.finish_with_message(format!("Downloaded version {}", version));
                 Ok(())
             } else {
                 Err(anyhow!("Please provide an existing neovim version"))
