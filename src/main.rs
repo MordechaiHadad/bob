@@ -8,9 +8,10 @@ use std::io::{Error, ErrorKind};
 use std::num::ParseFloatError;
 use std::process::{exit, Command};
 use tokio::io::AsyncWriteExt;
+use anyhow::{anyhow, Result};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<()> {
     let app = App::new("bob")
         .subcommand(App::new("use").arg(arg!([VERSION]).required(true)))
         .get_matches();
@@ -33,7 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     Ok(())
 }
-async fn parse_version(mut version: String) -> Result<String, Box<dyn std::error::Error>> {
+async fn parse_version(mut version: String) -> Result<String> {
     match version.as_str() {
         "nightly" | "stable" => Ok(version),
         _ => {
@@ -44,15 +45,12 @@ async fn parse_version(mut version: String) -> Result<String, Box<dyn std::error
                 }
                 return Ok(version);
             }
-            Err(Box::new(Error::new(
-                ErrorKind::Other,
-                "Please provide a proper version string",
-            )))
+            Err(anyhow!("Please provide a proper version string"))
         }
     }
 }
 
-async fn download_version(version: &str) -> Result<(), Box<dyn std::error::Error>> {
+async fn download_version(version: &str) -> Result<()> {
     let response = send_request(version).await;
 
     match response {
@@ -66,13 +64,10 @@ async fn download_version(version: &str) -> Result<(), Box<dyn std::error::Error
                 println!("Successfully downloaded version {}", version);
                 Ok(())
             } else {
-                Err(Box::new(Error::new(
-                    ErrorKind::Other,
-                    "Please provide an existing neovim version",
-                )))
+                Err(anyhow!("Please provide an existing neovim version"))
             }
         }
-        Err(error) => Err(Box::new(Error::new(ErrorKind::Other, error))),
+        Err(error) => Err(anyhow!(error)),
     }
 }
 
