@@ -54,7 +54,7 @@ async fn download_version(version: &str) -> Result<(), Box<dyn std::error::Error
         Ok(response) => {
             let response_bytes = response.bytes().await?;
             if String::from_utf8_lossy(&response_bytes) != "Not Found" {
-                let mut file = tokio::fs::File::create("bro.zip").await?;
+                let mut file = tokio::fs::File::create(format!("{}.{}", version, get_file_type().await)).await?;
                 file.write_all(&response_bytes).await;
                 println!("Successfully downloaded version {}", version);
                 Ok(())
