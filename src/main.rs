@@ -21,12 +21,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let version = match parse_version(version).await {
                 Ok(value) => value,
                 Err(error) => {
-                    eprintln!("Error: {}", error.as_ref());
+                    eprintln!("Error: {}", error);
                     exit(1);
                 }
             };
             if let Err(error) = download_version(&version).await {
-                eprintln!("Error: {}", error.as_ref());
+                eprintln!("Error: {}", error);
                 exit(1);
             }
         }
