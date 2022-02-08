@@ -15,3 +15,4 @@ tokio = { version = "1.16.1", features = ["full"] }
 anyhow = "1.0.52"
 indicatif = "0.16.2"
 futures-util = "0.3.14"
+dirs = "4.0.0"
