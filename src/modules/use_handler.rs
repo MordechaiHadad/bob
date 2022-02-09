@@ -1,4 +1,4 @@
-use crate::models::{StableVersion, DownloadedFile};
+use crate::models::{DownloadedFile, StableVersion};
 use anyhow::{anyhow, Result};
 use clap::ArgMatches;
 use dirs::data_local_dir;
@@ -8,7 +8,8 @@ use regex::Regex;
 use reqwest::Client;
 use std::cmp::min;
 use std::path::PathBuf;
-use tokio::io::AsyncWriteExt;
+use std::process::Stdio;
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 
 pub async fn start(command: &ArgMatches) -> Result<()> {
@@ -166,39 +167,6 @@ async fn get_downloads_folder() -> Result<PathBuf> {
 }
 
 async fn install_version(downloaded_file: DownloadedFile) -> Result<()> {
-    println!("Installing");
-    let output = if cfg!(target_os = "windows") {
-        Command::new("powershell")
-            .current_dir(downloaded_file.path)
-            .arg("-c")
-            .arg(format!(
-                "\
-        Add-Type -AssemblyName System.IO.Compression.FileSystem
-        [System.IO.Compression.ZipFile]::ExtractToDirectory(\"{}.{}\", \"./{0}\")
-        ", downloaded_file.name, downloaded_file.extension))
-            .output()
-            .await?
-    } else {
-        Command::new("bash")
-            .current_dir(downloaded_file.path)
-            .arg("-c")
-            .arg(format!(
-                "\
-            tar -xf {}
-            ",
-                downloaded_file.name
-            ))
-            .output()
-            .await?
-    };
-    if !output.status.success() {
-        return Err(anyhow!(
-            "Failed to uncompress {} {}",
-            downloaded_file.name,
-            String::from_utf8_lossy(&output.stderr)
-        ));
-    }
-    println!("Finsihed installing");
 
     Ok(())
 }
