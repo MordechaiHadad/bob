@@ -34,8 +34,7 @@ async fn expand_windows() -> Result<()> {
 async fn expand_unix() -> Result<()> {
     use async_tar::Archive;
 
-    let mut file = fs::File::open("v0.6.1.zip").await?;
-    let mut archive = Archive::new(file);
+    let mut archive = Archive::new("v0.6.1.tar.gz");
     let mut entries = archive.entries()?;
 
     while let Some(value) = entries.next().await {
