@@ -18,7 +18,7 @@ futures-util = "0.3.14"
 dirs = "4.0.0"
 
 [target.'cfg(windows)'.dependencies]
-async_zip = "0.0.5"
+zip = "0.5"
 
 [target.'cfg(unix)'.dependencies]
-async-tar = "0.4.2"
+tar = "0.4"

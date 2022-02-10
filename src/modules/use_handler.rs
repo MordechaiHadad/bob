@@ -1,4 +1,5 @@
-use crate::models::{DownloadedFile, StableVersion};
+use crate::models::{DownloadedVersion, StableVersion};
+use crate::modules::expand_archive;
 use anyhow::{anyhow, Result};
 use clap::ArgMatches;
 use dirs::data_local_dir;
@@ -9,6 +10,7 @@ use reqwest::Client;
 use std::cmp::min;
 use std::path::PathBuf;
 use std::process::Stdio;
+use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 
@@ -23,12 +25,12 @@ pub async fn start(command: &ArgMatches) -> Result<()> {
         return Err(anyhow!("Todo.."));
     };
 
-    let downloaded_version = match download_version(&client, &version).await {
+    let downloaded_file = match download_version(&client, &version).await {
         Ok(value) => value,
         Err(error) => return Err(anyhow!(error)),
     };
 
-    if let Err(error) = install_version(downloaded_version).await {
+    if let Err(error) = expand_archive::start(downloaded_file).await {
         return Err(anyhow!(error));
     }
 
@@ -66,7 +68,7 @@ async fn parse_version(client: &Client, version: &str) -> Result<String> {
     }
 }
 
-async fn download_version(client: &Client, version: &String) -> Result<DownloadedFile> {
+async fn download_version(client: &Client, version: &String) -> Result<DownloadedVersion> {
     let response = send_request(client, version).await;
 
     match response {
@@ -96,7 +98,7 @@ async fn download_version(client: &Client, version: &String) -> Result<Downloade
 
                 while let Some(item) = response_bytes.next().await {
                     let chunk = item.or(anyhow::private::Err(anyhow::Error::msg("hello")))?;
-                    file.write(&chunk).await;
+                    file.write(&chunk).await?;
                     let new = min(downloaded + (chunk.len() as u64), total_size);
                     downloaded = new;
                     pb.set_position(new);
@@ -106,10 +108,10 @@ async fn download_version(client: &Client, version: &String) -> Result<Downloade
                     "Downloaded version {version} to {downloads_dir_str}/{version}.{file_type}"
                 ));
 
-                Ok(DownloadedFile {
-                    path: downloads_dir,
-                    extension: file_type,
-                    name: String::from(version),
+                Ok(DownloadedVersion {
+                    file_name: version.clone(),
+                    file_format: file_type,
+                    path: downloads_dir_str.to_string(),
                 })
             } else {
                 Err(anyhow!("Please provide an existing neovim version"))
@@ -164,9 +166,4 @@ async fn get_downloads_folder() -> Result<PathBuf> {
         }
     }
     Ok(PathBuf::from(path_string))
-}
-
-async fn install_version(downloaded_file: DownloadedFile) -> Result<()> {
-
-    Ok(())
 }

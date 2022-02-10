@@ -22,7 +22,7 @@ async fn run() -> Result<()> {
         .get_matches();
 
     if let Some(subcommand) = app.subcommand_matches("use") {
-        if let Err(error) = modules::expand_archive::start().await {
+        if let Err(error) = modules::use_handler::start(subcommand).await {
             return Err(anyhow!(error));
         }
     }
