@@ -2,15 +2,16 @@ use crate::models::{DownloadedVersion, StableVersion};
 use crate::modules::expand_archive;
 use anyhow::{anyhow, Result};
 use clap::ArgMatches;
-use dirs::data_local_dir;
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use regex::Regex;
 use reqwest::Client;
 use std::cmp::min;
-use std::path::PathBuf;
+use std::env;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use tokio::fs::File;
+use tokio::fs;
+use tokio::fs::{File, symlink_dir};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 
@@ -25,15 +26,27 @@ pub async fn start(command: &ArgMatches) -> Result<()> {
         return Err(anyhow!("Todo.."));
     };
 
-    let downloaded_file = match download_version(&client, &version).await {
+    let root = match get_downloads_folder().await {
         Ok(value) => value,
         Err(error) => return Err(anyhow!(error)),
     };
+    env::set_current_dir(&root)?;
+    let root = root.as_path();
 
-    if let Err(error) = expand_archive::start(downloaded_file).await {
-        return Err(anyhow!(error));
+    if !is_version_available(&version).await {
+        let downloaded_file = match download_version(&client, &version, root).await {
+            Ok(value) => value,
+            Err(error) => return Err(anyhow!(error)),
+        };
+
+        if let Err(error) = expand_archive::start(downloaded_file).await {
+            return Err(anyhow!(error));
+        }
     }
 
+   if let Err(error) = link_version(&version).await {
+       return Err(anyhow!(error));
+   }
     Ok(())
 }
 
@@ -68,7 +81,68 @@ async fn parse_version(client: &Client, version: &str) -> Result<String> {
     }
 }
 
-async fn download_version(client: &Client, version: &String) -> Result<DownloadedVersion> {
+async fn get_downloads_folder() -> Result<PathBuf> {
+    use dirs::data_local_dir;
+    let data_dir = match data_local_dir() {
+        None => return Err(anyhow!("Couldn't get local data folder")),
+        Some(value) => value,
+    };
+    let path_string = format!("{}/bob", data_dir.to_str().unwrap());
+    let does_folder_exist = tokio::fs::metadata(path_string.clone()).await.is_ok();
+
+    if !does_folder_exist {
+        if let Err(error) = tokio::fs::create_dir(path_string.clone()).await {
+            return Err(anyhow!(error));
+        }
+    }
+    Ok(PathBuf::from(path_string))
+}
+
+async fn is_version_available(version: &str) -> bool {
+    let paths = tokio::task::spawn_blocking(move || std::fs::read_dir("./").unwrap())
+        .await
+        .unwrap();
+    for path in paths {
+        if path
+            .unwrap()
+            .file_name()
+            .to_str()
+            .unwrap()
+            .contains(version)
+        {
+            return true;
+        }
+    }
+    false
+}
+
+async fn link_version(version: &str) -> Result<()> {
+    use dirs::data_dir;
+
+    let installation_dir = match data_dir() {
+        None => return Err(anyhow!("Couldn't get data dir")),
+        Some(value) => value
+    };
+
+   if cfg!(target_family = "windows") {
+       use std::os::windows::fs::symlink_dir;
+
+       // TODO: check if version already linked
+
+       if let Err(_) = symlink_dir(format!("{}/{}/Neovim", env::current_dir().unwrap().display(),version), format!("{}/Neovim", installation_dir.display())) {
+           return Err(anyhow!("Couldn't install version, please run application as administrator to complete installation"))
+       }
+    } // TODO: Unix
+
+    println!("Add {}/Neovim to PATH to complete this installation", installation_dir.display()); // TODO: do this automatically
+    Ok(())
+}
+
+async fn download_version(
+    client: &Client,
+    version: &String,
+    root: &Path,
+) -> Result<DownloadedVersion> {
     let response = send_request(client, version).await;
 
     match response {
@@ -84,15 +158,8 @@ async fn download_version(client: &Client, version: &String) -> Result<Downloade
                     .progress_chars("█  "));
                 pb.set_message(format!("Downloading version: {version}"));
 
-                let downloads_dir = match get_downloads_folder().await {
-                    Ok(value) => value,
-                    Err(error) => return Err(anyhow!(error)),
-                };
-                let downloads_dir_str = downloads_dir.to_str().unwrap();
                 let file_type = get_file_type();
-                let mut file =
-                    tokio::fs::File::create(format!("{downloads_dir_str}/{version}.{file_type}"))
-                        .await?;
+                let mut file = tokio::fs::File::create(format!("{version}.{file_type}")).await?;
 
                 let mut downloaded: u64 = 0;
 
@@ -105,13 +172,14 @@ async fn download_version(client: &Client, version: &String) -> Result<Downloade
                 }
 
                 pb.finish_with_message(format!(
-                    "Downloaded version {version} to {downloads_dir_str}/{version}.{file_type}"
+                    "Downloaded version {version} to {}/{version}.{file_type}",
+                    root.display()
                 ));
 
                 Ok(DownloadedVersion {
                     file_name: version.clone(),
                     file_format: file_type,
-                    path: downloads_dir_str.to_string(),
+                    path: root.display().to_string(),
                 })
             } else {
                 Err(anyhow!("Please provide an existing neovim version"))
@@ -150,20 +218,4 @@ fn get_file_type() -> String {
     } else {
         String::from("tar.gz")
     }
-}
-
-async fn get_downloads_folder() -> Result<PathBuf> {
-    let data_dir = match data_local_dir() {
-        None => return Err(anyhow!("Couldn't get data folder")),
-        Some(value) => value,
-    };
-    let path_string = format!("{}/bob", data_dir.to_str().unwrap());
-    let does_folder_exist = tokio::fs::metadata(path_string.clone()).await.is_ok();
-
-    if !does_folder_exist {
-        if let Err(error) = tokio::fs::create_dir(path_string.clone()).await {
-            return Err(anyhow!(error));
-        }
-    }
-    Ok(PathBuf::from(path_string))
 }

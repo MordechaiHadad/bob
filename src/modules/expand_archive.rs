@@ -20,8 +20,8 @@ fn expand(downloaded_file: &DownloadedVersion) -> Result<()> {
     use zip::ZipArchive;
 
     let file = File::open(format!(
-        "{}/{}.{}",
-        downloaded_file.path, downloaded_file.file_name, downloaded_file.file_format
+        "{}.{}",
+        downloaded_file.file_name, downloaded_file.file_format
     ))?;
 
     let mut archive = ZipArchive::new(file)?;
@@ -33,20 +33,12 @@ fn expand(downloaded_file: &DownloadedVersion) -> Result<()> {
         .progress_chars("█  "));
     pb.set_message("Unzipping file");
 
-    std::fs::create_dir(format!(
-        "{}/{}",
-        downloaded_file.path, downloaded_file.file_name
-    ))?;
+    std::fs::create_dir(downloaded_file.file_name.clone())?;
 
     let mut downloaded: u64 = 0;
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
-        let temp = format!(
-            "{}/{}/{}",
-            downloaded_file.path,
-            downloaded_file.file_name,
-            file.name()
-        );
+        let temp = format!("{}/{}", downloaded_file.file_name, file.name());
         let outpath = Path::new(temp.as_str());
 
         if file.is_dir() {
