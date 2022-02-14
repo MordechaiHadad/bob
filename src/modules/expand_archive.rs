@@ -3,20 +3,25 @@ use anyhow::{anyhow, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::cmp::min;
 use std::fs::File;
-use std::io::{Read, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::{fs, io};
 
 pub async fn start(file: DownloadedVersion) -> Result<()> {
+    let temp_file = file.clone();
     tokio::task::spawn_blocking(move || {
-        expand(&file).unwrap();
+        expand(temp_file).unwrap();
     })
+    .await?;
+    tokio::fs::remove_file(format!(
+        "{}/{}.{}",
+        file.path, file.file_name, file.file_format
+    ))
     .await?;
     Ok(())
 }
 
 #[cfg(target_family = "windows")]
-fn expand(downloaded_file: &DownloadedVersion) -> Result<()> {
+fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
     use zip::ZipArchive;
 
     let file = File::open(format!(
@@ -37,6 +42,7 @@ fn expand(downloaded_file: &DownloadedVersion) -> Result<()> {
 
     let mut downloaded: u64 = 0;
     for i in 0..archive.len() {
+        //TODO: find way to optimize
         let mut file = archive.by_index(i)?;
         let temp = format!("{}/{}", downloaded_file.file_name, file.name());
         let outpath = Path::new(temp.as_str());
