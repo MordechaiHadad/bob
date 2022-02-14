@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
 #[derive(Serialize, Deserialize)]
 pub struct StableVersion {
     pub tag_name: String,

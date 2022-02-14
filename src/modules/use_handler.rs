@@ -1,24 +1,21 @@
-use crate::models::{DownloadedVersion, StableVersion};
+use super::utils;
+use crate::models::DownloadedVersion;
 use crate::modules::expand_archive;
 use anyhow::{anyhow, Result};
 use clap::ArgMatches;
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
-use regex::Regex;
 use reqwest::Client;
 use std::cmp::min;
 use std::env;
-use std::path::{Path, PathBuf};
-use std::process::Stdio;
+use std::path::Path;
 use tokio::fs;
-use tokio::fs::{File, symlink_dir};
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
-use tokio::process::Command;
+use tokio::io::AsyncWriteExt;
 
 pub async fn start(command: &ArgMatches) -> Result<()> {
     let client = Client::new();
     let version = if let Some(value) = command.value_of("VERSION") {
-        match parse_version(&client, value).await {
+        match utils::parse_version(&client, value).await {
             Ok(version) => version,
             Err(error) => return Err(anyhow!(error)),
         }
@@ -26,14 +23,25 @@ pub async fn start(command: &ArgMatches) -> Result<()> {
         return Err(anyhow!("Todo.."));
     };
 
-    let root = match get_downloads_folder().await {
+    let root = match utils::get_downloads_folder().await {
         Ok(value) => value,
         Err(error) => return Err(anyhow!(error)),
     };
     env::set_current_dir(&root)?;
     let root = root.as_path();
 
-    if !is_version_available(&version).await {
+    if utils::does_version_exist(&version).await {
+        println!("{version} is already installed");
+        return Ok(());
+    }
+
+    let mut does_folder_exist = utils::does_folder_exist(&version, root).await;
+    if version == "nightly" && does_folder_exist {
+        fs::remove_dir_all(format!("{}/nightly", root.display())).await?;
+        does_folder_exist = false;
+    }
+
+    if !does_folder_exist {
         let downloaded_file = match download_version(&client, &version, root).await {
             Ok(value) => value,
             Err(error) => return Err(anyhow!(error)),
@@ -44,76 +52,11 @@ pub async fn start(command: &ArgMatches) -> Result<()> {
         }
     }
 
-   if let Err(error) = link_version(&version).await {
-       return Err(anyhow!(error));
-   }
+    if let Err(error) = link_version(&version).await {
+        return Err(anyhow!(error));
+    }
+    println!("You can now open neovim");
     Ok(())
-}
-
-async fn parse_version(client: &Client, version: &str) -> Result<String> {
-    match version {
-        "nightly" => Ok(String::from(version)),
-        "stable" => {
-            let response = client
-                .get("https://api.github.com/repos/neovim/neovim/releases/latest")
-                .header("user-agent", "bob")
-                .header("Accept", "application/vnd.github.v3+json")
-                .send()
-                .await?
-                .text()
-                .await?;
-
-            let latest: StableVersion = serde_json::from_str(response.as_str())?;
-
-            Ok(latest.tag_name)
-        }
-        _ => {
-            let regex = Regex::new(r"^v?[0-9]+\.[0-9]+\.[0-9]+$").unwrap();
-            if regex.is_match(version) {
-                let mut returned_version = String::from(version);
-                if !version.contains('v') {
-                    returned_version.insert(0, 'v');
-                }
-                return Ok(returned_version);
-            }
-            Err(anyhow!("Please provide a proper version string"))
-        }
-    }
-}
-
-async fn get_downloads_folder() -> Result<PathBuf> {
-    use dirs::data_local_dir;
-    let data_dir = match data_local_dir() {
-        None => return Err(anyhow!("Couldn't get local data folder")),
-        Some(value) => value,
-    };
-    let path_string = format!("{}/bob", data_dir.to_str().unwrap());
-    let does_folder_exist = tokio::fs::metadata(path_string.clone()).await.is_ok();
-
-    if !does_folder_exist {
-        if let Err(error) = tokio::fs::create_dir(path_string.clone()).await {
-            return Err(anyhow!(error));
-        }
-    }
-    Ok(PathBuf::from(path_string))
-}
-
-async fn is_version_available(version: &str) -> bool {
-    let paths = tokio::task::spawn_blocking(move || std::fs::read_dir("./").unwrap())
-        .await
-        .unwrap();
-    for path in paths {
-        if path
-            .unwrap()
-            .file_name()
-            .to_str()
-            .unwrap()
-            .contains(version)
-        {
-            return true;
-        }
-    }
-    false
 }
 
 async fn link_version(version: &str) -> Result<()> {
@@ -121,20 +64,38 @@ async fn link_version(version: &str) -> Result<()> {
 
     let installation_dir = match data_dir() {
         None => return Err(anyhow!("Couldn't get data dir")),
-        Some(value) => value
+        Some(value) => value,
     };
 
-   if cfg!(target_family = "windows") {
-       use std::os::windows::fs::symlink_dir;
+    let mut is_installed = false;
 
-       // TODO: check if version already linked
+    if utils::does_folder_exist("Neovim", installation_dir.as_path()).await {
+        fs::remove_dir_all(format!("{}/Neovim", installation_dir.display())).await?;
+    }
 
-       if let Err(_) = symlink_dir(format!("{}/{}/Neovim", env::current_dir().unwrap().display(),version), format!("{}/Neovim", installation_dir.display())) {
-           return Err(anyhow!("Couldn't install version, please run application as administrator to complete installation"))
-       }
+    if cfg!(target_family = "windows") {
+        use std::os::windows::fs::symlink_dir;
+
+        if let Err(error) = symlink_dir(
+            format!(
+                "{}/{}/Neovim",
+                env::current_dir().unwrap().display(),
+                version
+            ),
+            format!("{}/Neovim", installation_dir.display()),
+        ) {
+            return Err(anyhow!(error));
+        }
     } // TODO: Unix
 
-    println!("Add {}/Neovim to PATH to complete this installation", installation_dir.display()); // TODO: do this automatically
+    println!("Linked {version} to {}/Neovim", installation_dir.display());
+
+    if !utils::does_version_exist(version).await {
+        println!(
+            "Add {}/Neovim/bin to PATH to complete this installation",
+            installation_dir.display()
+        ); // TODO: do this automatically
+    }
     Ok(())
 }
 
@@ -158,7 +119,7 @@ async fn download_version(
                     .progress_chars("█  "));
                 pb.set_message(format!("Downloading version: {version}"));
 
-                let file_type = get_file_type();
+                let file_type = utils::get_file_type();
                 let mut file = tokio::fs::File::create(format!("{version}.{file_type}")).await?;
 
                 let mut downloaded: u64 = 0;
@@ -189,10 +150,7 @@ async fn download_version(
     }
 }
 
-async fn send_request(
-    client: &Client,
-    version: &String,
-) -> Result<reqwest::Response, reqwest::Error> {
+async fn send_request(client: &Client, version: &str) -> Result<reqwest::Response, reqwest::Error> {
     let os = if cfg!(target_os = "linux") {
         "linux64"
     } else if cfg!(target_os = "windows") {
@@ -202,7 +160,7 @@ async fn send_request(
     };
     let request_url = format!(
         "https://github.com/neovim/neovim/releases/download/{version}/nvim-{os}.{}",
-        get_file_type()
+        utils::get_file_type()
     );
 
     client
@@ -210,12 +168,4 @@ async fn send_request(
         .header("user-agent", "bob")
         .send()
         .await
-}
-
-fn get_file_type() -> String {
-    if cfg!(target_family = "windows") {
-        String::from("zip")
-    } else {
-        String::from("tar.gz")
-    }
 }
