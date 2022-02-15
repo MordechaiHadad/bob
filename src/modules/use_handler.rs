@@ -82,7 +82,7 @@ async fn link_version(version: &str) -> Result<()> {
             ),
             format!("{}/Neovim", installation_dir.display()),
         ) {
-            return Err(anyhow!(error));
+            return Err(anyhow!("Please restart this application as admin to complete the installation."));
         }
     } // TODO: Unix
 
