@@ -30,7 +30,7 @@ pub async fn start(command: &ArgMatches) -> Result<()> {
     env::set_current_dir(&root)?;
     let root = root.as_path();
 
-    if utils::does_version_exist(&version).await {
+    if utils::is_version_installed(&version).await {
         println!("{version} is already installed");
         return Ok(());
     }
@@ -67,8 +67,6 @@ async fn link_version(version: &str) -> Result<()> {
         Some(value) => value,
     };
 
-    let mut is_installed = false;
-
     if utils::does_folder_exist("Neovim", installation_dir.as_path()).await {
         fs::remove_dir_all(format!("{}/Neovim", installation_dir.display())).await?;
     }
@@ -90,7 +88,7 @@ async fn link_version(version: &str) -> Result<()> {
 
     println!("Linked {version} to {}/Neovim", installation_dir.display());
 
-    if !utils::does_version_exist(version).await {
+    if !utils::is_version_installed(version).await {
         println!(
             "Add {}/Neovim/bin to PATH to complete this installation",
             installation_dir.display()

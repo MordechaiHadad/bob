@@ -1,3 +1,4 @@
+use std::future::Future;
 use crate::models::StableVersion;
 use anyhow::{anyhow, Result};
 use regex::Regex;
@@ -80,16 +81,24 @@ pub fn get_file_type() -> String {
     }
 }
 
-pub async fn does_version_exist(version: &str) -> bool {
-    let output = match Command::new("nvim").arg("--version").output().await {
-        Ok(value) => value,
-        Err(_) => return false,
+pub async fn is_version_installed(version: &str) -> bool {
+    let installed_version = match get_current_version().await {
+        None => return false,
+        Some(value) => value
     };
-    let regex = Regex::new(r"v[0-9]\.[0-9]\.[0-9]").unwrap();
-    let output = String::from_utf8_lossy(&*output.stdout).to_string();
-    let installed_version = regex.find(output.as_str()).unwrap().as_str().to_owned();
+
     if installed_version.contains(version) {
         return true;
     }
     false
+}
+
+pub async fn get_current_version() -> Option<String> {
+    let output = match Command::new("nvim").arg("--version").output().await {
+        Ok(value) => value,
+        Err(_) => return None,
+    };
+    let regex = Regex::new(r"v[0-9]\.[0-9]\.[0-9]").unwrap();
+    let output = String::from_utf8_lossy(&*output.stdout).to_string();
+    Some(regex.find(output.as_str()).unwrap().as_str().to_owned())
 }
