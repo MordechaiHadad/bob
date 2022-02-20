@@ -67,30 +67,34 @@ async fn link_version(version: &str) -> Result<()> {
         Some(value) => value,
     };
 
-    if utils::does_folder_exist("Neovim", installation_dir.as_path()).await {
-        fs::remove_dir_all(format!("{}/Neovim", installation_dir.display())).await?;
+    if utils::does_folder_exist("neovim", installation_dir.as_path()).await {
+        fs::remove_dir_all(format!("{}/neovim", installation_dir.display())).await?;
     }
 
-    if cfg!(target_family = "windows") {
-        use std::os::windows::fs::symlink_dir;
+    let base_path = &format!("{}/{}", env::current_dir().unwrap().display(), version);
 
-        if let Err(error) = symlink_dir(
-            format!(
-                "{}/{}/Neovim",
-                env::current_dir().unwrap().display(),
-                version
-            ),
-            format!("{}/Neovim", installation_dir.display()),
-        ) {
-            return Err(anyhow!("Please restart this application as admin to complete the installation."));
-        }
-    } // TODO: Unix
+    cfg_if::cfg_if! {
+         if #[cfg(windows)] {
+            use std::os::windows::fs::symlink_dir;
 
-    println!("Linked {version} to {}/Neovim", installation_dir.display());
+            if let Err(_) = symlink_dir(format!("{base_path}/Neovim"),
+                format!("{}/neovim", installation_dir.display())) {
+                    return Err(anyhow!("Please restart this application as admin to complete the installation."));
+                }
+         } else {
+             use std::os::unix::fs::symlink;
+
+             if let Err(error) = symlink(format!("{base_path}/nvim-linux64"), format!("{}/neovim", installation_dir.display())) {
+                 return Err(anyhow!(error))
+             }
+         }
+     }
+
+    println!("Linked {version} to {}/neovim", installation_dir.display());
 
     if !utils::is_version_installed(version).await {
         println!(
-            "Add {}/Neovim/bin to PATH to complete this installation",
+            "Add {}/neovim/bin to PATH to complete this installation",
             installation_dir.display()
         ); // TODO: do this automatically
     }
