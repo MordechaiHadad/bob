@@ -37,7 +37,10 @@ async fn run() -> Result<()> {
 
         let paths = std::fs::read_dir(downloads_dir)?;
         let mut versions = String::new();
-        let installed_version = utils::get_current_version().await.unwrap();
+        let installed_version = match utils::get_current_version().await {
+            Some(value) => value,
+            None => return Err(anyhow!("Neovim is not installed"))
+        };
         let mut first = true;
         for path in paths {
             let path_name = path.unwrap().file_name();
