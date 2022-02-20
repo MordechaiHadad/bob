@@ -3,10 +3,10 @@ mod modules;
 
 extern crate core;
 
+use crate::modules::utils;
 use anyhow::{anyhow, Result};
 use clap::{arg, App};
 use std::process::exit;
-use crate::modules::utils;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -32,7 +32,7 @@ async fn run() -> Result<()> {
     if let Some(_) = app.subcommand_matches("ls") {
         let downloads_dir = match utils::get_downloads_folder().await {
             Ok(value) => value,
-            Err(error) => return Err(anyhow!(error))
+            Err(error) => return Err(anyhow!(error)),
         };
 
         let paths = std::fs::read_dir(downloads_dir)?;
@@ -55,8 +55,6 @@ async fn run() -> Result<()> {
                 }
                 first = false;
             }
-
-
         }
         println!("{versions}");
     }

@@ -16,9 +16,11 @@ anyhow = "1.0.52"
 indicatif = "0.16.2"
 futures-util = "0.3.14"
 dirs = "4.0.0"
+cfg-if = "1.0"
 
 [target.'cfg(windows)'.dependencies]
 zip = "0.5"
 
 [target.'cfg(unix)'.dependencies]
 tar = "0.4"
+flate2 = "1.0"

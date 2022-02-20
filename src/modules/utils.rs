@@ -1,8 +1,8 @@
-use std::future::Future;
 use crate::models::StableVersion;
 use anyhow::{anyhow, Result};
 use regex::Regex;
 use reqwest::Client;
+use std::future::Future;
 use std::path::{Path, PathBuf};
 use tokio::process::Command;
 
@@ -84,7 +84,7 @@ pub fn get_file_type() -> String {
 pub async fn is_version_installed(version: &str) -> bool {
     let installed_version = match get_current_version().await {
         None => return false,
-        Some(value) => value
+        Some(value) => value,
     };
 
     if installed_version.contains(version) {
