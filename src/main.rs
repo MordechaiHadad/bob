@@ -5,7 +5,7 @@ extern crate core;
 
 use crate::modules::utils;
 use anyhow::{anyhow, Result};
-use clap::{arg, App, Command};
+use clap::{arg, Command, AppSettings};
 use std::process::exit;
 
 #[tokio::main]
@@ -19,6 +19,7 @@ async fn main() -> Result<()> {
 
 async fn run() -> Result<()> {
     let app = Command::new("bob")
+        .arg_required_else_help(true)
         .subcommand(
             Command::new("use")
                 .arg(arg!([VERSION]).required(true))

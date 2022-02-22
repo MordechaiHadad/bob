@@ -6,11 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap = { version = "3.0.14", features = ["derive"] }
+clap = { version = "3.0.14"}
 regex = "1.5"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-reqwest = { version = "0.11", features = ["json", "stream"] }
+reqwest = { version = "0.11", features = ["stream"] }
 tokio = { version = "1.16.1", features = ["full"] }
 anyhow = "1.0.52"
 indicatif = "0.16.2"
