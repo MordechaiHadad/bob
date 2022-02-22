@@ -8,8 +8,9 @@ Bob is a fast and easy to use neovim version manager, easily switch between vers
 Cross-Platform, fast, lightweight and 0 dependencies.
 
 ## :question: Usage
-- `bob use |nightly|stable|{version-string}|`
+- `bob use |nightly|stable|<version-string>|`
 - `bob ls`
+A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
 
 Windows side note: Make sure to run the application as administator to properly install a version.
 

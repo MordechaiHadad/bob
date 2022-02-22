@@ -19,7 +19,11 @@ async fn main() -> Result<()> {
 
 async fn run() -> Result<()> {
     let app = Command::new("bob")
-        .subcommand(Command::new("use").arg(arg!([VERSION]).required(true)).about("Switch to a different neovim version"))
+        .subcommand(
+            Command::new("use")
+                .arg(arg!([VERSION]).required(true))
+                .about("Switch to a different neovim version"),
+        )
         .subcommand(Command::new("ls").about("List all downloaded and installed versions"))
         .get_matches();
 
@@ -39,7 +43,7 @@ async fn run() -> Result<()> {
         let mut versions = String::new();
         let installed_version = match utils::get_current_version().await {
             Some(value) => value,
-            None => return Err(anyhow!("Neovim is not installed"))
+            None => return Err(anyhow!("Neovim is not installed")),
         };
         let mut first = true;
         for path in paths {
