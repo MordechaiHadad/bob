@@ -98,8 +98,11 @@ pub async fn get_current_version() -> Option<String> {
         Ok(value) => value,
         Err(_) => return None,
     };
-    let regex = Regex::new(r"v[0-9]\.[0-9]\.[0-9]").unwrap();
     let output = String::from_utf8_lossy(&*output.stdout).to_string();
+    if output.contains("dev") {
+        return Some(String::from("nightly"))
+    }
+    let regex = Regex::new(r"v[0-9]\.[0-9]\.[0-9]").unwrap();
     Some(regex.find(output.as_str()).unwrap().as_str().to_owned())
 }
 

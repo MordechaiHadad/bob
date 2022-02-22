@@ -81,7 +81,7 @@ async fn link_version(version: &str) -> Result<()> {
         if #[cfg(windows)] {
            use std::os::windows::fs::symlink_dir;
 
-           if let Err(_) = symlink_dir(format!("{base_path}/Neovim"),
+           if let Err(error) = symlink_dir(format!("{base_path}/Neovim"),
                format!("{}/neovim", installation_dir.display())) {
                    return Err(anyhow!("Please restart this application as admin to complete the installation."));
                }
