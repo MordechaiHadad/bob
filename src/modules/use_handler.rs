@@ -1,20 +1,21 @@
-use crate::models::{StableVersion, DownloadedFile};
+use super::utils;
+use crate::models::DownloadedVersion;
+use crate::modules::expand_archive;
 use anyhow::{anyhow, Result};
 use clap::ArgMatches;
-use dirs::data_local_dir;
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
-use regex::Regex;
 use reqwest::Client;
 use std::cmp::min;
-use std::path::PathBuf;
+use std::env;
+use std::path::Path;
+use tokio::fs;
 use tokio::io::AsyncWriteExt;
-use tokio::process::Command;
 
 pub async fn start(command: &ArgMatches) -> Result<()> {
     let client = Client::new();
     let version = if let Some(value) = command.value_of("VERSION") {
-        match parse_version(&client, value).await {
+        match utils::parse_version(&client, value).await {
             Ok(version) => version,
             Err(error) => return Err(anyhow!(error)),
         }
@@ -22,50 +23,95 @@ pub async fn start(command: &ArgMatches) -> Result<()> {
         return Err(anyhow!("Todo.."));
     };
 
-    let downloaded_version = match download_version(&client, &version).await {
+    let root = match utils::get_downloads_folder().await {
         Ok(value) => value,
         Err(error) => return Err(anyhow!(error)),
     };
+    env::set_current_dir(&root)?;
+    let root = root.as_path();
 
-    if let Err(error) = install_version(downloaded_version).await {
-        return Err(anyhow!(error));
+    if utils::is_version_installed(&version).await {
+        println!("{version} is already installed");
+        return Ok(());
     }
 
+    let mut does_folder_exist = utils::does_folder_exist(&version, root).await;
+    if version == "nightly" && does_folder_exist {
+        fs::remove_dir_all(format!("{}/nightly", root.display())).await?;
+        does_folder_exist = false;
+    }
+
+    if !does_folder_exist {
+        let downloaded_file = match download_version(&client, &version, root).await {
+            Ok(value) => value,
+            Err(error) => return Err(anyhow!(error)),
+        };
+        if cfg!(target_os = "macos") {
+            "nvim-macos"
+        } else {
+            "nvim-linux64"
+        };
+        if let Err(error) = expand_archive::start(downloaded_file).await {
+            return Err(anyhow!(error));
+        }
+    }
+
+    if let Err(error) = link_version(&version).await {
+        return Err(anyhow!(error));
+    }
+    println!("You can now open neovim");
     Ok(())
 }
 
-async fn parse_version(client: &Client, version: &str) -> Result<String> {
-    match version {
-        "nightly" => Ok(String::from(version)),
-        "stable" => {
-            let response = client
-                .get("https://api.github.com/repos/neovim/neovim/releases/latest")
-                .header("user-agent", "bob")
-                .header("Accept", "application/vnd.github.v3+json")
-                .send()
-                .await?
-                .text()
-                .await?;
+async fn link_version(version: &str) -> Result<()> {
+    use dirs::data_dir;
 
-            let latest: StableVersion = serde_json::from_str(response.as_str())?;
+    let installation_dir = match data_dir() {
+        None => return Err(anyhow!("Couldn't get data dir")),
+        Some(value) => value,
+    };
 
-            Ok(latest.tag_name)
-        }
-        _ => {
-            let regex = Regex::new(r"^v?[0-9]+\.[0-9]+\.[0-9]+$").unwrap();
-            if regex.is_match(version) {
-                let mut returned_version = String::from(version);
-                if !version.contains('v') {
-                    returned_version.insert(0, 'v');
-                }
-                return Ok(returned_version);
+    if utils::does_folder_exist("neovim", installation_dir.as_path()).await {
+        fs::remove_dir_all(format!("{}/neovim", installation_dir.display())).await?;
+    }
+
+    let base_path = &format!("{}/{}", env::current_dir().unwrap().display(), version);
+
+    cfg_if::cfg_if! {
+        if #[cfg(windows)] {
+           use std::os::windows::fs::symlink_dir;
+
+           if let Err(_) = symlink_dir(format!("{base_path}/Neovim"),
+               format!("{}/neovim", installation_dir.display())) {
+                   return Err(anyhow!("Please restart this application as admin to complete the installation."));
+               }
+        } else {
+            use std::os::unix::fs::symlink;
+
+            let folder_name = utils::get_platform_name();
+
+            if let Err(error) = symlink(format!("{base_path}/{folder_name}"), format!("{}/neovim", installation_dir.display())) {
+                return Err(anyhow!(error))
             }
-            Err(anyhow!("Please provide a proper version string"))
         }
     }
+
+    println!("Linked {version} to {}/neovim", installation_dir.display());
+
+    if !utils::is_version_installed(version).await {
+        println!(
+            "Add {}/neovim/bin to PATH to complete this installation",
+            installation_dir.display()
+        ); // TODO: do this automatically
+    }
+    Ok(())
 }
 
-async fn download_version(client: &Client, version: &String) -> Result<DownloadedFile> {
+async fn download_version(
+    client: &Client,
+    version: &String,
+    root: &Path,
+) -> Result<DownloadedVersion> {
     let response = send_request(client, version).await;
 
     match response {
@@ -81,34 +127,28 @@ async fn download_version(client: &Client, version: &String) -> Result<Downloade
                     .progress_chars("█  "));
                 pb.set_message(format!("Downloading version: {version}"));
 
-                let downloads_dir = match get_downloads_folder().await {
-                    Ok(value) => value,
-                    Err(error) => return Err(anyhow!(error)),
-                };
-                let downloads_dir_str = downloads_dir.to_str().unwrap();
-                let file_type = get_file_type();
-                let mut file =
-                    tokio::fs::File::create(format!("{downloads_dir_str}/{version}.{file_type}"))
-                        .await?;
+                let file_type = utils::get_file_type();
+                let mut file = tokio::fs::File::create(format!("{version}.{file_type}")).await?;
 
                 let mut downloaded: u64 = 0;
 
                 while let Some(item) = response_bytes.next().await {
                     let chunk = item.or(anyhow::private::Err(anyhow::Error::msg("hello")))?;
-                    file.write(&chunk).await;
+                    file.write(&chunk).await?;
                     let new = min(downloaded + (chunk.len() as u64), total_size);
                     downloaded = new;
                     pb.set_position(new);
                 }
 
                 pb.finish_with_message(format!(
-                    "Downloaded version {version} to {downloads_dir_str}/{version}.{file_type}"
+                    "Downloaded version {version} to {}/{version}.{file_type}",
+                    root.display()
                 ));
 
-                Ok(DownloadedFile {
-                    path: downloads_dir,
-                    extension: file_type,
-                    name: String::from(version),
+                Ok(DownloadedVersion {
+                    file_name: version.clone(),
+                    file_format: file_type.to_string(),
+                    path: root.display().to_string(),
                 })
             } else {
                 Err(anyhow!("Please provide an existing neovim version"))
@@ -118,20 +158,11 @@ async fn download_version(client: &Client, version: &String) -> Result<Downloade
     }
 }
 
-async fn send_request(
-    client: &Client,
-    version: &String,
-) -> Result<reqwest::Response, reqwest::Error> {
-    let os = if cfg!(target_os = "linux") {
-        "linux64"
-    } else if cfg!(target_os = "windows") {
-        "win64"
-    } else {
-        "macos"
-    };
+async fn send_request(client: &Client, version: &str) -> Result<reqwest::Response, reqwest::Error> {
+    let platform = utils::get_platform_name();
+    let file_type = utils::get_file_type();
     let request_url = format!(
-        "https://github.com/neovim/neovim/releases/download/{version}/nvim-{os}.{}",
-        get_file_type()
+        "https://github.com/neovim/neovim/releases/download/{version}/{platform}.{file_type}",
     );
 
     client
@@ -139,66 +170,4 @@ async fn send_request(
         .header("user-agent", "bob")
         .send()
         .await
-}
-
-fn get_file_type() -> String {
-    if cfg!(target_family = "windows") {
-        String::from("zip")
-    } else {
-        String::from("tar.gz")
-    }
-}
-
-async fn get_downloads_folder() -> Result<PathBuf> {
-    let data_dir = match data_local_dir() {
-        None => return Err(anyhow!("Couldn't get data folder")),
-        Some(value) => value,
-    };
-    let path_string = format!("{}/bob", data_dir.to_str().unwrap());
-    let does_folder_exist = tokio::fs::metadata(path_string.clone()).await.is_ok();
-
-    if !does_folder_exist {
-        if let Err(error) = tokio::fs::create_dir(path_string.clone()).await {
-            return Err(anyhow!(error));
-        }
-    }
-    Ok(PathBuf::from(path_string))
-}
-
-async fn install_version(downloaded_file: DownloadedFile) -> Result<()> {
-    println!("Installing");
-    let output = if cfg!(target_os = "windows") {
-        Command::new("powershell")
-            .current_dir(downloaded_file.path)
-            .arg("-c")
-            .arg(format!(
-                "\
-        Add-Type -AssemblyName System.IO.Compression.FileSystem
-        [System.IO.Compression.ZipFile]::ExtractToDirectory(\"{}.{}\", \"./{0}\")
-        ", downloaded_file.name, downloaded_file.extension))
-            .output()
-            .await?
-    } else {
-        Command::new("bash")
-            .current_dir(downloaded_file.path)
-            .arg("-c")
-            .arg(format!(
-                "\
-            tar -xf {}
-            ",
-                downloaded_file.name
-            ))
-            .output()
-            .await?
-    };
-    if !output.status.success() {
-        return Err(anyhow!(
-            "Failed to uncompress {} {}",
-            downloaded_file.name,
-            String::from_utf8_lossy(&output.stderr)
-        ));
-    }
-    println!("Finsihed installing");
-
-    Ok(())
 }
