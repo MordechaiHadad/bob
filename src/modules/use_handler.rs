@@ -46,7 +46,11 @@ pub async fn start(command: &ArgMatches) -> Result<()> {
             Ok(value) => value,
             Err(error) => return Err(anyhow!(error)),
         };
-
+if cfg!(target_os = "macos") {
+                 "nvim-macos"
+             } else {
+                 "nvim-linux64"
+             };
         if let Err(error) = expand_archive::start(downloaded_file).await {
             return Err(anyhow!(error));
         }
@@ -84,7 +88,9 @@ async fn link_version(version: &str) -> Result<()> {
          } else {
              use std::os::unix::fs::symlink;
 
-             if let Err(error) = symlink(format!("{base_path}/nvim-linux64"), format!("{}/neovim", installation_dir.display())) {
+             let folder_name = utils::get_platform_name();
+
+             if let Err(error) = symlink(format!("{base_path}/{folder_name}"), format!("{}/neovim", installation_dir.display())) {
                  return Err(anyhow!(error))
              }
          }
@@ -141,7 +147,7 @@ async fn download_version(
 
                 Ok(DownloadedVersion {
                     file_name: version.clone(),
-                    file_format: file_type,
+                    file_format: file_type.to_string(),
                     path: root.display().to_string(),
                 })
             } else {
@@ -153,16 +159,10 @@ async fn download_version(
 }
 
 async fn send_request(client: &Client, version: &str) -> Result<reqwest::Response, reqwest::Error> {
-    let os = if cfg!(target_os = "linux") {
-        "linux64"
-    } else if cfg!(target_os = "windows") {
-        "win64"
-    } else {
-        "macos"
-    };
+    let platform = utils::get_platform_name();
+    let file_type = utils::get_file_type();
     let request_url = format!(
-        "https://github.com/neovim/neovim/releases/download/{version}/nvim-{os}.{}",
-        utils::get_file_type()
+        "https://github.com/neovim/neovim/releases/download/{version}/{platform}.{file_type}",
     );
 
     client

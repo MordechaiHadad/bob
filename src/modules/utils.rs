@@ -73,11 +73,11 @@ pub async fn does_folder_exist(directory: &str, path: &Path) -> bool {
     false
 }
 
-pub fn get_file_type() -> String {
+pub fn get_file_type() -> &'static str {
     if cfg!(target_family = "windows") {
-        String::from("zip")
+        "zip"
     } else {
-        String::from("tar.gz")
+        "tar.gz"
     }
 }
 
@@ -101,4 +101,14 @@ pub async fn get_current_version() -> Option<String> {
     let regex = Regex::new(r"v[0-9]\.[0-9]\.[0-9]").unwrap();
     let output = String::from_utf8_lossy(&*output.stdout).to_string();
     Some(regex.find(output.as_str()).unwrap().as_str().to_owned())
+}
+
+pub fn get_platform_name() -> &'static str {
+    if cfg!(target_os = "windows") {
+        "nvim-win64"
+    } else if cfg!(target_os = "macos") {
+        "nvim-macos"
+    } else {
+        "nvim-linux64"
+    }
 }
