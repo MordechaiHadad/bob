@@ -5,6 +5,7 @@ use std::cmp::min;
 use std::fs::File;
 use std::path::Path;
 use std::{fs, io};
+use super::utils;
 
 pub async fn start(file: DownloadedVersion) -> Result<()> {
     let temp_file = file.clone();
@@ -121,7 +122,8 @@ fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
         "Finished expanding to {}/{}",
         downloaded_file.path, downloaded_file.file_name
     ));
-    let file = &format!("{}/nvim-linux64/bin/nvim", downloaded_file.file_name);
+    let platform = utils::get_platform_name();
+    let file = &format!("{}/{platform}/bin/nvim", downloaded_file.file_name);
     let mut perms = fs::metadata(file)?.permissions();
     perms.set_mode(0o111);
     fs::set_permissions(file, perms)?;
