@@ -1,3 +1,4 @@
+use super::utils;
 use crate::models::DownloadedVersion;
 use anyhow::{anyhow, Result};
 use indicatif::{ProgressBar, ProgressStyle};
@@ -5,7 +6,6 @@ use std::cmp::min;
 use std::fs::File;
 use std::path::Path;
 use std::{fs, io};
-use super::utils;
 
 pub async fn start(file: DownloadedVersion) -> Result<()> {
     let temp_file = file.clone();
@@ -75,8 +75,8 @@ fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
 #[cfg(target_family = "unix")]
 fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
     use flate2::read::GzDecoder;
-    use tar::Archive;
     use std::os::unix::fs::PermissionsExt;
+    use tar::Archive;
 
     let file = File::open(format!(
         "{}.{}",

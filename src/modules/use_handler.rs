@@ -46,11 +46,11 @@ pub async fn start(command: &ArgMatches) -> Result<()> {
             Ok(value) => value,
             Err(error) => return Err(anyhow!(error)),
         };
-if cfg!(target_os = "macos") {
-                 "nvim-macos"
-             } else {
-                 "nvim-linux64"
-             };
+        if cfg!(target_os = "macos") {
+            "nvim-macos"
+        } else {
+            "nvim-linux64"
+        };
         if let Err(error) = expand_archive::start(downloaded_file).await {
             return Err(anyhow!(error));
         }
@@ -78,23 +78,23 @@ async fn link_version(version: &str) -> Result<()> {
     let base_path = &format!("{}/{}", env::current_dir().unwrap().display(), version);
 
     cfg_if::cfg_if! {
-         if #[cfg(windows)] {
-            use std::os::windows::fs::symlink_dir;
+        if #[cfg(windows)] {
+           use std::os::windows::fs::symlink_dir;
 
-            if let Err(_) = symlink_dir(format!("{base_path}/Neovim"),
-                format!("{}/neovim", installation_dir.display())) {
-                    return Err(anyhow!("Please restart this application as admin to complete the installation."));
-                }
-         } else {
-             use std::os::unix::fs::symlink;
+           if let Err(_) = symlink_dir(format!("{base_path}/Neovim"),
+               format!("{}/neovim", installation_dir.display())) {
+                   return Err(anyhow!("Please restart this application as admin to complete the installation."));
+               }
+        } else {
+            use std::os::unix::fs::symlink;
 
-             let folder_name = utils::get_platform_name();
+            let folder_name = utils::get_platform_name();
 
-             if let Err(error) = symlink(format!("{base_path}/{folder_name}"), format!("{}/neovim", installation_dir.display())) {
-                 return Err(anyhow!(error))
-             }
-         }
-     }
+            if let Err(error) = symlink(format!("{base_path}/{folder_name}"), format!("{}/neovim", installation_dir.display())) {
+                return Err(anyhow!(error))
+            }
+        }
+    }
 
     println!("Linked {version} to {}/neovim", installation_dir.display());
 
