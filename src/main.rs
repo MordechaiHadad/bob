@@ -5,7 +5,7 @@ extern crate core;
 
 use crate::modules::utils;
 use anyhow::{anyhow, Result};
-use clap::{arg, App};
+use clap::{arg, App, Command};
 use std::process::exit;
 
 #[tokio::main]
@@ -18,9 +18,9 @@ async fn main() -> Result<()> {
 }
 
 async fn run() -> Result<()> {
-    let app = App::new("bob")
-        .subcommand(App::new("use").arg(arg!([VERSION]).required(true)))
-        .subcommand(App::new("ls"))
+    let app = Command::new("bob")
+        .subcommand(Command::new("use").arg(arg!([VERSION]).required(true)).about("Switch to a different neovim version"))
+        .subcommand(Command::new("ls").about("List all downloaded and installed versions"))
         .get_matches();
 
     if let Some(subcommand) = app.subcommand_matches("use") {
