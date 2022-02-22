@@ -7,6 +7,19 @@ Bob is a fast and easy to use neovim version manager, easily switch between vers
 ## :star2: Features
 Cross-Platform, fast, lightweight and 0 dependencies.
 
+## Prerequisites
+Make sure you don't have neovim already installed via other ways e.g. package manager.
+<details>
+<summary>When building from source</summary>
+Install [rustup](https://www.rust-lang.org/tools/install)
+</details>
+
+## :wrench: Installation
+### Install from source
+1. `git clone https://github.com/MordechaiHadad/bob.git`
+2. `cd bob && cargo install --path .`
+4. Run bob with `bob`
+
 ## :question: Usage
 - `bob use |nightly|stable|<version-string>|`
 - `bob ls`
