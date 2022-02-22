@@ -1,4 +1,4 @@
-# Bob(Temporary Name)
+# Bob
 
 > Struggle to keep your nvim versions in check? Bob provides an easy way to install and switch versions on any system!
 
@@ -10,9 +10,14 @@ Cross-Platform, fast, lightweight and 0 dependencies.
 ## :question: Usage
 - `bob use |nightly|stable|<version-string>|`
 - `bob ls`
+
 A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
 
+<details>
+<summary>Windows side note</summary>
+
 Windows side note: Make sure to run the application as administator to properly install a version.
+</details>
 
 ## :heart: Credits And Inspiration
 - [nvm](https://github.com/nvm-sh/nvm) A node version manager
