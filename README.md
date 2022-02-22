@@ -16,7 +16,7 @@ A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0
 <details>
 <summary>Windows side note</summary>
 
-Windows side note: Make sure to run the application as administator to properly install a version.
+Make sure to run the application as administator to properly install a version.
 </details>
 
 ## :heart: Credits And Inspiration
