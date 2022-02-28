@@ -131,6 +131,9 @@ fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
     let mut perms = fs::metadata(file)?.permissions();
     perms.set_mode(0o111);
     fs::set_permissions(file, perms)?;
-    println!("made {}/{platform}/bin/nvim executable", downloaded_file.file_name);
+    println!(
+        "made {}/{platform}/bin/nvim executable",
+        downloaded_file.file_name
+    );
     Ok(())
 }
