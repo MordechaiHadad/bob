@@ -122,7 +122,11 @@ fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
         "Finished expanding to {}/{}",
         downloaded_file.path, downloaded_file.file_name
     ));
-    let platform = utils::get_platform_name();
+    let platform = if cfg!(target_os = "macos") {
+        "nvim-osx64"
+    } else {
+        "nvim-linux64"
+    };
     let file = &format!("{}/{platform}/bin/nvim", downloaded_file.file_name);
     let mut perms = fs::metadata(file)?.permissions();
     perms.set_mode(0o111);
