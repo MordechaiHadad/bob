@@ -3,7 +3,6 @@ mod modules;
 
 extern crate core;
 
-use crate::modules::utils;
 use anyhow::{anyhow, Result};
 use std::process::exit;
 

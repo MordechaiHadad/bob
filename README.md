@@ -16,9 +16,8 @@ Install [rustup](https://www.rust-lang.org/tools/install)
 
 ## :wrench: Installation
 ### Install from source
-1. `git clone https://github.com/MordechaiHadad/bob.git`
-2. `cd bob && cargo install --path .`
-4. Run bob with `bob`
+1. `cargo install --git https://github.com/MordechaiHadad/bob.git`
+2. Run bob with `bob`
 
 ## :question: Usage
 - `bob use |nightly|stable|<version-string>|`

@@ -1,6 +1,5 @@
-use super::utils;
 use crate::models::DownloadedVersion;
-use anyhow::{anyhow, Result};
+use anyhow::{Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::cmp::min;
 use std::fs::File;
@@ -72,7 +71,7 @@ fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
     Ok(())
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(target_family = "unix")] // I don't know if its worth making both expand functions into one function, but the API difference will cause so much if statements
 fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
     use flate2::read::GzDecoder;
     use std::os::unix::fs::PermissionsExt;
