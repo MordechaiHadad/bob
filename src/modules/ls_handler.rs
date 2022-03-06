@@ -26,7 +26,7 @@ pub async fn start() -> Result<()> {
             if path_name.to_str().unwrap().contains(&installed_version) {
                 versions += &format!("{}(installed)", path_name.to_str().unwrap());
             } else {
-                versions += &format!("{}", path_name.to_str().unwrap());
+                versions += path_name.to_str().unwrap()
             }
             first = false;
         }

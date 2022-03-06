@@ -1,6 +1,6 @@
 use super::{ls_handler, use_handler};
 use anyhow::{anyhow, Result};
-use clap::{arg, AppSettings, Command};
+use clap::{arg, Command};
 
 pub async fn start() -> Result<()> {
     let app = Command::new("bob")

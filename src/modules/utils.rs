@@ -2,7 +2,6 @@ use crate::models::StableVersion;
 use anyhow::{anyhow, Result};
 use regex::Regex;
 use reqwest::Client;
-use std::future::Future;
 use std::path::{Path, PathBuf};
 use tokio::process::Command;
 
