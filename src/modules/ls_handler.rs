@@ -15,20 +15,23 @@ pub async fn start() -> Result<()> {
     };
     let mut first = true;
     for path in paths {
-        let path_name = path.unwrap().file_name();
-        if !first {
-            if path_name.to_str().unwrap().contains(&installed_version) {
-                versions += &format!(", {}(installed)", path_name.to_str().unwrap());
+        let path = path.unwrap().path();
+        let path_name = path.file_name().unwrap();
+        if path.is_dir() {
+            if !first {
+                if path_name.to_str().unwrap().contains(&installed_version) {
+                    versions += &format!(", {}(installed)", path_name.to_str().unwrap());
+                } else {
+                    versions += &format!(", {}", path_name.to_str().unwrap());
+                }
             } else {
-                versions += &format!(", {}", path_name.to_str().unwrap());
+                if path_name.to_str().unwrap().contains(&installed_version) {
+                    versions += &format!("{}(installed)", path_name.to_str().unwrap());
+                } else {
+                    versions += path_name.to_str().unwrap()
+                }
+                first = false;
             }
-        } else {
-            if path_name.to_str().unwrap().contains(&installed_version) {
-                versions += &format!("{}(installed)", path_name.to_str().unwrap());
-            } else {
-                versions += path_name.to_str().unwrap()
-            }
-            first = false;
         }
     }
     println!("{versions}");
