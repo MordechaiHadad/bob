@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize)]
-pub struct StableVersion {
+pub struct Version {
     pub tag_name: String,
+    pub published_at: String,
 }
 
 #[derive(Clone)]
