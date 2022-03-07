@@ -53,7 +53,7 @@ pub async fn get_downloads_folder() -> Result<PathBuf> {
     Ok(PathBuf::from(path_string))
 }
 
-pub async fn does_folder_exist(directory: &str, path: &Path) -> bool {
+pub async fn is_version_installed(directory: &str, path: &Path) -> bool {
     let path = path.to_owned();
     let paths = tokio::task::spawn_blocking(move || std::fs::read_dir(path).unwrap())
         .await
@@ -80,7 +80,7 @@ pub fn get_file_type() -> &'static str {
     }
 }
 
-pub async fn is_version_installed(version: &str) -> bool {
+pub async fn is_version_used(version: &str) -> bool {
     let installed_version = match get_current_version().await {
         None => return false,
         Some(value) => value,

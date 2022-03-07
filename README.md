@@ -21,6 +21,8 @@ Install [rustup](https://www.rust-lang.org/tools/install)
 
 ## :question: Usage
 - `bob use |nightly|stable|<version-string>|`
+- `bob install |nightly|stable|<version-string>|`
+- `bob uninstall |nightly|stable|<version-string>|`
 - `bob ls`
 
 A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
