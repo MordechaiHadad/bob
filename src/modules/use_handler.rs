@@ -1,5 +1,5 @@
 use super::utils;
-use crate::models::DownloadedVersion;
+use crate::models::{DownloadedVersion, Version};
 use crate::modules::expand_archive;
 use anyhow::{anyhow, Result};
 use clap::ArgMatches;
@@ -35,24 +35,42 @@ pub async fn start(command: &ArgMatches) -> Result<()> {
         return Ok(());
     }
 
-    let mut does_folder_exist = utils::does_folder_exist(&version, root).await;
-    if version == "nightly" && does_folder_exist {
-        fs::remove_dir_all(format!("{}/nightly", root.display())).await?;
-        does_folder_exist = false;
-    }
+    let nightly_version = if version == "nightly" {
+        let response = client
+            .get("https://api.github.com/repos/neovim/neovim/releases/tags/nightly")
+            .header("user-agent", "bob")
+            .header("Accept", "application/vnd.github.v3+json")
+            .send()
+            .await?
+            .text()
+            .await?;
+        let nightly: Version = serde_json::from_str(&response)?;
+            if let Ok(file) = fs::read_to_string("nightly/bob.json").await {
+                let file_json: Version = serde_json::from_str(&file)?;
+                if nightly.published_at != file_json.published_at {
+                    fs::remove_dir_all(format!("{}/nightly", root.display())).await?;
+                }
+            }
+        Some(nightly)
+    } else {
+        None
+    };
 
+    let does_folder_exist = utils::does_folder_exist(&version, root).await;
     if !does_folder_exist {
         let downloaded_file = match download_version(&client, &version, root).await {
             Ok(value) => value,
             Err(error) => return Err(anyhow!(error)),
         };
-        if cfg!(target_os = "macos") {
-            "nvim-macos"
-        } else {
-            "nvim-linux64"
-        };
         if let Err(error) = expand_archive::start(downloaded_file).await {
             return Err(anyhow!(error));
+        }
+
+        if let Some(nightly_version) = nightly_version {
+            let nightly_string = serde_json::to_string(&nightly_version)?;
+            let mut file = fs::File::create("nightly/bob.json").await?;
+            file.write(nightly_string.as_bytes()).await?;
+
         }
     }
 

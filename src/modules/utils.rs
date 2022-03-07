@@ -1,4 +1,4 @@
-use crate::models::StableVersion;
+use crate::models::Version;
 use anyhow::{anyhow, Result};
 use regex::Regex;
 use reqwest::Client;
@@ -18,7 +18,7 @@ pub async fn parse_version(client: &Client, version: &str) -> Result<String> {
                 .text()
                 .await?;
 
-            let latest: StableVersion = serde_json::from_str(response.as_str())?;
+            let latest: Version = serde_json::from_str(&response)?;
 
             Ok(latest.tag_name)
         }
