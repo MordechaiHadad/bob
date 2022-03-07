@@ -5,10 +5,10 @@ use crate::modules::{install_handler, utils};
 use tokio::fs;
 
 pub async fn start(version: &str, client: &Client) -> Result<()> {
-    if let Err(error) = install_handler::start(&version, &client, true).await {
+    if let Err(error) = install_handler::start(version, client, true).await {
         return Err(anyhow!(error));
     }
-    if let Err(error) = link_version(&version).await {
+    if let Err(error) = link_version(version).await {
         return Err(anyhow!(error));
     }
     println!("You can now open neovim");

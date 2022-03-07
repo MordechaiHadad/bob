@@ -2,7 +2,6 @@ use super::utils;
 use crate::models::{DownloadedVersion, Version};
 use crate::modules::expand_archive;
 use anyhow::{anyhow, Result};
-use clap::ArgMatches;
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
@@ -41,13 +40,13 @@ pub async fn start(version: &str, client: &Client, via_use: bool) -> Result<()> 
         None
     };
 
-    let is_version_installed = utils::is_version_installed(&version, root).await;
+    let is_version_installed = utils::is_version_installed(version, root).await;
     if !via_use && is_version_installed {
         println!("{version} is already installed");
         return Ok(());
     }
     if !is_version_installed {
-        let downloaded_file = match download_version(&client, &version, root).await {
+        let downloaded_file = match download_version(client, version, root).await {
             Ok(value) => value,
             Err(error) => return Err(anyhow!(error)),
         };
@@ -107,7 +106,7 @@ async fn download_version(
                 ));
 
                 Ok(DownloadedVersion {
-                    file_name: String::from(version.clone()),
+                    file_name: String::from(version),
                     file_format: file_type.to_string(),
                     path: root.display().to_string(),
                 })
