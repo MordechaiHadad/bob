@@ -1,5 +1,5 @@
 use crate::models::DownloadedVersion;
-use anyhow::{Result};
+use anyhow::Result;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::cmp::min;
 use std::fs::File;
