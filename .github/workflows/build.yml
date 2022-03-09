@@ -1,0 +1,76 @@
+# Using neosh's ci https://github.com/neo-sh/neosh/blob/main/.github/workflows/build.yml
+name: Build
+on: [push, pull_request]
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - name: Build Bob
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --profile optimized
+      - name: Upload Bob Linux binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: "bob-linux-x86_64"
+          path: "target/optimized/bob"
+          if-no-files-found: error
+          retention-days: 7
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - name: Build Bob
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --profile optimized
+      - name: Upload Bob MacOS binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: "bob-macos-x86_64"
+          path: "target/optimized/bob"
+          if-no-files-found: error
+          retention-days: 7
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - name: Build Bob
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --profile optimized
+      - name: Upload Bob Windows binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: "bob-windows-x86_64.exe"
+          path: "target\\optimized\\bob.exe"
+          if-no-files-found: error
+          retention-days: 7
