@@ -26,3 +26,7 @@ zip = "0.5"
 [target.'cfg(unix)'.dependencies]
 tar = "0.4"
 flate2 = "1.0"
+
+[profile.optimized]
+inherits = "release"
+opt-level = "z"
