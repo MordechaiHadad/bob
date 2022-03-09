@@ -1,8 +1,7 @@
-use crate::models::StableVersion;
+use crate::models::Version;
 use anyhow::{anyhow, Result};
 use regex::Regex;
 use reqwest::Client;
-use std::future::Future;
 use std::path::{Path, PathBuf};
 use tokio::process::Command;
 
@@ -19,7 +18,7 @@ pub async fn parse_version(client: &Client, version: &str) -> Result<String> {
                 .text()
                 .await?;
 
-            let latest: StableVersion = serde_json::from_str(response.as_str())?;
+            let latest: Version = serde_json::from_str(&response)?;
 
             Ok(latest.tag_name)
         }
@@ -54,7 +53,7 @@ pub async fn get_downloads_folder() -> Result<PathBuf> {
     Ok(PathBuf::from(path_string))
 }
 
-pub async fn does_folder_exist(directory: &str, path: &Path) -> bool {
+pub async fn is_version_installed(directory: &str, path: &Path) -> bool {
     let path = path.to_owned();
     let paths = tokio::task::spawn_blocking(move || std::fs::read_dir(path).unwrap())
         .await
@@ -81,7 +80,7 @@ pub fn get_file_type() -> &'static str {
     }
 }
 
-pub async fn is_version_installed(version: &str) -> bool {
+pub async fn is_version_used(version: &str) -> bool {
     let installed_version = match get_current_version().await {
         None => return false,
         Some(value) => value,
@@ -100,7 +99,7 @@ pub async fn get_current_version() -> Option<String> {
     };
     let output = String::from_utf8_lossy(&*output.stdout).to_string();
     if output.contains("dev") {
-        return Some(String::from("nightly"))
+        return Some(String::from("nightly"));
     }
     let regex = Regex::new(r"v[0-9]\.[0-9]\.[0-9]").unwrap();
     Some(regex.find(output.as_str()).unwrap().as_str().to_owned())

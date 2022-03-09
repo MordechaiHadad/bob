@@ -16,12 +16,13 @@ Install [rustup](https://www.rust-lang.org/tools/install)
 
 ## :wrench: Installation
 ### Install from source
-1. `git clone https://github.com/MordechaiHadad/bob.git`
-2. `cd bob && cargo install --path .`
-4. Run bob with `bob`
+1. `cargo install --git https://github.com/MordechaiHadad/bob.git`
+2. Run bob with `bob`
 
 ## :question: Usage
 - `bob use |nightly|stable|<version-string>|`
+- `bob install |nightly|stable|<version-string>|`
+- `bob uninstall |nightly|stable|<version-string>|`
 - `bob ls`
 
 A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
