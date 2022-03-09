@@ -5,11 +5,18 @@ extern crate core;
 
 use anyhow::{anyhow, Result};
 use std::process::exit;
+use tracing_subscriber;
+use tracing::{error, Level};
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let collector = tracing_subscriber::fmt()
+        .with_target(false)
+        .with_max_level(Level::INFO)
+        .finish();
+    tracing::subscriber::set_global_default(collector)?;
     if let Err(error) = run().await {
-        eprintln!("Error: {error}");
+        error!("Error: {error}");
         exit(1);
     }
     Ok(())

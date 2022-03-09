@@ -10,6 +10,7 @@ use std::env;
 use std::path::Path;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
+use tracing::info;
 
 pub async fn start(version: &str, client: &Client, via_use: bool) -> Result<()> {
     let root = match utils::get_downloads_folder().await {
@@ -42,7 +43,7 @@ pub async fn start(version: &str, client: &Client, via_use: bool) -> Result<()> 
 
     let is_version_installed = utils::is_version_installed(version, root).await;
     if !via_use && is_version_installed {
-        println!("{version} is already installed");
+        info!("{version} is already installed");
         return Ok(());
     }
     if !is_version_installed {
@@ -60,7 +61,7 @@ pub async fn start(version: &str, client: &Client, via_use: bool) -> Result<()> 
             file.write(nightly_string.as_bytes()).await?;
         }
         if !via_use {
-            println!("Successfully installed version: {version}");
+            info!("Successfully installed version: {version}");
         }
     }
 

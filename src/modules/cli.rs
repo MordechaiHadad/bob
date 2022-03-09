@@ -3,6 +3,7 @@ use crate::modules::{uninstall_handler, use_handler, utils};
 use anyhow::{anyhow, Result};
 use clap::{arg, Command};
 use reqwest::Client;
+use tracing::info;
 
 pub async fn start() -> Result<()> {
     let app = Command::new("bob")
@@ -37,7 +38,7 @@ pub async fn start() -> Result<()> {
                 };
 
                 if utils::is_version_used(&version).await {
-                    println!("{version} is already installed and used");
+                    info!("{version} is already installed and used");
                     return Ok(());
                 }
 
@@ -60,6 +61,7 @@ pub async fn start() -> Result<()> {
             }
         }
         Some(("uninstall", subcommand)) => {
+            info!("Starting uninstallation process");
             if let Err(error) = uninstall_handler::start(subcommand).await {
                 return Err(anyhow!(error));
             }

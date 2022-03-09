@@ -3,6 +3,7 @@ use anyhow::{anyhow, Result};
 use reqwest::Client;
 use crate::modules::{install_handler, utils};
 use tokio::fs;
+use tracing::info;
 
 pub async fn start(version: &str, client: &Client) -> Result<()> {
     if let Err(error) = install_handler::start(version, client, true).await {
@@ -11,7 +12,7 @@ pub async fn start(version: &str, client: &Client) -> Result<()> {
     if let Err(error) = link_version(version).await {
         return Err(anyhow!(error));
     }
-    println!("You can now open neovim");
+    info!("You can now open neovim");
     Ok(())
 }
 
@@ -38,8 +39,8 @@ async fn link_version(version: &str) -> Result<()> {
                 "nvim-win64"
             };
 
-           if let Err(_) = symlink_dir(format!("{base_path}/{base_dir}"),
-               format!("{}/neovim", installation_dir.display())) {
+           if symlink_dir(format!("{base_path}/{base_dir}"),
+               format!("{}/neovim", installation_dir.display())).is_err() {
                    return Err(anyhow!("Please restart this application as admin to complete the installation."));
                }
         } else {
@@ -54,10 +55,10 @@ async fn link_version(version: &str) -> Result<()> {
         }
     }
 
-    println!("Linked {version} to {}/neovim", installation_dir.display());
+    info!("Linked {version} to {}/neovim", installation_dir.display());
 
     if !utils::is_version_used(version).await {
-        println!(
+        info!(
             "Add {}/neovim/bin to PATH to complete this installation",
             installation_dir.display()
         ); // TODO: do this automatically
