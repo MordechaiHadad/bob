@@ -5,7 +5,6 @@ extern crate core;
 
 use anyhow::{anyhow, Result};
 use std::process::exit;
-use tracing_subscriber;
 use tracing::{error, Level};
 
 #[tokio::main]
