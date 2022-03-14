@@ -45,8 +45,6 @@ async fn link_version(version: &str) -> Result<()> {
                }
         } else {
             use std::os::unix::fs::symlink;
-            println!("Starting linking process");
-
             let folder_name = utils::get_platform_name();
 
             if let Err(error) = symlink(format!("{base_path}/{folder_name}"), format!("{}/neovim", installation_dir.display())) {
