@@ -42,13 +42,11 @@ pub async fn get_downloads_folder() -> Result<PathBuf> {
         None => return Err(anyhow!("Couldn't get local data folder")),
         Some(value) => value,
     };
-    let path_string = format!("{}/bob", data_dir.to_str().unwrap());
-    let does_folder_exist = tokio::fs::metadata(path_string.clone()).await.is_ok();
+    let path_string = &format!("{}/bob", data_dir.to_str().unwrap());
+    let does_folder_exist = tokio::fs::metadata(path_string).await.is_ok();
 
-    if !does_folder_exist {
-        if let Err(error) = tokio::fs::create_dir(path_string.clone()).await {
-            return Err(anyhow!(error));
-        }
+    if !does_folder_exist &&  tokio::fs::create_dir(path_string).await.is_err(){
+            return Err(anyhow!("Couldn't create downloads directory"));
     }
     Ok(PathBuf::from(path_string))
 }
