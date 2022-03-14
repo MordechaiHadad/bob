@@ -10,7 +10,7 @@ use std::env;
 use std::path::Path;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
-use tracing::{error, info};
+use tracing::info;
 
 pub async fn start(version: &str, client: &Client, via_use: bool) -> Result<()> {
     let root = match utils::get_downloads_folder().await {
@@ -50,7 +50,6 @@ pub async fn start(version: &str, client: &Client, via_use: bool) -> Result<()> 
         let downloaded_file = match download_version(client, version, root).await {
             Ok(value) => value,
             Err(error) => {
-                error!("Failed to download file");
                 return Err(anyhow!(error))},
         };
         if let Err(error) = expand_archive::start(downloaded_file).await {
