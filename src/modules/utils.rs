@@ -84,10 +84,7 @@ pub async fn is_version_used(version: &str) -> bool {
         Some(value) => value,
     };
 
-    if installed_version.contains(version) {
-        return true;
-    }
-    false
+    installed_version.contains(version)
 }
 
 pub async fn get_current_version() -> Option<String> {
