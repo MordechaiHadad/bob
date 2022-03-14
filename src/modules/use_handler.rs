@@ -29,6 +29,7 @@ async fn link_version(version: &str) -> Result<()> {
     }
 
     let base_path = &format!("{}/{}", env::current_dir().unwrap().display(), version);
+    info!("Starting linking process");
 
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
@@ -51,7 +52,7 @@ async fn link_version(version: &str) -> Result<()> {
                 "nvim-linux64"
             };
             if let Err(error) = symlink(format!("{base_path}/{folder_name}"), format!("{}/neovim", installation_dir.display())) {
-                return Err(anyhow!(error))
+                return Err(anyhow!(format!("Couldn't find {base_path}/{folder_name}")))
             }
         }
     }
