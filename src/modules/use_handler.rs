@@ -47,9 +47,9 @@ async fn link_version(version: &str) -> Result<()> {
         } else {
             use std::os::unix::fs::symlink;
             let folder_name = if cfg!(target_os = "macos") {
+                info!("Starting linking process: {base_path}/nvim-osx64");
                 "nvim-osx64"
             } else {
-                info!("Starting linking process: {base_path}/nvim-osx64");
                 "nvim-linux64"
             };
             if let Err(error) = symlink(format!("{base_path}/{folder_name}"), format!("{}/neovim", installation_dir.display())) {
