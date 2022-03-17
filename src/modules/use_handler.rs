@@ -19,6 +19,7 @@ pub async fn start(version: &str, client: &Client) -> Result<()> {
 async fn link_version(version: &str) -> Result<()> {
     use dirs::data_dir;
 
+    info!("Preparing for linking process");
     let installation_dir = match data_dir() {
         None => return Err(anyhow!("Couldn't get data dir")),
         Some(value) => value,
@@ -29,7 +30,6 @@ async fn link_version(version: &str) -> Result<()> {
     }
 
     let base_path = &format!("{}/{}", env::current_dir().unwrap().display(), version);
-    info!("Starting linking process");
 
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
@@ -49,6 +49,7 @@ async fn link_version(version: &str) -> Result<()> {
             let folder_name = if cfg!(target_os = "macos") {
                 "nvim-osx64"
             } else {
+                info!("Starting linking process: {base_path}/nvim-osx64");
                 "nvim-linux64"
             };
             if let Err(error) = symlink(format!("{base_path}/{folder_name}"), format!("{}/neovim", installation_dir.display())) {
