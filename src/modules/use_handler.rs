@@ -19,7 +19,6 @@ pub async fn start(version: &str, client: &Client) -> Result<()> {
 async fn link_version(version: &str) -> Result<()> {
     use dirs::data_dir;
 
-    info!("Preparing for linking process");
     let installation_dir = match data_dir() {
         None => return Err(anyhow!("Couldn't get data dir")),
         Some(value) => value,
@@ -29,7 +28,13 @@ async fn link_version(version: &str) -> Result<()> {
         fs::remove_dir_all(format!("{}/neovim", installation_dir.display())).await?;
     }
 
-    let base_path = &format!("{}/{}", env::current_dir().unwrap().display(), version);
+    let current_dir = match env::current_dir() {
+        Ok(value) => value,
+        Err(_) => return Err(anyhow!("Couldn't get current environment directory"))
+    };
+
+    let base_path = &format!("{}/{}", current_dir.display(), version);
+    info!("Preparing to install from {base_path}");
 
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
