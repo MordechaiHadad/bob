@@ -2,7 +2,7 @@ use crate::models::Version;
 use anyhow::{anyhow, Result};
 use regex::Regex;
 use reqwest::Client;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tokio::process::Command;
 
 pub async fn parse_version(client: &Client, version: &str) -> Result<String> {
@@ -42,34 +42,13 @@ pub async fn get_downloads_folder() -> Result<PathBuf> {
         None => return Err(anyhow!("Couldn't get local data folder")),
         Some(value) => value,
     };
-    let path_string = format!("{}/bob", data_dir.to_str().unwrap());
-    let does_folder_exist = tokio::fs::metadata(path_string.clone()).await.is_ok();
+    let path_string = &format!("{}/bob", data_dir.to_str().unwrap());
+    let does_folder_exist = tokio::fs::metadata(path_string).await.is_ok();
 
-    if !does_folder_exist {
-        if let Err(error) = tokio::fs::create_dir(path_string.clone()).await {
-            return Err(anyhow!(error));
-        }
+    if !does_folder_exist &&  tokio::fs::create_dir(path_string).await.is_err(){
+            return Err(anyhow!("Couldn't create downloads directory"));
     }
     Ok(PathBuf::from(path_string))
-}
-
-pub async fn is_version_installed(directory: &str, path: &Path) -> bool {
-    let path = path.to_owned();
-    let paths = tokio::task::spawn_blocking(move || std::fs::read_dir(path).unwrap())
-        .await
-        .unwrap();
-    for path in paths {
-        if path
-            .unwrap()
-            .file_name()
-            .to_str()
-            .unwrap()
-            .contains(directory)
-        {
-            return true;
-        }
-    }
-    false
 }
 
 pub fn get_file_type() -> &'static str {
@@ -86,10 +65,7 @@ pub async fn is_version_used(version: &str) -> bool {
         Some(value) => value,
     };
 
-    if installed_version.contains(version) {
-        return true;
-    }
-    false
+    installed_version.contains(version)
 }
 
 pub async fn get_current_version() -> Option<String> {
