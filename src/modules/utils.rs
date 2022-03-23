@@ -2,9 +2,8 @@ use crate::models::Version;
 use anyhow::{anyhow, Result};
 use regex::Regex;
 use reqwest::Client;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tokio::process::Command;
-use tracing::info;
 
 pub async fn parse_version(client: &Client, version: &str) -> Result<String> {
     match version {
