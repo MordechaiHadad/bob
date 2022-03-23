@@ -53,11 +53,11 @@ pub async fn get_downloads_folder() -> Result<PathBuf> {
 }
 
 pub async fn is_version_installed(directory: &str, path: &Path) -> bool {
-    let path = path.to_owned();
+    let pathbuf = path.to_owned();
     info!("Executing is_version_installed");
-    if path.exists()
+    if pathbuf.exists()
     {
-        let paths = tokio::task::spawn_blocking(move || std::fs::read_dir(path).unwrap())
+        let paths = tokio::task::spawn_blocking(move || std::fs::read_dir(pathbuf).unwrap())
             .await
             .unwrap();
         for path in paths {
