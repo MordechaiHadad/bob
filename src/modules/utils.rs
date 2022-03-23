@@ -52,30 +52,6 @@ pub async fn get_downloads_folder() -> Result<PathBuf> {
     Ok(PathBuf::from(path_string))
 }
 
-pub async fn is_version_installed(directory: &str, path: &Path) -> bool {
-    let pathbuf = path.to_owned();
-    info!("Executing is_version_installed");
-    if pathbuf.exists()
-    {
-        let paths = tokio::task::spawn_blocking(move || std::fs::read_dir(pathbuf).unwrap())
-            .await
-            .unwrap();
-        for path in paths {
-            if path
-                .unwrap()
-                .file_name()
-                .to_str()
-                .unwrap()
-                .contains(directory)
-            {
-                return true;
-            }
-        }
-    }
-    info!("{} Does not exist", path.display());
-    false
-}
-
 pub fn get_file_type() -> &'static str {
     if cfg!(target_family = "windows") {
         "zip"

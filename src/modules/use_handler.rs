@@ -24,7 +24,8 @@ async fn link_version(version: &str) -> Result<()> {
         Some(value) => value,
     };
 
-    if utils::is_version_installed("neovim", installation_dir.as_path()).await {
+    if fs::metadata(format!("{}/neovim", installation_dir.display())).await.is_ok() {
+        info!("Deleting existing neovim link");
         fs::remove_dir_all(format!("{}/neovim", installation_dir.display())).await?;
     }
 
