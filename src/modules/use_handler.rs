@@ -25,17 +25,12 @@ async fn link_version(version: &str) -> Result<()> {
     };
 
     if fs::metadata(format!("{}/neovim", installation_dir.display())).await.is_ok() {
-        info!("Deleting existing neovim link");
         fs::remove_dir_all(format!("{}/neovim", installation_dir.display())).await?;
     }
 
-    let current_dir = match env::current_dir() {
-        Ok(value) => value,
-        Err(_) => return Err(anyhow!("Couldn't get current environment directory"))
-    };
+    let current_dir = env::current_dir()?;
 
     let base_path = &format!("{}/{}", current_dir.display(), version);
-    info!("Preparing to install from {base_path}");
 
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
@@ -53,7 +48,6 @@ async fn link_version(version: &str) -> Result<()> {
         } else {
             use std::os::unix::fs::symlink;
             let folder_name = if cfg!(target_os = "macos") {
-                info!("Starting linking process: {base_path}/nvim-osx64");
                 "nvim-osx64"
             } else {
                 "nvim-linux64"
