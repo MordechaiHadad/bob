@@ -24,11 +24,13 @@ async fn link_version(version: &str) -> Result<()> {
         Some(value) => value,
     };
 
-    if utils::is_version_installed("neovim", installation_dir.as_path()).await {
+    if fs::metadata(format!("{}/neovim", installation_dir.display())).await.is_ok() {
         fs::remove_dir_all(format!("{}/neovim", installation_dir.display())).await?;
     }
 
-    let base_path = &format!("{}/{}", env::current_dir().unwrap().display(), version);
+    let current_dir = env::current_dir()?;
+
+    let base_path = &format!("{}/{}", current_dir.display(), version);
 
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
@@ -45,12 +47,13 @@ async fn link_version(version: &str) -> Result<()> {
                }
         } else {
             use std::os::unix::fs::symlink;
-            println!("Starting linking process");
-
-            let folder_name = utils::get_platform_name();
-
+            let folder_name = if cfg!(target_os = "macos") {
+                "nvim-osx64"
+            } else {
+                "nvim-linux64"
+            };
             if let Err(error) = symlink(format!("{base_path}/{folder_name}"), format!("{}/neovim", installation_dir.display())) {
-                return Err(anyhow!(error))
+                return Err(anyhow!(format!("Couldn't find {base_path}/{folder_name}")))
             }
         }
     }
