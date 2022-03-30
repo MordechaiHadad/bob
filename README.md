@@ -11,6 +11,7 @@ Cross-Platform, fast, lightweight and 0 dependencies.
 Make sure you don't have neovim already installed via other ways e.g. package manager.
 <details>
 <summary>When building from source</summary>
+
 Install [rustup](https://www.rust-lang.org/tools/install)
 </details>
 
