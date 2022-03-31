@@ -4,7 +4,6 @@ use reqwest::Client;
 use crate::modules::{install_handler, utils};
 use tokio::fs;
 use tracing::info;
-use winreg::RegKey;
 
 pub async fn start(version: &str, client: &Client) -> Result<()> {
     if let Err(error) = install_handler::start(version, client, true).await {
@@ -36,7 +35,7 @@ async fn link_version(version: &str) -> Result<()> {
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
            use std::os::windows::fs::symlink_dir;
-            use winreg::enums::*;
+            use winreg::RegKey;
 
             let base_dir = if fs::metadata(&format!("{base_path}/Neovim")).await.is_ok() {
                 "Neovim"
