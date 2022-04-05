@@ -1,5 +1,6 @@
 use crate::models::Version;
 use anyhow::{anyhow, Result};
+use dirs::data_local_dir;
 use regex::Regex;
 use reqwest::Client;
 use std::path::PathBuf;
@@ -37,7 +38,6 @@ pub async fn parse_version(client: &Client, version: &str) -> Result<String> {
 }
 
 pub async fn get_downloads_folder() -> Result<PathBuf> {
-    use dirs::data_local_dir;
     let data_dir = match data_local_dir() {
         None => return Err(anyhow!("Couldn't get local data folder")),
         Some(value) => value,
@@ -45,10 +45,27 @@ pub async fn get_downloads_folder() -> Result<PathBuf> {
     let path_string = &format!("{}/bob", data_dir.to_str().unwrap());
     let does_folder_exist = tokio::fs::metadata(path_string).await.is_ok();
 
-    if !does_folder_exist &&  tokio::fs::create_dir(path_string).await.is_err(){
-            return Err(anyhow!("Couldn't create downloads directory"));
+    if !does_folder_exist && tokio::fs::create_dir(path_string).await.is_err() {
+        return Err(anyhow!("Couldn't create downloads directory"));
     }
     Ok(PathBuf::from(path_string))
+}
+
+pub fn get_install_folder() -> Result<PathBuf> {
+    cfg_if::cfg_if! {
+        if #[cfg(windows)] {
+            let data_dir = match data_local_dir() {
+                None => return Err(anyhow!("Couldn't get local data folder")),
+                Some(value) => value,
+            };
+
+            let full_path = &format!("{}\\neovim", data_dir.to_str().unwrap());
+
+            Ok(PathBuf::from(full_path))
+        } else {
+            Ok(PathBuf::from("/usr/local/bin"))
+        }
+    }
 }
 
 pub fn get_file_type() -> &'static str {
