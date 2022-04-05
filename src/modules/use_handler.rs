@@ -51,7 +51,7 @@ async fn link_version(version: &str) -> Result<()> {
             } else {
                 "nvim-linux64"
             };
-            if let Err(error) = symlink(format!("{base_path}/{folder_name}/nvim"), format!("{}/nvim", installation_dir.display())) {
+            if let Err(error) = symlink(format!("{base_path}/{folder_name}/bin/nvim"), format!("{}/nvim", installation_dir.display())) {
                 return Err(anyhow!(format!("Couldn't find {base_path}/{folder_name}/nvim")))
             }
         }
