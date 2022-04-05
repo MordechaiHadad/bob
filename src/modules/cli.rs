@@ -28,8 +28,7 @@ pub async fn start() -> Result<()> {
     let matches = app.get_matches();
 
     match matches.subcommand() {
-        Some(("use", subcommand))
-        | Some(("install", subcommand)) => {
+        Some(("use", subcommand)) | Some(("install", subcommand)) => {
             let client = Client::new();
             if let Some(value) = subcommand.value_of("VERSION") {
                 let version = match utils::parse_version(&client, value).await {
@@ -47,7 +46,6 @@ pub async fn start() -> Result<()> {
                         if let Err(error) = use_handler::start(&version, &client).await {
                             return Err(anyhow!(error));
                         }
-
                     }
                     "install" => {
                         if let Err(error) = install_handler::start(&version, &client, false).await {
@@ -56,8 +54,6 @@ pub async fn start() -> Result<()> {
                     }
                     _ => (),
                 }
-
-
             }
         }
         Some(("uninstall", subcommand)) => {

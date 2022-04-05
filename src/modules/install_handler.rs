@@ -41,7 +41,9 @@ pub async fn start(version: &str, client: &Client, via_use: bool) -> Result<()> 
         None
     };
 
-    let is_version_installed = fs::metadata(format!("{}/{version}", root.display())).await.is_ok();
+    let is_version_installed = fs::metadata(format!("{}/{version}", root.display()))
+        .await
+        .is_ok();
     if !via_use && is_version_installed {
         info!("{version} is already installed");
         return Ok(());
@@ -49,8 +51,7 @@ pub async fn start(version: &str, client: &Client, via_use: bool) -> Result<()> 
     if !is_version_installed {
         let downloaded_file = match download_version(client, version, root).await {
             Ok(value) => value,
-            Err(error) => {
-                return Err(anyhow!(error))},
+            Err(error) => return Err(anyhow!(error)),
         };
         if let Err(error) = expand_archive::start(downloaded_file).await {
             return Err(anyhow!(error));
