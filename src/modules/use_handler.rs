@@ -1,3 +1,4 @@
+use crate::enums::InstallResult;
 use crate::modules::{install_handler, utils};
 use anyhow::{anyhow, Result};
 use reqwest::Client;
@@ -6,13 +7,30 @@ use tokio::fs;
 use tracing::info;
 
 pub async fn start(version: &str, client: &Client) -> Result<()> {
-    if let Err(error) = install_handler::start(version, client, true).await {
-        return Err(anyhow!(error));
+
+    let is_version_used = utils::is_version_used(version).await;
+    if  is_version_used && version != "nightly" {
+        info!("{version} is already installed and used!");
+        return Ok(());
     }
+
+    match install_handler::start(version, client, true).await {
+        Ok(success) => {
+            if let InstallResult::NightlyIsUpdated = success {
+                if is_version_used {
+                    info!("Nightly is already updated and used!");
+                    return Ok(());
+                }
+            }
+        }
+        Err(error) => return Err(error),
+    }
+
     if let Err(error) = link_version(version).await {
-        return Err(anyhow!(error));
+        return Err(error);
     }
-    info!("Neovim has successfully installed!");
+    info!("You can now use {version}!");
+
     Ok(())
 }
 
@@ -25,14 +43,15 @@ async fn link_version(version: &str) -> Result<()> {
 
     let base_path = &format!("{}/{}", current_dir.display(), version);
 
+    if fs::metadata(&installation_dir).await.is_ok() {
+        fs::remove_dir_all(&installation_dir).await?;
+    }
+
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
            use std::os::windows::fs::symlink_dir;
             use winreg::RegKey;
 
-            if fs::metadata(&installation_dir).await.is_ok() {
-                fs::remove_dir_all(&installation_dir).await?;
-            }
 
             let base_dir = if fs::metadata(&format!("{base_path}/Neovim")).await.is_ok() {
                 "Neovim"
@@ -51,7 +70,7 @@ async fn link_version(version: &str) -> Result<()> {
             } else {
                 "nvim-linux64"
             };
-            if let Err(error) = symlink(format!("{base_path}/{folder_name}/bin/nvim"), format!("{}/nvim", installation_dir.display())) {
+            if let Err(error) = symlink(format!("{base_path}/{folder_name}"), &installation_dir) {
                 return Err(anyhow!(error))
             }
         }
@@ -71,6 +90,8 @@ async fn link_version(version: &str) -> Result<()> {
                     format!("{usr_path};{}\\bin", installation_dir.display())
                 };
                 env.set_value("Path", &new_path)?;
+            } else {
+                info!("Please add {} to PATH", installation_dir.display());
             }
         }
     }
