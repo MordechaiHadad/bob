@@ -1,6 +1,6 @@
 use super::utils;
 use crate::enums::InstallResult;
-use crate::models::{DownloadedVersion, Version};
+use crate::models::DownloadedVersion;
 use crate::modules::expand_archive;
 use anyhow::{anyhow, Result};
 use futures_util::stream::StreamExt;

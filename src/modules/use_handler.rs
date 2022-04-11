@@ -7,9 +7,8 @@ use tokio::fs;
 use tracing::info;
 
 pub async fn start(version: &str, client: &Client) -> Result<()> {
-
     let is_version_used = utils::is_version_used(version).await;
-    if  is_version_used && version != "nightly" {
+    if is_version_used && version != "nightly" {
         info!("{version} is already installed and used!");
         return Ok(());
     }
