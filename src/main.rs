@@ -1,6 +1,6 @@
+mod enums;
 mod models;
 mod modules;
-mod enums;
 
 extern crate core;
 
