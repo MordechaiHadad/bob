@@ -33,13 +33,8 @@ pub async fn start() -> Result<()> {
             if let Some(value) = subcommand.value_of("VERSION") {
                 let version = match utils::parse_version(&client, value).await {
                     Ok(version) => version,
-                    Err(error) => return Err(anyhow!(error)),
+                    Err(error) => return Err(error),
                 };
-
-                if utils::is_version_used(&version).await {
-                    info!("{version} is already installed and used");
-                    return Ok(());
-                }
 
                 match matches.subcommand_name().unwrap() {
                     "use" => {

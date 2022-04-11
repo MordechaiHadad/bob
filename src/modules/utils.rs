@@ -4,7 +4,7 @@ use dirs::data_local_dir;
 use regex::Regex;
 use reqwest::Client;
 use std::path::PathBuf;
-use tokio::process::Command;
+use tokio::{fs, process::Command};
 
 pub async fn parse_version(client: &Client, version: &str) -> Result<String> {
     match version {
@@ -52,18 +52,19 @@ pub async fn get_downloads_folder() -> Result<PathBuf> {
 }
 
 pub fn get_install_folder() -> Result<PathBuf> {
+    let data_dir = match data_local_dir() {
+        None => return Err(anyhow!("Couldn't get local data folder")),
+        Some(value) => value,
+    };
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
-            let data_dir = match data_local_dir() {
-                None => return Err(anyhow!("Couldn't get local data folder")),
-                Some(value) => value,
-            };
 
             let full_path = &format!("{}\\neovim", data_dir.to_str().unwrap());
 
             Ok(PathBuf::from(full_path))
         } else {
-            Ok(PathBuf::from("/usr/local/bin"))
+            let full_path = &format!("{}/neovim", data_dir.to_str().unwrap());
+            Ok(PathBuf::from(full_path))
         }
     }
 }
@@ -74,6 +75,13 @@ pub fn get_file_type() -> &'static str {
     } else {
         "tar.gz"
     }
+}
+
+pub async fn is_version_installed(version: &str) -> bool {
+    let downloads_dir = get_downloads_folder().await.unwrap();
+    fs::metadata(format!("{}/{version}", downloads_dir.display()))
+        .await
+        .is_ok()
 }
 
 pub async fn is_version_used(version: &str) -> bool {
@@ -105,5 +113,31 @@ pub fn get_platform_name() -> &'static str {
         "nvim-macos"
     } else {
         "nvim-linux64"
+    }
+}
+
+pub async fn get_upstream_nightly(client: &Client) -> Version {
+    let response = client
+        .get("https://api.github.com/repos/neovim/neovim/releases/tags/nightly")
+        .header("user-agent", "bob")
+        .header("Accept", "application/vnd.github.v3+json")
+        .send()
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    serde_json::from_str(&response).unwrap()
+}
+
+pub async fn get_local_nightly() -> Result<Version> {
+    let downloads_dir = get_downloads_folder().await.unwrap();
+    if let Ok(file) =
+        fs::read_to_string(format!("{}/nightly/bob.json", downloads_dir.display())).await
+    {
+        let file_json: Version = serde_json::from_str(&file).unwrap();
+        Ok(file_json)
+    } else {
+        Err(anyhow!("Couldn't find bob.json"))
     }
 }

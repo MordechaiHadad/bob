@@ -1,4 +1,5 @@
 use super::utils;
+use crate::enums::InstallResult;
 use crate::models::{DownloadedVersion, Version};
 use crate::modules::expand_archive;
 use anyhow::{anyhow, Result};
@@ -12,7 +13,7 @@ use tokio::fs;
 use tokio::io::AsyncWriteExt;
 use tracing::info;
 
-pub async fn start(version: &str, client: &Client, via_use: bool) -> Result<()> {
+pub async fn start(version: &str, client: &Client, via_use: bool) -> Result<InstallResult> {
     let root = match utils::get_downloads_folder().await {
         Ok(value) => value,
         Err(error) => return Err(anyhow!(error)),
@@ -20,54 +21,49 @@ pub async fn start(version: &str, client: &Client, via_use: bool) -> Result<()> 
     env::set_current_dir(&root)?;
     let root = root.as_path();
 
-    let nightly_version = if version == "nightly" {
-        let response = client
-            .get("https://api.github.com/repos/neovim/neovim/releases/tags/nightly")
-            .header("user-agent", "bob")
-            .header("Accept", "application/vnd.github.v3+json")
-            .send()
-            .await?
-            .text()
-            .await?;
-        let nightly: Version = serde_json::from_str(&response)?;
-        if let Ok(file) = fs::read_to_string("nightly/bob.json").await {
-            let file_json: Version = serde_json::from_str(&file)?;
-            if nightly.published_at != file_json.published_at {
-                fs::remove_dir_all(format!("{}/nightly", root.display())).await?;
+    let nightly_version = if utils::is_version_installed(version).await {
+        if version == "nightly" {
+            let upstream_nightly = utils::get_upstream_nightly(client).await;
+            let local_nighly = utils::get_local_nightly().await?;
+
+            if local_nighly.published_at == upstream_nightly.published_at {
+                if !via_use {
+                    info!("Nightly is up to date!");
+                }
+                return Ok(InstallResult::NightlyIsUpdated);
             }
+
+            Some(upstream_nightly)
+        } else {
+            if !via_use {
+                info!("{version} is already installed");
+            }
+            return Ok(InstallResult::VersionAlreadyInstalled);
         }
-        Some(nightly)
     } else {
         None
     };
 
-    let is_version_installed = fs::metadata(format!("{}/{version}", root.display()))
-        .await
-        .is_ok();
-    if !via_use && is_version_installed {
-        info!("{version} is already installed");
-        return Ok(());
-    }
-    if !is_version_installed {
-        let downloaded_file = match download_version(client, version, root).await {
-            Ok(value) => value,
-            Err(error) => return Err(anyhow!(error)),
-        };
-        if let Err(error) = expand_archive::start(downloaded_file).await {
-            return Err(anyhow!(error));
-        }
-
-        if let Some(nightly_version) = nightly_version {
-            let nightly_string = serde_json::to_string(&nightly_version)?;
-            let mut file = fs::File::create("nightly/bob.json").await?;
-            file.write(nightly_string.as_bytes()).await?;
-        }
-        if !via_use {
-            info!("Successfully installed version: {version}");
-        }
+    let downloaded_file = match download_version(client, version, root).await {
+        Ok(value) => value,
+        Err(error) => return Err(anyhow!(error)),
+    };
+    if let Err(error) = expand_archive::start(downloaded_file).await {
+        return Err(anyhow!(error));
     }
 
-    Ok(())
+    if let Some(nightly_version) = nightly_version {
+        let nightly_string = serde_json::to_string(&nightly_version)?;
+        let mut file = fs::File::create("nightly/bob.json").await?;
+        file.write(nightly_string.as_bytes()).await?;
+    }
+    if !via_use {
+        info!(
+            "{version} has been successfully installed in {}",
+            root.display()
+        );
+    }
+    Ok(InstallResult::InstallationSuccess)
 }
 
 async fn download_version(
