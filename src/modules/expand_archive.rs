@@ -26,6 +26,10 @@ pub async fn start(file: DownloadedVersion) -> Result<()> {
 fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
     use zip::ZipArchive;
 
+    if fs::metadata(&downloaded_file.file_name).is_ok() {
+        fs::remove_dir_all(&downloaded_file.file_name)?;
+    }
+
     let file = File::open(format!(
         "{}.{}",
         downloaded_file.file_name, downloaded_file.file_format
@@ -76,6 +80,10 @@ fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
     use flate2::read::GzDecoder;
     use std::os::unix::fs::PermissionsExt;
     use tar::Archive;
+
+    if fs::metadata(&downloaded_file.file_name).is_ok() {
+        fs::remove_dir_all(&downloaded_file.file_name)?;
+    }
 
     let file = File::open(format!(
         "{}.{}",
@@ -130,9 +138,5 @@ fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
     let mut perms = fs::metadata(file)?.permissions();
     perms.set_mode(0o111);
     fs::set_permissions(file, perms)?;
-    println!(
-        "made {}/{platform}/bin/nvim executable",
-        downloaded_file.file_name
-    );
     Ok(())
 }

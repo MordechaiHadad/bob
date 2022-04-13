@@ -1,3 +1,4 @@
+mod enums;
 mod models;
 mod modules;
 
