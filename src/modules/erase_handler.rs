@@ -9,9 +9,9 @@ pub async fn start() -> Result<()> {
 
 
     fs::remove_dir_all(&installation_dir).await?;
-    info!("Successfully remove neovim's installation folder");
+    info!("Successfully removed neovim's installation folder");
     fs::remove_dir_all(downloads).await?;
-    info!("Successfully remove neovim downloads folder");
+    info!("Successfully removed neovim downloads folder");
 
 
     cfg_if::cfg_if! {
