@@ -1,7 +1,7 @@
-use clap::ArgMatches;
-use anyhow::{anyhow, Result};
-use reqwest::Client;
 use crate::modules::utils;
+use anyhow::{anyhow, Result};
+use clap::ArgMatches;
+use reqwest::Client;
 use tokio::fs;
 use tracing::{info, warn};
 
@@ -16,7 +16,6 @@ pub async fn start(subcommand: &ArgMatches) -> Result<()> {
         return Err(anyhow!("Todo.."));
     };
 
-
     if utils::is_version_used(&version).await {
         warn!("Switch to a different version before proceeding");
         return Ok(());
@@ -29,5 +28,5 @@ pub async fn start(subcommand: &ArgMatches) -> Result<()> {
 
     fs::remove_dir_all(&format!("{}/{version}", downloads_dir.display())).await?;
     info!("Successfully uninstalled version: {version}");
-   Ok(())
+    Ok(())
 }

@@ -1,4 +1,5 @@
 use super::{install_handler, ls_handler};
+use crate::enums::InstallResult;
 use crate::modules::{uninstall_handler, use_handler, utils};
 use anyhow::{anyhow, Result};
 use clap::{arg, Command};
@@ -28,36 +29,30 @@ pub async fn start() -> Result<()> {
     let matches = app.get_matches();
 
     match matches.subcommand() {
-        Some(("use", subcommand))
-        | Some(("install", subcommand)) => {
+        Some(("use", subcommand)) | Some(("install", subcommand)) => {
             let client = Client::new();
             if let Some(value) = subcommand.value_of("VERSION") {
                 let version = match utils::parse_version(&client, value).await {
                     Ok(version) => version,
-                    Err(error) => return Err(anyhow!(error)),
+                    Err(error) => return Err(error),
                 };
-
-                if utils::is_version_used(&version).await {
-                    info!("{version} is already installed and used");
-                    return Ok(());
-                }
 
                 match matches.subcommand_name().unwrap() {
                     "use" => {
                         if let Err(error) = use_handler::start(&version, &client).await {
                             return Err(anyhow!(error));
                         }
-
                     }
-                    "install" => {
-                        if let Err(error) = install_handler::start(&version, &client, false).await {
-                            return Err(anyhow!(error));
-                        }
-                    }
+                    "install" => match install_handler::start(&version, &client).await {
+                        Ok(result) => match result {
+                            InstallResult::InstallationSuccess(location) => info!("{version} has been successfully installed in {location}"),
+                            InstallResult::VersionAlreadyInstalled => info!("{version} is already installed!"),
+                            InstallResult::NightlyIsUpdated => info!("Nightly is up to date!"),
+                        },
+                        Err(error) => return Err(error),
+                    },
                     _ => (),
                 }
-
-
             }
         }
         Some(("uninstall", subcommand)) => {
