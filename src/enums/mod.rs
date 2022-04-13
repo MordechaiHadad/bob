@@ -1,5 +1,5 @@
 pub enum InstallResult {
-    InstallationSuccess,
+    InstallationSuccess(String),
     VersionAlreadyInstalled,
     NightlyIsUpdated,
 }

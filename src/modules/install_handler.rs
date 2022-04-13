@@ -11,9 +11,8 @@ use std::env;
 use std::path::Path;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
-use tracing::info;
 
-pub async fn start(version: &str, client: &Client, via_use: bool) -> Result<InstallResult> {
+pub async fn start(version: &str, client: &Client) -> Result<InstallResult> {
     let root = match utils::get_downloads_folder().await {
         Ok(value) => value,
         Err(error) => return Err(anyhow!(error)),
@@ -21,26 +20,22 @@ pub async fn start(version: &str, client: &Client, via_use: bool) -> Result<Inst
     env::set_current_dir(&root)?;
     let root = root.as_path();
 
-    let nightly_version = if utils::is_version_installed(version).await {
-        if version == "nightly" {
-            let upstream_nightly = utils::get_upstream_nightly(client).await;
-            let local_nighly = utils::get_local_nightly().await?;
+    let is_version_installed = utils::is_version_installed(version).await;
 
-            if local_nighly.published_at == upstream_nightly.published_at {
-                if !via_use {
-                    info!("Nightly is up to date!");
-                }
+    let nightly_version = if version == "nightly" {
+        let upstream_nightly = utils::get_upstream_nightly(client).await;
+        if is_version_installed {
+            let local_nightly = utils::get_local_nightly().await?;
+
+            if local_nightly.published_at == upstream_nightly.published_at {
                 return Ok(InstallResult::NightlyIsUpdated);
             }
-
-            Some(upstream_nightly)
-        } else {
-            if !via_use {
-                info!("{version} is already installed");
-            }
+        }
+        Some(upstream_nightly)
+    } else {
+        if is_version_installed {
             return Ok(InstallResult::VersionAlreadyInstalled);
         }
-    } else {
         None
     };
 
@@ -57,13 +52,7 @@ pub async fn start(version: &str, client: &Client, via_use: bool) -> Result<Inst
         let mut file = fs::File::create("nightly/bob.json").await?;
         file.write(nightly_string.as_bytes()).await?;
     }
-    if !via_use {
-        info!(
-            "{version} has been successfully installed in {}",
-            root.display()
-        );
-    }
-    Ok(InstallResult::InstallationSuccess)
+    Ok(InstallResult::InstallationSuccess(root.display().to_string()))
 }
 
 async fn download_version(

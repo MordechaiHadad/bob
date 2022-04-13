@@ -1,4 +1,5 @@
 use super::{install_handler, ls_handler};
+use crate::enums::InstallResult;
 use crate::modules::{uninstall_handler, use_handler, utils};
 use anyhow::{anyhow, Result};
 use clap::{arg, Command};
@@ -42,11 +43,14 @@ pub async fn start() -> Result<()> {
                             return Err(anyhow!(error));
                         }
                     }
-                    "install" => {
-                        if let Err(error) = install_handler::start(&version, &client, false).await {
-                            return Err(anyhow!(error));
-                        }
-                    }
+                    "install" => match install_handler::start(&version, &client).await {
+                        Ok(result) => match result {
+                            InstallResult::InstallationSuccess(location) => info!("{version} has been successfully installed in {location}"),
+                            InstallResult::VersionAlreadyInstalled => info!("{version} is already installed!"),
+                            InstallResult::NightlyIsUpdated => info!("Nightly is up to date!"),
+                        },
+                        Err(error) => return Err(error),
+                    },
                     _ => (),
                 }
             }

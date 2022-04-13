@@ -13,7 +13,7 @@ pub async fn start(version: &str, client: &Client) -> Result<()> {
         return Ok(());
     }
 
-    match install_handler::start(version, client, true).await {
+    match install_handler::start(version, client).await {
         Ok(success) => {
             if let InstallResult::NightlyIsUpdated = success {
                 if is_version_used {
