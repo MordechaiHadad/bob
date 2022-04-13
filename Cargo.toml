@@ -31,3 +31,4 @@ flate2 = "1.0"
 [profile.optimized]
 inherits = "release"
 opt-level = "z"
+strip = true
