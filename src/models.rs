@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Version {
     pub tag_name: String,
     pub published_at: String,
