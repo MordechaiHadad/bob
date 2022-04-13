@@ -34,7 +34,7 @@ pub async fn start(version: &str, client: &Client) -> Result<()> {
 }
 
 async fn link_version(version: &str) -> Result<()> {
-    let installation_dir = match utils::get_install_folder() {
+    let installation_dir = match utils::get_installation_folder() {
         Err(_) => return Err(anyhow!("Couldn't get data dir")),
         Ok(value) => value,
     };

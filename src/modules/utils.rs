@@ -51,7 +51,7 @@ pub async fn get_downloads_folder() -> Result<PathBuf> {
     Ok(PathBuf::from(path_string))
 }
 
-pub fn get_install_folder() -> Result<PathBuf> {
+pub fn get_installation_folder() -> Result<PathBuf> {
     let data_dir = match data_local_dir() {
         None => return Err(anyhow!("Couldn't get local data folder")),
         Some(value) => value,
