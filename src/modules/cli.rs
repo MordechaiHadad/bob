@@ -11,12 +11,12 @@ pub async fn start() -> Result<()> {
         .subcommand(
             Command::new("use")
                 .arg(arg!([VERSION]).required(true))
-                .about("Switch to the specified neovim version"),
+                .about("Switch to the specified version, will auto-invoke install command if version is not installed already."),
         )
         .subcommand(
             Command::new("install")
                 .arg(arg!([VERSION]).required(true))
-                .about("Install the specified version"),
+                .about("Install the specified version, can also be used to update out-of-date nightly version."),
         )
         .subcommand(
             Command::new("uninstall")
@@ -25,7 +25,7 @@ pub async fn start() -> Result<()> {
         )
         .subcommand(Command::new("erase")
                     .about("Erase any change bob ever made including: neovim installation, neovim installs and registry changes"))
-        .subcommand(Command::new("ls").about("List all downloaded and installed versions"));
+        .subcommand(Command::new("ls").about("List all installed and used versions"));
 
     let matches = app.get_matches();
 
