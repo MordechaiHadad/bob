@@ -52,7 +52,9 @@ pub async fn start(version: &str, client: &Client) -> Result<InstallResult> {
         let mut file = fs::File::create("nightly/bob.json").await?;
         file.write(nightly_string.as_bytes()).await?;
     }
-    Ok(InstallResult::InstallationSuccess(root.display().to_string()))
+    Ok(InstallResult::InstallationSuccess(
+        root.display().to_string(),
+    ))
 }
 
 async fn download_version(
