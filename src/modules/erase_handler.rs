@@ -7,12 +7,10 @@ pub async fn start() -> Result<()> {
     let downloads = utils::get_downloads_folder().await?;
     let installation_dir = utils::get_installation_folder()?;
 
-
     fs::remove_dir_all(&installation_dir).await?;
     info!("Successfully removed neovim's installation folder");
     fs::remove_dir_all(downloads).await?;
     info!("Successfully removed neovim downloads folder");
-
 
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
