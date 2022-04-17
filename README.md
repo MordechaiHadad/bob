@@ -21,9 +21,15 @@ Install [rustup](https://www.rust-lang.org/tools/install)
 
 ## :question: Usage
 - `bob use |nightly|stable|<version-string>|`
+Switch to the specified version, will auto-invoke install command if version is not installed already.
 - `bob install |nightly|stable|<version-string>|`
+Install the specified version, can also be used to update out-of-date nightly version.
 - `bob uninstall |nightly|stable|<version-string>|`
+Uninstall the specified version.
+- `bob erase`
+Erase any change bob ever made including: neovim installation, neovim installs and registry changes
 - `bob ls`
+List all installed and used versions
 
 A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
 
