@@ -28,16 +28,15 @@ Install [rustup](https://www.rust-lang.org/tools/install)
 
 ## :question: Usage
 
-<details>
-<summary>Windows side note</summary>
-
-Make sure to run the application as administator to properly install a version.
-
-</details>
-
 - `bob use |nightly|stable|<version-string>|`
 
 Switch to the specified version, will auto-invoke install command if version is not installed already.
+<details>
+<summary>Windows side note</summary>
+
+Make sure to run the application as administator to properly switch a version.
+
+</details>
 
 - `bob install |nightly|stable|<version-string>|`
 
