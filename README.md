@@ -28,6 +28,13 @@ Install [rustup](https://www.rust-lang.org/tools/install)
 
 ## :question: Usage
 
+<details>
+<summary>Windows side note</summary>
+
+Make sure to run the application as administator to properly install a version.
+
+</details>
+
 - `bob use |nightly|stable|<version-string>|`
 
 Switch to the specified version, will auto-invoke install command if version is not installed already.
@@ -49,12 +56,7 @@ Erase any change bob ever made including: neovim installation, neovim installs a
 
 A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
 
-<details>
-<summary>Windows side note</summary>
-
-Make sure to run the application as administator to properly install a version.
-
-</details>
+<img src="https://user-images.githubusercontent.com/33547558/164459653-91bb62b8-515a-4571-9c45-aff1ed765126.gif">
 
 ## :heart: Credits And Inspiration
 
@@ -65,10 +67,11 @@ Make sure to run the application as administator to properly install a version.
 
 <table>
     <tr>
-        <td align="center"><a href="https://github.com/max397574"><img src="https://avatars.githubusercontent.com/u/81827001?v=4" width="100px;" alt ""/><br/><sub><b>max397</b></sub></a><br /><a href="https://github.com/MordechaiHadad/bob/" title="Testing">💻</a></td>
-        <td align="center"><a href="https://github.com/shift-d"><img src="https://avatars.githubusercontent.com/u/53366878?v=4" width="100px;" alt ""/><br/><sub><b>shift-d</b></sub></a><br /><a href="https://github.com/MordechaiHadad/bob/" title="Testing">💻</a></td>
-        <td align="center"><a href="https://github.com/tamton-aquib"><img src="https://avatars.githubusercontent.com/u/77913442?v=4" width="100px;" alt ""/><br/><sub><b>Aquib</b></sub></a><br /><a href="https://github.com/MordechaiHadad/bob/" title="Testing">💻</a></td>
-        <td align="center"><a href="https://github.com/vsedov"><img src="https://avatars.githubusercontent.com/u/28804392?v=4" width="100px;" alt ""/><br/><sub><b>Viv Sedov</b></sub></a><br /><a href="https://github.com/MordechaiHadad/bob/" title="Testing">💻</a></td>
-        <td align="center"><a href="https://github.com/TarunDaCoder"><img src="https://avatars.githubusercontent.com/u/77536695?v=4" width="100px;" alt ""/><br/><sub><b>Tarun</b></sub></a><br /><a href="https://github.com/MordechaiHadad/bob/" title="Testing">💻</a></td>
+        <td align="center"><a href="https://github.com/max397574"><img src="https://avatars.githubusercontent.com/u/81827001?v=4" width="100px;" alt ""/><br/><sub><b>max397</b></sub></a><br /><a href="https://github.com/MordechaiHadad/bob/" title="Testing">👷</a></td>
+        <td align="center"><a href="https://github.com/shift-d"><img src="https://avatars.githubusercontent.com/u/53366878?v=4" width="100px;" alt ""/><br/><sub><b>shift-d</b></sub></a><br /><a href="https://github.com/MordechaiHadad/bob/" title="Testing">👷</a></td>
+        <td align="center"><a href="https://github.com/tamton-aquib"><img src="https://avatars.githubusercontent.com/u/77913442?v=4" width="100px;" alt ""/><br/><sub><b>Aquib</b></sub></a><br /><a href="https://github.com/MordechaiHadad/bob/" title="Testing">👷</a></td>
+        <td align="center"><a href="https://github.com/vsedov"><img src="https://avatars.githubusercontent.com/u/28804392?v=4" width="100px;" alt ""/><br/><sub><b>Viv Sedov</b></sub></a><br /><a href="https://github.com/MordechaiHadad/bob/" title="Testing">👷</a></td>
+        <td align="center"><a href="https://github.com/TarunDaCoder"><img src="https://avatars.githubusercontent.com/u/77536695?v=4" width="100px;" alt ""/><br/><sub><b>Tarun</b></sub></a><br /><a href="https://github.com/MordechaiHadad/bob/" title="Testing">👷</a></td>
+        <td align="center"><a href="https://github.com/TheChoudo"><img src="https://avatars.githubusercontent.com/u/68950943?v=4" width="100px;" alt ""/><br/><sub><b>Dev Choudhuri</b></sub></a><br /><a href="https://github.com/MordechaiHadad/bob/" title="Testing">👷</a><a href="https://github.com/MordechaiHadad/bob/" title="README">📖</a></td>
     </tr>
 </table>
