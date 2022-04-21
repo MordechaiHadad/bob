@@ -55,7 +55,7 @@ Erase any change bob ever made including: neovim installation, neovim installs a
 
 A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
 
-<img src="https://user-images.githubusercontent.com/33547558/164459653-91bb62b8-515a-4571-9c45-aff1ed765126.gif">
+<img src="https://user-images.githubusercontent.com/33547558/164478344-2707eb41-5b26-452e-ba05-c18282a3503a.gif">
 
 ## :heart: Credits And Inspiration
 
