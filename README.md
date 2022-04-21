@@ -53,6 +53,6 @@ Make sure to run the application as administator to properly install a version.
 
 <table>
     <tr>
-        <td align="center"><a href="https://github.com/max397574"><img src="https://avatars.githubusercontent.com/u/81827001?v=4" width="100px;" alt ""/><br/><sub><b>max397</b></sub></a><br /><a title="Testing">💻</a></td>
+        <td align="center"><a href="https://github.com/max397574"><img src="https://avatars.githubusercontent.com/u/81827001?v=4" width="100px;" alt ""/><br/><sub><b>max397</b></sub></a><br /><a href="" title="Testing">💻</a></td>
     </tr>
 </table>
