@@ -48,3 +48,11 @@ Make sure to run the application as administator to properly install a version.
 ## :heart: Credits And Inspiration
 - [nvm](https://github.com/nvm-sh/nvm) A node version manager
 - [nvenv](https://github.com/NTBBloodbath/nvenv) A neovim version manager written by NTBBloodbath
+
+### Contributors
+
+<table>
+    <tr>
+        <td align="center"><a href="https://github.com/max397574"><img src="https://avatars.githubusercontent.com/u/81827001?v=4" width="100px;" alt ""/><br/><sub><b>max397</b></sub></a><br /><a title="Testing">💻</a></td>
+    </tr>
+</table>
