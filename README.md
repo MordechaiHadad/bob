@@ -21,29 +21,24 @@ Install [rustup](https://www.rust-lang.org/tools/install)
 2. Run bob with `bob`
 
 ## :question: Usage
-- `bob use |nightly|stable|<version-string>|`
-
-Switch to the specified version, will auto-invoke install command if version is not installed already.
+To install a specified version, run:
 - `bob install |nightly|stable|<version-string>|`
 
-Install the specified version, can also be used to update out-of-date nightly version.
+To use the installed version, run:
+- `bob use |nightly|stable|<version-string>|`
+> Windows user: Run this command with administrator
+
+To install the specified version, can also be used to update out-of-date nightly version.
 - `bob uninstall |nightly|stable|<version-string>|`
 
-Uninstall the specified version.
+To uninstall the specified version.
 - `bob erase`
+> Erase any change bob ever made including: neovim installation, neovim installs and registry changes
 
-Erase any change bob ever made including: neovim installation, neovim installs and registry changes
-
-- `bob ls`
 List all installed and used versions
+- `bob ls`
 
 A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
-
-<details>
-<summary>Windows side note</summary>
-
-Make sure to run the application as administator to properly install a version.
-</details>
 
 ## :heart: Credits And Inspiration
 - [nvm](https://github.com/nvm-sh/nvm) A node version manager
