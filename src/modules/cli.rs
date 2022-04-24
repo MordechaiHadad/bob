@@ -24,7 +24,7 @@ pub async fn start() -> Result<()> {
                 .about("Uninstall the specified version"),
         )
         .subcommand(Command::new("erase")
-                    .about("Erase any change bob ever made including neovim installation, neovim installs and registry changes."))
+                    .about("Erase any change bob ever made including neovim installation, neovim version downloads and registry changes."))
         .subcommand(Command::new("ls").about("List all installed and used versions"));
 
     let matches = app.get_matches();
