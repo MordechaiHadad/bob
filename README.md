@@ -39,7 +39,7 @@ Uninstall the specified version.
 
 - `bob erase`
 
-Erase any change bob ever made including neovim installation, neovim installs and registry changes.
+Erase any change bob ever made including neovim installation, neovim verion downloads and registry changes.
 
 - `bob ls`
   List all installed and used versions
