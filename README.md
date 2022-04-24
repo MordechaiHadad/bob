@@ -2,7 +2,7 @@
 
 > Struggle to keep your nvim versions in check? Bob provides an easy way to install and switch versions on any system!
 
-Bob is a Blazingly-fast and easy to use neovim version manager, easily switch between versions with ease.
+Bob is a Blazingly-fast and easy to use neovim version manager, easily switch between versions.
 
 ## Prerequisites
 Make sure you don't have neovim already installed via other ways e.g. package manager.
