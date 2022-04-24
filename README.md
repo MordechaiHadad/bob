@@ -1,8 +1,8 @@
 # Bob
 
-> Struggle to keep your nvim versions in check? Bob provides an easy way to install and switch versions on any system!
+> Struggle to keep your neovim versions in check? Bob provides an easy way to install and switch versions on any system!
 
-Bob is a Blazingly-fast and easy to use neovim version manager, easily switch between versions.
+Bob is a blazingly fast and easy-to-use neovim version manager, easily switch between versions.
 
 ## Prerequisites
 Make sure you don't have neovim already installed via other ways e.g. package manager.
@@ -21,11 +21,11 @@ Install [rustup](https://www.rust-lang.org/tools/install)
 
 - `bob use |nightly|stable|<version-string>|`
 
-Switch to the specified version, will auto-invoke install command if version is not installed already.
+Switch to the specified version, will auto-invoke install command if the version is not installed already.
 <details>
 <summary>Windows side note</summary>
 
-Make sure to run the application as administator to properly switch a version.
+Make sure to run the application as administrator to properly switch a version.
 
 </details>
 
@@ -39,7 +39,7 @@ Uninstall the specified version.
 
 - `bob erase`
 
-Erase any change bob ever made including: neovim installation, neovim installs and registry changes
+Erase any change bob ever made including neovim installation, neovim installs and registry changes.
 
 - `bob ls`
   List all installed and used versions
