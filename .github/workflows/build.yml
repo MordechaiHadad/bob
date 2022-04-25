@@ -70,7 +70,7 @@ jobs:
       - name: Upload Bob Windows binary
         uses: actions/upload-artifact@v2
         with:
-          name: "bob-windows-x86_64.exe"
+          name: "bob-windows-x86_64"
           path: "target\\optimized\\bob.exe"
           if-no-files-found: error
           retention-days: 7
