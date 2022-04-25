@@ -1,82 +1,78 @@
 use super::{erase_handler, install_handler, ls_handler, uninstall_handler, use_handler, utils};
 use crate::enums::InstallResult;
-use anyhow::{anyhow, Result};
-use clap::{arg, Command};
+use anyhow::Result;
+use clap::{AppSettings, Parser};
 use reqwest::Client;
 use tracing::info;
 
+#[derive(Debug, Parser)]
+#[clap(global_setting = AppSettings::DeriveDisplayOrder)]
+enum Cli {
+    /// Switch to the specified version, will auto-invoke install command
+    /// if the version is not installed already
+    Use {
+        /// Version to switch to
+        version: String,
+    },
+
+    /// Install the specified version, can also be used to update
+    /// out-of-date nightly version
+    Install {
+        /// Version to be installed
+        version: String,
+    },
+
+    /// Uninstall the specified version
+    Uninstall {
+        /// Version to be uninstalled
+        version: String,
+    },
+
+    /// Erase any change bob ever made, including neovim installation,
+    /// neovim version downloads and registry changes
+    Erase,
+
+    /// List all installed and used versions
+    #[clap(visible_alias = "ls")]
+    List,
+}
+
 pub async fn start() -> Result<()> {
-    let app = Command::new("bob")
-        .arg_required_else_help(true)
-        .subcommand(
-            Command::new("use")
-                .arg(arg!([VERSION]).required(true))
-                .about("Switch to the specified version, will auto-invoke install command if the version is not installed already."),
-        )
-        .subcommand(
-            Command::new("install")
-                .arg(arg!([VERSION]).required(true))
-                .about("Install the specified version, can also be used to update out-of-date nightly version."),
-        )
-        .subcommand(
-            Command::new("uninstall")
-                .arg(arg!([VERSION]).required(true))
-                .about("Uninstall the specified version"),
-        )
-        .subcommand(Command::new("erase")
-                    .about("Erase any change bob ever made including neovim installation, neovim version downloads and registry changes."))
-        .subcommand(Command::new("ls").about("List all installed and used versions"));
+    let cli = Cli::parse();
 
-    let matches = app.get_matches();
-
-    match matches.subcommand() {
-        Some(("use", subcommand)) | Some(("install", subcommand)) => {
+    match cli {
+        Cli::Use { version } => {
             let client = Client::new();
-            if let Some(value) = subcommand.value_of("VERSION") {
-                let version = match utils::parse_version(&client, value).await {
-                    Ok(version) => version,
-                    Err(error) => return Err(error),
-                };
+            let version = utils::parse_version(&client, &version).await?;
 
-                match matches.subcommand_name().unwrap() {
-                    "use" => {
-                        if let Err(error) = use_handler::start(&version, &client).await {
-                            return Err(anyhow!(error));
-                        }
-                    }
-                    "install" => match install_handler::start(&version, &client).await {
-                        Ok(result) => match result {
-                            InstallResult::InstallationSuccess(location) => {
-                                info!("{version} has been successfully installed in {location}")
-                            }
-                            InstallResult::VersionAlreadyInstalled => {
-                                info!("{version} is already installed!")
-                            }
-                            InstallResult::NightlyIsUpdated => info!("Nightly is up to date!"),
-                        },
-                        Err(error) => return Err(error),
-                    },
-                    _ => (),
+            use_handler::start(&version, &client).await?;
+        }
+        Cli::Install { version } => {
+            let client = Client::new();
+            let version = utils::parse_version(&client, &version).await?;
+
+            match install_handler::start(&version, &client).await? {
+                InstallResult::InstallationSuccess(location) => {
+                    info!("{version} has been successfully installed in {location}");
+                }
+                InstallResult::VersionAlreadyInstalled => {
+                    info!("{version} is already installed");
+                }
+                InstallResult::NightlyIsUpdated => {
+                    info!("Nightly up to date!");
                 }
             }
         }
-        Some(("uninstall", subcommand)) => {
+        Cli::Uninstall { version } => {
             info!("Starting uninstallation process");
-            if let Err(error) = uninstall_handler::start(subcommand).await {
-                return Err(error);
-            }
+            uninstall_handler::start(&version).await?;
         }
-        Some(("ls", _)) => {
-            if let Err(error) = ls_handler::start().await {
-                return Err(error);
-            }
+        Cli::Erase => {
+            erase_handler::start().await?;
         }
-        Some(("erase", _)) => {
-            if let Err(error) = erase_handler::start().await {
-                return Err(error);
-            }
+        Cli::List => {
+            ls_handler::start().await?;
         }
-        _ => (),
     }
 
     Ok(())
