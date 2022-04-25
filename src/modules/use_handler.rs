@@ -90,7 +90,7 @@ async fn link_version(version: &str) -> Result<()> {
                 };
                 env.set_value("Path", &new_path)?;
             } else {
-                info!("Please add {} to PATH", installation_dir.display());
+                info!("Please add {}/bin to PATH", installation_dir.display());
             }
         }
     }

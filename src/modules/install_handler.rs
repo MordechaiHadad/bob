@@ -11,6 +11,7 @@ use std::env;
 use std::path::Path;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
+use tracing::info;
 
 pub async fn start(version: &str, client: &Client) -> Result<InstallResult> {
     let root = match utils::get_downloads_folder().await {
@@ -23,6 +24,7 @@ pub async fn start(version: &str, client: &Client) -> Result<InstallResult> {
     let is_version_installed = utils::is_version_installed(version).await;
 
     let nightly_version = if version == "nightly" {
+        info!("Looking for nightly updates...");
         let upstream_nightly = utils::get_upstream_nightly(client).await;
         if is_version_installed {
             let local_nightly = utils::get_local_nightly().await?;
@@ -50,7 +52,7 @@ pub async fn start(version: &str, client: &Client) -> Result<InstallResult> {
     if let Some(nightly_version) = nightly_version {
         let nightly_string = serde_json::to_string(&nightly_version)?;
         let mut file = fs::File::create("nightly/bob.json").await?;
-        file.write(nightly_string.as_bytes()).await?;
+        file.write_all(nightly_string.as_bytes()).await?;
     }
     Ok(InstallResult::InstallationSuccess(
         root.display().to_string(),
