@@ -41,7 +41,7 @@ Uninstall the specified version.
 
 Erase any change bob ever made including neovim installation, neovim verion downloads and registry changes.
 
-- `bob ls`
+- `bob list`
   List all installed and used versions
 
 A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
