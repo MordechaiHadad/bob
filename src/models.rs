@@ -11,3 +11,19 @@ pub struct DownloadedVersion {
     pub file_format: String,
     pub path: String,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RepoCommit {
+    pub commit: Commit
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Commit {
+    pub author: CommitAuthor,
+    pub message: String
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CommitAuthor {
+    pub name: String
+}

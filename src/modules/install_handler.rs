@@ -12,6 +12,7 @@ use std::path::Path;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 use tracing::info;
+use yansi::Paint;
 
 pub async fn start(version: &str, client: &Client) -> Result<InstallResult> {
     let root = match utils::get_downloads_folder().await {
@@ -28,6 +29,12 @@ pub async fn start(version: &str, client: &Client) -> Result<InstallResult> {
         let upstream_nightly = utils::get_upstream_nightly(client).await;
         if is_version_installed {
             let local_nightly = utils::get_local_nightly().await?;
+
+            let commits = utils::get_commits_for_nightly(client, &local_nightly.published_at, &upstream_nightly.published_at).await?;
+
+            for commit in commits {
+                println!("| {} {}\n", Paint::blue(commit.commit.author.name).bold(), commit.commit.message.replace('\n', "\n| "));
+            }
 
             if local_nightly.published_at == upstream_nightly.published_at {
                 return Ok(InstallResult::NightlyIsUpdated);
