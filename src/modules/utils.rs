@@ -1,4 +1,4 @@
-use crate::models::Version;
+use crate::models::{RepoCommit, Version};
 use anyhow::{anyhow, Result};
 use dirs::data_local_dir;
 use regex::Regex;
@@ -140,4 +140,18 @@ pub async fn get_local_nightly() -> Result<Version> {
     } else {
         Err(anyhow!("Couldn't find bob.json"))
     }
+}
+
+pub async fn get_commits_for_nightly(client: &Client, since: &str, until: &str) -> Result<Vec<RepoCommit>> {
+    let response = client
+        .get(format!(
+            "https://api.github.com/repos/neovim/neovim/commits?since={since}&until={until}&per_page=100"))
+        .header("user-agent", "bob")
+        .header("Accept", "application/vnd.github.v3+json")
+        .send()
+        .await?
+        .text()
+        .await?;
+
+    Ok(serde_json::from_str(&response)?)
 }

@@ -19,6 +19,7 @@ dirs = "4.0.0"
 cfg-if = "1.0"
 tracing = "0.1"
 tracing-subscriber = "0.2"
+yansi = "0.5.1"
 
 [target.'cfg(windows)'.dependencies]
 zip = "0.5"
