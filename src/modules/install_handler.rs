@@ -14,7 +14,7 @@ use tokio::io::AsyncWriteExt;
 use tracing::info;
 use yansi::Paint;
 
-pub async fn start(version: &str, client: &Client, config: Config) -> Result<InstallResult> {
+pub async fn start(version: &str, client: &Client, config: &Config) -> Result<InstallResult> {
     let root = match utils::get_downloads_folder(&config).await {
         Ok(value) => value,
         Err(error) => return Err(anyhow!(error)),

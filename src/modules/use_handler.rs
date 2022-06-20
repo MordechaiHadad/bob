@@ -14,7 +14,7 @@ pub async fn start(version: &str, client: &Client, config: Config) -> Result<()>
         return Ok(());
     }
 
-    match install_handler::start(version, client, config).await {
+    match install_handler::start(version, client, &config).await {
         Ok(success) => {
             if let InstallResult::NightlyIsUpdated = success {
                 if is_version_used {
@@ -26,7 +26,7 @@ pub async fn start(version: &str, client: &Client, config: Config) -> Result<()>
         Err(error) => return Err(error),
     }
 
-    if let Err(error) = link_version(version).await {
+    if let Err(error) = link_version(version, &config).await {
         return Err(error);
     }
     info!("You can now use {version}!");
@@ -34,8 +34,8 @@ pub async fn start(version: &str, client: &Client, config: Config) -> Result<()>
     Ok(())
 }
 
-async fn link_version(version: &str) -> Result<()> {
-    let installation_dir = match utils::get_installation_folder() {
+async fn link_version(version: &str, config: &Config) -> Result<()> {
+    let installation_dir = match utils::get_installation_folder(&config) {
         Err(_) => return Err(anyhow!("Couldn't get data dir")),
         Ok(value) => value,
     };

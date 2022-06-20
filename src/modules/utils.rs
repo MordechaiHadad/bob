@@ -40,13 +40,12 @@ pub async fn parse_version(client: &Client, version: &str) -> Result<String> {
 pub async fn get_downloads_folder(config: &Config) -> Result<PathBuf> {
     let path_string = match &config.downloads_dir {
         Some(path) => {
-
             if tokio::fs::metadata(path).await.is_err() {
-                return Err(anyhow!("Custom directory {path} doesn't exist!"))
+                return Err(anyhow!("Custom directory {path} doesn't exist!"));
             }
 
             path.clone()
-        },
+        }
         None => {
             let data_dir = match data_local_dir() {
                 None => return Err(anyhow!("Couldn't get local data folder")),
@@ -65,20 +64,25 @@ pub async fn get_downloads_folder(config: &Config) -> Result<PathBuf> {
     Ok(PathBuf::from(path_string))
 }
 
-pub fn get_installation_folder() -> Result<PathBuf> {
-    let data_dir = match data_local_dir() {
-        None => return Err(anyhow!("Couldn't get local data folder")),
-        Some(value) => value,
-    };
-    cfg_if::cfg_if! {
-        if #[cfg(windows)] {
+pub fn get_installation_folder(config: &Config) -> Result<PathBuf> {
+    match &config.installation_location {
+        Some(path) => Ok(PathBuf::from(path.clone())),
+        None => {
+            let data_dir = match data_local_dir() {
+                None => return Err(anyhow!("Couldn't get local data folder")),
+                Some(value) => value,
+            };
+            cfg_if::cfg_if! {
+                if #[cfg(windows)] {
 
-            let full_path = &format!("{}\\neovim", data_dir.to_str().unwrap());
+                    let full_path = &format!("{}\\neovim", data_dir.to_str().unwrap());
 
-            Ok(PathBuf::from(full_path))
-        } else {
-            let full_path = &format!("{}/neovim", data_dir.to_str().unwrap());
-            Ok(PathBuf::from(full_path))
+                    Ok(PathBuf::from(full_path))
+                } else {
+                    let full_path = &format!("{}/neovim", data_dir.to_str().unwrap());
+                    Ok(PathBuf::from(full_path))
+                }
+            }
         }
     }
 }

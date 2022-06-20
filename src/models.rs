@@ -1,4 +1,3 @@
-
 use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Version {
@@ -15,22 +14,23 @@ pub struct DownloadedVersion {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RepoCommit {
-    pub commit: Commit
+    pub commit: Commit,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Commit {
     pub author: CommitAuthor,
-    pub message: String
+    pub message: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CommitAuthor {
-    pub name: String
+    pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     pub enable_nightly_info: Option<bool>,
-    pub downloads_dir: Option<String>
+    pub downloads_dir: Option<String>,
+    pub installation_location: Option<String>,
 }

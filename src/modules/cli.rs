@@ -51,7 +51,7 @@ pub async fn start(config: Config) -> Result<()> {
             let client = Client::new();
             let version = utils::parse_version(&client, &version).await?;
 
-            match install_handler::start(&version, &client, config).await? {
+            match install_handler::start(&version, &client, &config).await? {
                 InstallResult::InstallationSuccess(location) => {
                     info!("{version} has been successfully installed in {location}");
                 }

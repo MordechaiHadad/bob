@@ -24,11 +24,14 @@ async fn main() -> Result<()> {
 }
 
 async fn run() -> Result<()> {
-    let config: Config = match tokio::fs::read_to_string("bob.json").await {
+    let config_dir = dirs::config_dir().unwrap();
+    let config_file = format!("{}/bob/config.json", config_dir.to_str().unwrap());
+    let config: Config = match tokio::fs::read_to_string(config_file).await {
         Ok(config_file) => serde_json::from_str(&config_file)?,
         Err(_) => Config {
             enable_nightly_info: None,
             downloads_dir: None,
+            installation_location: None,
         },
     };
     if let Err(error) = modules::cli::start(config).await {
