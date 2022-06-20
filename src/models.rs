@@ -27,3 +27,8 @@ pub struct Commit {
 pub struct CommitAuthor {
     pub name: String
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Config {
+    pub enable_nightly_info: Option<bool>
+}

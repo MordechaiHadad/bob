@@ -5,6 +5,7 @@ mod modules;
 extern crate core;
 
 use anyhow::{anyhow, Result};
+use models::Config;
 use std::process::exit;
 use tracing::{error, Level};
 
@@ -23,7 +24,13 @@ async fn main() -> Result<()> {
 }
 
 async fn run() -> Result<()> {
-    if let Err(error) = modules::cli::start().await {
+    let config: Config = match tokio::fs::read_to_string("bob.json").await {
+        Ok(config_file) => serde_json::from_str(&config_file)?,
+        Err(_) => Config {
+            enable_nightly_info: Some(true),
+        },
+    };
+    if let Err(error) = modules::cli::start(config).await {
         return Err(anyhow!(error));
     }
     Ok(())

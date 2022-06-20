@@ -1,4 +1,5 @@
 use crate::enums::InstallResult;
+use crate::models::Config;
 use crate::modules::{install_handler, utils};
 use anyhow::{anyhow, Result};
 use reqwest::Client;
@@ -6,14 +7,14 @@ use std::env;
 use tokio::fs;
 use tracing::info;
 
-pub async fn start(version: &str, client: &Client) -> Result<()> {
+pub async fn start(version: &str, client: &Client, config: Config) -> Result<()> {
     let is_version_used = utils::is_version_used(version).await;
     if is_version_used && version != "nightly" {
         info!("{version} is already installed and used!");
         return Ok(());
     }
 
-    match install_handler::start(version, client).await {
+    match install_handler::start(version, client, config).await {
         Ok(success) => {
             if let InstallResult::NightlyIsUpdated = success {
                 if is_version_used {
