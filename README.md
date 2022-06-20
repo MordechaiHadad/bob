@@ -51,7 +51,10 @@ A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0
 ## Customization
 This section is a bit more advanced and thus the user will have to do the work himself since bob doesn't do that.
 
-Bob's configuration file will have to be in `config_dir/bob/config.json`. to be more specific: On linux: `/home/user/.config/bob/config.json`, On windows: `C:\Users\user\AppData\Roaming\bob\config.json`
+Bob's configuration file will have to be in `config_dir/bob/config.json`, to be more specific: 
+On Linux: `/home/user/.config/bob/config.json`
+On Windows: `C:\Users\User\AppData\Roaming\bob\config.json`
+On MacOS: `	/Users/User/Library/Application Support/bob/config.json`
 
 ### Syntax
 `/home/user/.config/bob/config.json`
