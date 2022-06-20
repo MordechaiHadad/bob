@@ -65,13 +65,13 @@ pub async fn start(config: Config) -> Result<()> {
         }
         Cli::Uninstall { version } => {
             info!("Starting uninstallation process");
-            uninstall_handler::start(&version).await?;
+            uninstall_handler::start(&version, config).await?;
         }
         Cli::Erase => {
-            erase_handler::start().await?;
+            erase_handler::start(config).await?;
         }
         Cli::List => {
-            ls_handler::start().await?;
+            ls_handler::start(config).await?;
         }
     }
 

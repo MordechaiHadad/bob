@@ -27,7 +27,8 @@ async fn run() -> Result<()> {
     let config: Config = match tokio::fs::read_to_string("bob.json").await {
         Ok(config_file) => serde_json::from_str(&config_file)?,
         Err(_) => Config {
-            enable_nightly_info: Some(true),
+            enable_nightly_info: None,
+            downloads_dir: None,
         },
     };
     if let Err(error) = modules::cli::start(config).await {

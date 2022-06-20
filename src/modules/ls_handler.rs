@@ -1,9 +1,11 @@
+use crate::models::Config;
+
 use super::utils;
 use anyhow::{anyhow, Result};
 use yansi::Paint;
 
-pub async fn start() -> Result<()> {
-    let downloads_dir = match utils::get_downloads_folder().await {
+pub async fn start(config: Config) -> Result<()> {
+    let downloads_dir = match utils::get_downloads_folder(&config).await {
         Ok(value) => value,
         Err(error) => return Err(anyhow!(error)),
     };

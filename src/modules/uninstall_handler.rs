@@ -1,10 +1,10 @@
-use crate::modules::utils;
+use crate::{modules::utils, models::Config};
 use anyhow::{anyhow, Result};
 use reqwest::Client;
 use tokio::fs;
 use tracing::{info, warn};
 
-pub async fn start(version: &str) -> Result<()> {
+pub async fn start(version: &str, config: Config) -> Result<()> {
     let client = Client::new();
     let version = utils::parse_version(&client, version).await?;
 
@@ -13,7 +13,7 @@ pub async fn start(version: &str) -> Result<()> {
         return Ok(());
     }
 
-    let downloads_dir = match utils::get_downloads_folder().await {
+    let downloads_dir = match utils::get_downloads_folder(&config).await {
         Ok(value) => value,
         Err(error) => return Err(anyhow!(error)),
     };

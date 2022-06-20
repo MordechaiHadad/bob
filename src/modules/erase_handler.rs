@@ -1,10 +1,12 @@
+use crate::models::Config;
+
 use super::utils;
 use anyhow::{anyhow, Result};
 use tokio::fs;
 use tracing::info;
 
-pub async fn start() -> Result<()> {
-    let downloads = utils::get_downloads_folder().await?;
+pub async fn start(config: Config) -> Result<()> {
+    let downloads = utils::get_downloads_folder(&config).await?;
     let installation_dir = utils::get_installation_folder()?;
 
     if fs::remove_dir_all(&installation_dir).await.is_ok() {

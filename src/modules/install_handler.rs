@@ -15,20 +15,20 @@ use tracing::info;
 use yansi::Paint;
 
 pub async fn start(version: &str, client: &Client, config: Config) -> Result<InstallResult> {
-    let root = match utils::get_downloads_folder().await {
+    let root = match utils::get_downloads_folder(&config).await {
         Ok(value) => value,
         Err(error) => return Err(anyhow!(error)),
     };
     env::set_current_dir(&root)?;
     let root = root.as_path();
 
-    let is_version_installed = utils::is_version_installed(version).await;
+    let is_version_installed = utils::is_version_installed(version, &config).await;
 
     let nightly_version = if version == "nightly" {
         info!("Looking for nightly updates...");
         let upstream_nightly = utils::get_upstream_nightly(client).await;
         if is_version_installed {
-            let local_nightly = utils::get_local_nightly().await?;
+            let local_nightly = utils::get_local_nightly(&config).await?;
 
             match config.enable_nightly_info {
                 Some(boolean) if boolean == true => {

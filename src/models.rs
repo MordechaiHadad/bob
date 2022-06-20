@@ -1,3 +1,4 @@
+
 use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Version {
@@ -30,5 +31,6 @@ pub struct CommitAuthor {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
-    pub enable_nightly_info: Option<bool>
+    pub enable_nightly_info: Option<bool>,
+    pub downloads_dir: Option<String>
 }
