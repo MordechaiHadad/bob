@@ -48,7 +48,7 @@ A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0
 
 <img src="https://user-images.githubusercontent.com/33547558/164478344-2707eb41-5b26-452e-ba05-c18282a3503a.gif">
 
-## Customization
+## Configuration
 This section is a bit more advanced and thus the user will have to do the work himself since bob doesn't do that.
 
 Bob's configuration file will have to be in `config_dir/bob/config.json`, to be more specific: 
@@ -59,18 +59,16 @@ Bob's configuration file will have to be in `config_dir/bob/config.json`, to be 
 `/home/user/.config/bob/config.json`
 
 </details>
-
 <details>
 <summary>On Windows</summary>
 
 `C:\Users\User\AppData\Roaming\bob\config.json`
 
 </details>
-
 <details>
 <summary>On MacOS</summary>
 
-`/Users/Alice/Library/Application Support/bob/config.json`
+`/Users/User/Library/Application Support/bob/config.json`
 
 </details>
 
