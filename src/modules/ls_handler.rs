@@ -8,32 +8,27 @@ pub async fn start() -> Result<()> {
     };
 
     let paths = std::fs::read_dir(downloads_dir)?;
-    let mut versions = String::new();
-    let installed_version = match utils::get_current_version().await {
+    let used_version = match utils::get_current_version().await {
         Some(value) => value,
         None => return Err(anyhow!("Neovim is not installed")),
     };
-    let mut first = true;
+    const VERSION_MAX_LEN: usize = 7;
+
+    println!("Version | Status");
+    println!("{}|{}", "-".repeat(7 + 1) ,"-".repeat(10));
+
     for path in paths {
         let path = path.unwrap().path();
-        let path_name = path.file_name().unwrap();
+        let path_name = path.file_name().unwrap().to_str().unwrap();
+
+        let width = (VERSION_MAX_LEN - path_name.len()) + 1;
         if path.is_dir() {
-            if !first {
-                if path_name.to_str().unwrap().contains(&installed_version) {
-                    versions += &format!(", {}(installed)", path_name.to_str().unwrap());
-                } else {
-                    versions += &format!(", {}", path_name.to_str().unwrap());
-                }
+            if path_name.contains(&used_version) {
+                println!("{path_name}{}| Used", " ".repeat(width));
             } else {
-                if path_name.to_str().unwrap().contains(&installed_version) {
-                    versions += &format!("{}(installed)", path_name.to_str().unwrap());
-                } else {
-                    versions += path_name.to_str().unwrap()
-                }
-                first = false;
+                println!("{path_name}{}| Installed", " ".repeat(width));
             }
         }
     }
-    println!("{versions}");
     Ok(())
 }
