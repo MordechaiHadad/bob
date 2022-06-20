@@ -70,8 +70,12 @@ Bob's configuration file will have to be in `config_dir/bob/config.json`, to be 
 <details>
 <summary>On MacOS</summary>
 
+`/Users/Alice/Library/Application Support/bob/config.json`
+
+</details>
+
 ### Syntax
-```json
+```jsonc
 // /home/user/.config/bob/config.json
 {
     "enable_nightly_info": true, // Will show new commits associated with new nightly release if enabled
