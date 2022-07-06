@@ -1,4 +1,4 @@
-use crate::models::{RepoCommit, Version};
+use crate::models::{Config, RepoCommit, Version};
 use anyhow::{anyhow, Result};
 use dirs::data_local_dir;
 use regex::Regex;
@@ -37,34 +37,52 @@ pub async fn parse_version(client: &Client, version: &str) -> Result<String> {
     }
 }
 
-pub async fn get_downloads_folder() -> Result<PathBuf> {
-    let data_dir = match data_local_dir() {
-        None => return Err(anyhow!("Couldn't get local data folder")),
-        Some(value) => value,
-    };
-    let path_string = &format!("{}/bob", data_dir.to_str().unwrap());
-    let does_folder_exist = tokio::fs::metadata(path_string).await.is_ok();
+pub async fn get_downloads_folder(config: &Config) -> Result<PathBuf> {
+    let path_string = match &config.downloads_dir {
+        Some(path) => {
+            if tokio::fs::metadata(path).await.is_err() {
+                return Err(anyhow!("Custom directory {path} doesn't exist!"));
+            }
 
-    if !does_folder_exist && tokio::fs::create_dir(path_string).await.is_err() {
-        return Err(anyhow!("Couldn't create downloads directory"));
-    }
+            path.clone()
+        }
+        None => {
+            let data_dir = match data_local_dir() {
+                None => return Err(anyhow!("Couldn't get local data folder")),
+                Some(value) => value,
+            };
+            let path_string = format!("{}/bob", data_dir.to_str().unwrap());
+            let does_folder_exist = tokio::fs::metadata(&path_string).await.is_ok();
+
+            if !does_folder_exist && tokio::fs::create_dir(&path_string).await.is_err() {
+                return Err(anyhow!("Couldn't create downloads directory"));
+            }
+            path_string
+        }
+    };
+
     Ok(PathBuf::from(path_string))
 }
 
-pub fn get_installation_folder() -> Result<PathBuf> {
-    let data_dir = match data_local_dir() {
-        None => return Err(anyhow!("Couldn't get local data folder")),
-        Some(value) => value,
-    };
-    cfg_if::cfg_if! {
-        if #[cfg(windows)] {
+pub fn get_installation_folder(config: &Config) -> Result<PathBuf> {
+    match &config.installation_location {
+        Some(path) => Ok(PathBuf::from(path.clone())),
+        None => {
+            let data_dir = match data_local_dir() {
+                None => return Err(anyhow!("Couldn't get local data folder")),
+                Some(value) => value,
+            };
+            cfg_if::cfg_if! {
+                if #[cfg(windows)] {
 
-            let full_path = &format!("{}\\neovim", data_dir.to_str().unwrap());
+                    let full_path = &format!("{}\\neovim", data_dir.to_str().unwrap());
 
-            Ok(PathBuf::from(full_path))
-        } else {
-            let full_path = &format!("{}/neovim", data_dir.to_str().unwrap());
-            Ok(PathBuf::from(full_path))
+                    Ok(PathBuf::from(full_path))
+                } else {
+                    let full_path = &format!("{}/neovim", data_dir.to_str().unwrap());
+                    Ok(PathBuf::from(full_path))
+                }
+            }
         }
     }
 }
@@ -77,8 +95,8 @@ pub fn get_file_type() -> &'static str {
     }
 }
 
-pub async fn is_version_installed(version: &str) -> bool {
-    let downloads_dir = get_downloads_folder().await.unwrap();
+pub async fn is_version_installed(version: &str, config: &Config) -> bool {
+    let downloads_dir = get_downloads_folder(config).await.unwrap();
     fs::metadata(format!("{}/{version}", downloads_dir.display()))
         .await
         .is_ok()
@@ -130,8 +148,8 @@ pub async fn get_upstream_nightly(client: &Client) -> Version {
     serde_json::from_str(&response).unwrap()
 }
 
-pub async fn get_local_nightly() -> Result<Version> {
-    let downloads_dir = get_downloads_folder().await.unwrap();
+pub async fn get_local_nightly(config: &Config) -> Result<Version> {
+    let downloads_dir = get_downloads_folder(config).await.unwrap();
     if let Ok(file) =
         fs::read_to_string(format!("{}/nightly/bob.json", downloads_dir.display())).await
     {
@@ -142,7 +160,11 @@ pub async fn get_local_nightly() -> Result<Version> {
     }
 }
 
-pub async fn get_commits_for_nightly(client: &Client, since: &str, until: &str) -> Result<Vec<RepoCommit>> {
+pub async fn get_commits_for_nightly(
+    client: &Client,
+    since: &str,
+    until: &str,
+) -> Result<Vec<RepoCommit>> {
     let response = client
         .get(format!(
             "https://api.github.com/repos/neovim/neovim/commits?since={since}&until={until}&per_page=100"))

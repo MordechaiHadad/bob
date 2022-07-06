@@ -1,6 +1,6 @@
 use super::utils;
 use crate::enums::InstallResult;
-use crate::models::DownloadedVersion;
+use crate::models::{Config, DownloadedVersion, Version};
 use crate::modules::expand_archive;
 use anyhow::{anyhow, Result};
 use futures_util::stream::StreamExt;
@@ -14,26 +14,28 @@ use tokio::io::AsyncWriteExt;
 use tracing::info;
 use yansi::Paint;
 
-pub async fn start(version: &str, client: &Client) -> Result<InstallResult> {
-    let root = match utils::get_downloads_folder().await {
+pub async fn start(version: &str, client: &Client, config: &Config) -> Result<InstallResult> {
+    let root = match utils::get_downloads_folder(&config).await {
         Ok(value) => value,
         Err(error) => return Err(anyhow!(error)),
     };
     env::set_current_dir(&root)?;
     let root = root.as_path();
 
-    let is_version_installed = utils::is_version_installed(version).await;
+    let is_version_installed = utils::is_version_installed(version, &config).await;
 
     let nightly_version = if version == "nightly" {
         info!("Looking for nightly updates...");
         let upstream_nightly = utils::get_upstream_nightly(client).await;
         if is_version_installed {
-            let local_nightly = utils::get_local_nightly().await?;
+            let local_nightly = utils::get_local_nightly(&config).await?;
 
-            let commits = utils::get_commits_for_nightly(client, &local_nightly.published_at, &upstream_nightly.published_at).await?;
-
-            for commit in commits {
-                println!("| {} {}\n", Paint::blue(commit.commit.author.name).bold(), commit.commit.message.replace('\n', "\n| "));
+            match config.enable_nightly_info {
+                Some(boolean) if boolean == true => {
+                    print_commits(&client, &local_nightly, &upstream_nightly).await
+                }
+                None => print_commits(&client, &local_nightly, &upstream_nightly).await,
+                _ => (),
             }
 
             if local_nightly.published_at == upstream_nightly.published_at {
@@ -64,6 +66,21 @@ pub async fn start(version: &str, client: &Client) -> Result<InstallResult> {
     Ok(InstallResult::InstallationSuccess(
         root.display().to_string(),
     ))
+}
+
+async fn print_commits(client: &Client, local: &Version, upstream: &Version) {
+    let commits =
+        utils::get_commits_for_nightly(client, &local.published_at, &upstream.published_at)
+            .await
+            .unwrap();
+
+    for commit in commits {
+        println!(
+            "| {} {}\n",
+            Paint::blue(commit.commit.author.name).bold(),
+            commit.commit.message.replace('\n', "\n| ")
+        );
+    }
 }
 
 async fn download_version(

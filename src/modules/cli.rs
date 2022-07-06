@@ -1,5 +1,5 @@
 use super::{erase_handler, install_handler, ls_handler, uninstall_handler, use_handler, utils};
-use crate::enums::InstallResult;
+use crate::{enums::InstallResult, models::Config};
 use anyhow::Result;
 use clap::{AppSettings, Parser};
 use reqwest::Client;
@@ -37,7 +37,7 @@ enum Cli {
     List,
 }
 
-pub async fn start() -> Result<()> {
+pub async fn start(config: Config) -> Result<()> {
     let cli = Cli::parse();
 
     match cli {
@@ -45,13 +45,13 @@ pub async fn start() -> Result<()> {
             let client = Client::new();
             let version = utils::parse_version(&client, &version).await?;
 
-            use_handler::start(&version, &client).await?;
+            use_handler::start(&version, &client, config).await?;
         }
         Cli::Install { version } => {
             let client = Client::new();
             let version = utils::parse_version(&client, &version).await?;
 
-            match install_handler::start(&version, &client).await? {
+            match install_handler::start(&version, &client, &config).await? {
                 InstallResult::InstallationSuccess(location) => {
                     info!("{version} has been successfully installed in {location}");
                 }
@@ -65,13 +65,13 @@ pub async fn start() -> Result<()> {
         }
         Cli::Uninstall { version } => {
             info!("Starting uninstallation process");
-            uninstall_handler::start(&version).await?;
+            uninstall_handler::start(&version, config).await?;
         }
         Cli::Erase => {
-            erase_handler::start().await?;
+            erase_handler::start(config).await?;
         }
         Cli::List => {
-            ls_handler::start().await?;
+            ls_handler::start(config).await?;
         }
     }
 
