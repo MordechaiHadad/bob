@@ -9,5 +9,7 @@
 
 * Roadmap
   - [ ] Add ARM support
-  - [ ] Add configuration
+  - [x] Add configuration
   - [x] Make the list command more visually appealing
+  - [ ] Allow building neovim from source
+  -- [ ] Rewrite how to get currently used version

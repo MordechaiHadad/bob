@@ -1,4 +1,4 @@
-use crate::enums::InstallResult;
+use crate::enums::{InstallResult, VersionType};
 use crate::models::Config;
 use crate::modules::{install_handler, utils};
 use anyhow::{anyhow, Result};
@@ -7,7 +7,7 @@ use std::env;
 use tokio::fs;
 use tracing::info;
 
-pub async fn start(version: &str, client: &Client, config: Config) -> Result<()> {
+pub async fn start(version: VersionType, client: &Client, config: Config) -> Result<()> {
     let is_version_used = utils::is_version_used(version).await;
     if is_version_used && version != "nightly" {
         info!("{version} is already installed and used!");

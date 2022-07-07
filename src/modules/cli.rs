@@ -43,13 +43,13 @@ pub async fn start(config: Config) -> Result<()> {
     match cli {
         Cli::Use { version } => {
             let client = Client::new();
-            let version = utils::parse_version(&client, &version).await?;
+            let version = utils::parse_version_type(&client, &version).await?;
 
             use_handler::start(&version, &client, config).await?;
         }
         Cli::Install { version } => {
             let client = Client::new();
-            let version = utils::parse_version(&client, &version).await?;
+            let version = utils::parse_version_type(&client, &version).await?;
 
             match install_handler::start(&version, &client, &config).await? {
                 InstallResult::InstallationSuccess(location) => {

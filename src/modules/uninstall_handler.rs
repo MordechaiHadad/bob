@@ -6,7 +6,7 @@ use tracing::{info, warn};
 
 pub async fn start(version: &str, config: Config) -> Result<()> {
     let client = Client::new();
-    let version = utils::parse_version(&client, version).await?;
+    let version = utils::parse_version_type(&client, version).await?;
 
     if utils::is_version_used(&version).await {
         warn!("Switch to a different version before proceeding");

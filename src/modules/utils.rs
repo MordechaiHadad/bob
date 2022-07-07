@@ -1,3 +1,4 @@
+use crate::enums::VersionType;
 use crate::models::{Config, RepoCommit, Version};
 use anyhow::{anyhow, Result};
 use dirs::data_local_dir;
@@ -6,9 +7,9 @@ use reqwest::Client;
 use std::path::PathBuf;
 use tokio::{fs, process::Command};
 
-pub async fn parse_version(client: &Client, version: &str) -> Result<String> {
+pub async fn parse_version_type(client: &Client, version: &str) -> Result<VersionType> {
     match version {
-        "nightly" => Ok(String::from(version)),
+        "nightly" => Ok(VersionType::Version(version.to_string())),
         "stable" => {
             let response = client
                 .get("https://api.github.com/repos/neovim/neovim/releases/latest")
@@ -21,16 +22,19 @@ pub async fn parse_version(client: &Client, version: &str) -> Result<String> {
 
             let latest: Version = serde_json::from_str(&response)?;
 
-            Ok(latest.tag_name)
+            Ok(VersionType::Version(latest.tag_name))
         }
         _ => {
-            let regex = Regex::new(r"^v?[0-9]+\.[0-9]+\.[0-9]+$").unwrap();
-            if regex.is_match(version) {
+            let version_regex = Regex::new(r"^v?[0-9]+\.[0-9]+\.[0-9]+$").unwrap();
+            let hash_regex = Regex::new(r"\b[0-9a-f]{5,40}\b").unwrap();
+            if version_regex.is_match(version) {
                 let mut returned_version = String::from(version);
                 if !version.contains('v') {
                     returned_version.insert(0, 'v');
                 }
-                return Ok(returned_version);
+                return Ok(VersionType::Version(returned_version));
+            } else if hash_regex.is_match(version) {
+                return Ok(VersionType::Hash(version.to_string()));
             }
             Err(anyhow!("Please provide a proper version string"))
         }

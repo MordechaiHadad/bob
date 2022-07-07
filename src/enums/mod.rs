@@ -3,3 +3,8 @@ pub enum InstallResult {
     VersionAlreadyInstalled,
     NightlyIsUpdated,
 }
+
+pub enum VersionType {
+    Version(String),
+    Hash(String),
+}
