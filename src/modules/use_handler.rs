@@ -1,5 +1,5 @@
-use crate::enums::{InstallResult, VersionType};
-use crate::models::Config;
+use crate::enums::InstallResult;
+use crate::models::{Config, InputVersion};
 use crate::modules::{install_handler, utils};
 use anyhow::{anyhow, Result};
 use reqwest::Client;
@@ -7,14 +7,14 @@ use std::env;
 use tokio::fs;
 use tracing::info;
 
-pub async fn start(version: VersionType, client: &Client, config: Config) -> Result<()> {
-    let is_version_used = utils::is_version_used(version).await;
-    if is_version_used && version != "nightly" {
-        info!("{version} is already installed and used!");
+pub async fn start(version: InputVersion, client: &Client, config: Config) -> Result<()> {
+    let is_version_used = utils::is_version_used(&version.tag_name).await;
+    if is_version_used && version.tag_name != "nightly" {
+        info!("{} is already installed and used!", version.tag_name);
         return Ok(());
     }
 
-    match install_handler::start(version, client, &config).await {
+    match install_handler::start(&version, client, &config).await {
         Ok(success) => {
             if let InstallResult::NightlyIsUpdated = success {
                 if is_version_used {
@@ -26,10 +26,10 @@ pub async fn start(version: VersionType, client: &Client, config: Config) -> Res
         Err(error) => return Err(error),
     }
 
-    if let Err(error) = link_version(version, &config).await {
+    if let Err(error) = link_version(&version.tag_name, &config).await {
         return Err(error);
     }
-    info!("You can now use {version}!");
+    info!("You can now use {}!", version.tag_name);
 
     Ok(())
 }

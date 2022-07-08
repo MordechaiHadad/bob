@@ -1,5 +1,5 @@
 use crate::enums::VersionType;
-use crate::models::{Config, RepoCommit, Version};
+use crate::models::{Config, InputVersion, RepoCommit, UpstreamVersion};
 use anyhow::{anyhow, Result};
 use dirs::data_local_dir;
 use regex::Regex;
@@ -7,9 +7,12 @@ use reqwest::Client;
 use std::path::PathBuf;
 use tokio::{fs, process::Command};
 
-pub async fn parse_version_type(client: &Client, version: &str) -> Result<VersionType> {
+pub async fn parse_version_type(client: &Client, version: &str) -> Result<InputVersion> {
     match version {
-        "nightly" => Ok(VersionType::Version(version.to_string())),
+        "nightly" => Ok(InputVersion {
+            tag_name: version.to_string(),
+            version_type: VersionType::Standard,
+        }),
         "stable" => {
             let response = client
                 .get("https://api.github.com/repos/neovim/neovim/releases/latest")
@@ -20,21 +23,30 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Versio
                 .text()
                 .await?;
 
-            let latest: Version = serde_json::from_str(&response)?;
+            let latest: UpstreamVersion = serde_json::from_str(&response)?;
 
-            Ok(VersionType::Version(latest.tag_name))
+            Ok(InputVersion {
+                tag_name: latest.tag_name,
+                version_type: VersionType::Standard,
+            })
         }
         _ => {
-            let version_regex = Regex::new(r"^v?[0-9]+\.[0-9]+\.[0-9]+$").unwrap();
-            let hash_regex = Regex::new(r"\b[0-9a-f]{5,40}\b").unwrap();
+            let version_regex = Regex::new(r"^v?[0-9]+\.[0-9]+\.[0-9]+$")?;
+            let hash_regex = Regex::new(r"\b[0-9a-f]{5,40}\b")?;
             if version_regex.is_match(version) {
-                let mut returned_version = String::from(version);
+                let mut returned_version = version.to_string();
                 if !version.contains('v') {
                     returned_version.insert(0, 'v');
                 }
-                return Ok(VersionType::Version(returned_version));
+                return Ok(InputVersion {
+                    tag_name: returned_version,
+                    version_type: VersionType::Standard,
+                });
             } else if hash_regex.is_match(version) {
-                return Ok(VersionType::Hash(version.to_string()));
+                return Ok(InputVersion {
+                    tag_name: version.to_string(),
+                    version_type: VersionType::Hash,
+                });
             }
             Err(anyhow!("Please provide a proper version string"))
         }
@@ -138,7 +150,7 @@ pub fn get_platform_name() -> &'static str {
     }
 }
 
-pub async fn get_upstream_nightly(client: &Client) -> Version {
+pub async fn get_upstream_nightly(client: &Client) -> UpstreamVersion {
     let response = client
         .get("https://api.github.com/repos/neovim/neovim/releases/tags/nightly")
         .header("user-agent", "bob")
@@ -152,12 +164,12 @@ pub async fn get_upstream_nightly(client: &Client) -> Version {
     serde_json::from_str(&response).unwrap()
 }
 
-pub async fn get_local_nightly(config: &Config) -> Result<Version> {
+pub async fn get_local_nightly(config: &Config) -> Result<UpstreamVersion> {
     let downloads_dir = get_downloads_folder(config).await.unwrap();
     if let Ok(file) =
         fs::read_to_string(format!("{}/nightly/bob.json", downloads_dir.display())).await
     {
-        let file_json: Version = serde_json::from_str(&file).unwrap();
+        let file_json: UpstreamVersion = serde_json::from_str(&file).unwrap();
         Ok(file_json)
     } else {
         Err(anyhow!("Couldn't find bob.json"))

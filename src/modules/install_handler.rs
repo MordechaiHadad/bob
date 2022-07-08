@@ -1,6 +1,6 @@
 use super::utils;
-use crate::enums::InstallResult;
-use crate::models::{Config, DownloadedVersion, Version};
+use crate::enums::{InstallResult, VersionType};
+use crate::models::{Config, LocalVersion, UpstreamVersion, InputVersion};
 use crate::modules::expand_archive;
 use anyhow::{anyhow, Result};
 use futures_util::stream::StreamExt;
@@ -14,7 +14,7 @@ use tokio::io::AsyncWriteExt;
 use tracing::info;
 use yansi::Paint;
 
-pub async fn start(version: &str, client: &Client, config: &Config) -> Result<InstallResult> {
+pub async fn start(version: &InputVersion, client: &Client, config: &Config) -> Result<InstallResult> {
     let root = match utils::get_downloads_folder(&config).await {
         Ok(value) => value,
         Err(error) => return Err(anyhow!(error)),
@@ -22,9 +22,9 @@ pub async fn start(version: &str, client: &Client, config: &Config) -> Result<In
     env::set_current_dir(&root)?;
     let root = root.as_path();
 
-    let is_version_installed = utils::is_version_installed(version, &config).await;
+    let is_version_installed = utils::is_version_installed(&version.tag_name, &config).await;
 
-    let nightly_version = if version == "nightly" {
+    let nightly_version = if version.tag_name == "nightly" {
         info!("Looking for nightly updates...");
         let upstream_nightly = utils::get_upstream_nightly(client).await;
         if is_version_installed {
@@ -50,7 +50,7 @@ pub async fn start(version: &str, client: &Client, config: &Config) -> Result<In
         None
     };
 
-    let downloaded_file = match download_version(client, version, root).await {
+    let downloaded_file = match download_version(client, &version.tag_name, root).await {
         Ok(value) => value,
         Err(error) => return Err(anyhow!(error)),
     };
@@ -68,7 +68,7 @@ pub async fn start(version: &str, client: &Client, config: &Config) -> Result<In
     ))
 }
 
-async fn print_commits(client: &Client, local: &Version, upstream: &Version) {
+async fn print_commits(client: &Client, local: &UpstreamVersion, upstream: &UpstreamVersion) {
     let commits =
         utils::get_commits_for_nightly(client, &local.published_at, &upstream.published_at)
             .await
@@ -87,7 +87,7 @@ async fn download_version(
     client: &Client,
     version: &str,
     root: &Path,
-) -> Result<DownloadedVersion> {
+) -> Result<LocalVersion> {
     let response = send_request(client, version).await;
 
     match response {
@@ -121,7 +121,7 @@ async fn download_version(
                     root.display()
                 ));
 
-                Ok(DownloadedVersion {
+                Ok(LocalVersion {
                     file_name: String::from(version),
                     file_format: file_type.to_string(),
                     path: root.display().to_string(),

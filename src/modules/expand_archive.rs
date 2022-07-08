@@ -1,4 +1,4 @@
-use crate::models::DownloadedVersion;
+use crate::models::LocalVersion;
 use anyhow::Result;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::cmp::min;
@@ -6,7 +6,7 @@ use std::fs::File;
 use std::path::Path;
 use std::{fs, io};
 
-pub async fn start(file: DownloadedVersion) -> Result<()> {
+pub async fn start(file: LocalVersion) -> Result<()> {
     let temp_file = file.clone();
     tokio::task::spawn_blocking(move || {
         expand(temp_file).unwrap();
@@ -23,7 +23,7 @@ pub async fn start(file: DownloadedVersion) -> Result<()> {
 // TODO: Refactor
 
 #[cfg(target_family = "windows")]
-fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
+fn expand(downloaded_file: LocalVersion) -> Result<()> {
     use zip::ZipArchive;
 
     if fs::metadata(&downloaded_file.file_name).is_ok() {
@@ -76,7 +76,7 @@ fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
 }
 
 #[cfg(target_family = "unix")] // I don't know if its worth making both expand functions into one function, but the API difference will cause so much if statements
-fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
+fn expand(downloaded_file: LocalVersion) -> Result<()> {
     use flate2::read::GzDecoder;
     use std::os::unix::fs::PermissionsExt;
     use tar::Archive;

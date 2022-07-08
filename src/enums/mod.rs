@@ -5,6 +5,6 @@ pub enum InstallResult {
 }
 
 pub enum VersionType {
-    Version(String),
-    Hash(String),
+    Standard,
+    Hash,
 }

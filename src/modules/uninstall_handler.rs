@@ -8,7 +8,7 @@ pub async fn start(version: &str, config: Config) -> Result<()> {
     let client = Client::new();
     let version = utils::parse_version_type(&client, version).await?;
 
-    if utils::is_version_used(&version).await {
+    if utils::is_version_used(&version.tag_name).await {
         warn!("Switch to a different version before proceeding");
         return Ok(());
     }
@@ -18,7 +18,7 @@ pub async fn start(version: &str, config: Config) -> Result<()> {
         Err(error) => return Err(anyhow!(error)),
     };
 
-    fs::remove_dir_all(&format!("{}/{version}", downloads_dir.display())).await?;
-    info!("Successfully uninstalled version: {version}");
+    fs::remove_dir_all(&format!("{}/{}", downloads_dir.display(), version.tag_name)).await?;
+    info!("Successfully uninstalled version: {}", version.tag_name);
     Ok(())
 }
