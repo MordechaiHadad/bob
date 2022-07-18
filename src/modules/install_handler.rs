@@ -1,6 +1,6 @@
 use super::utils;
 use crate::enums::{InstallResult, VersionType};
-use crate::models::{Config, LocalVersion, UpstreamVersion, InputVersion};
+use crate::models::{Config, InputVersion, LocalVersion, UpstreamVersion};
 use crate::modules::expand_archive;
 use anyhow::{anyhow, Result};
 use futures_util::stream::StreamExt;
@@ -9,12 +9,16 @@ use reqwest::Client;
 use std::cmp::min;
 use std::env;
 use std::path::Path;
-use tokio::fs;
+use tokio::{fs, process::Command};
 use tokio::io::AsyncWriteExt;
 use tracing::info;
 use yansi::Paint;
 
-pub async fn start(version: &InputVersion, client: &Client, config: &Config) -> Result<InstallResult> {
+pub async fn start(
+    version: &InputVersion,
+    client: &Client,
+    config: &Config,
+) -> Result<InstallResult> {
     let root = match utils::get_downloads_folder(&config).await {
         Ok(value) => value,
         Err(error) => return Err(anyhow!(error)),
@@ -26,7 +30,10 @@ pub async fn start(version: &InputVersion, client: &Client, config: &Config) -> 
 
     let nightly_version = if version.tag_name == "nightly" {
         info!("Looking for nightly updates...");
-        let upstream_nightly = utils::get_upstream_nightly(client).await;
+        let upstream_nightly = match utils::get_upstream_nightly(client).await {
+            Ok(value) => value,
+            Err(error) => return Err(error),
+        };
         if is_version_installed {
             let local_nightly = utils::get_local_nightly(&config).await?;
 
@@ -50,7 +57,7 @@ pub async fn start(version: &InputVersion, client: &Client, config: &Config) -> 
         None
     };
 
-    let downloaded_file = match download_version(client, &version.tag_name, root).await {
+    let downloaded_file = match download_version(client, &version, root).await {
         Ok(value) => value,
         Err(error) => return Err(anyhow!(error)),
     };
@@ -85,52 +92,62 @@ async fn print_commits(client: &Client, local: &UpstreamVersion, upstream: &Upst
 
 async fn download_version(
     client: &Client,
-    version: &str,
+    version: &InputVersion,
     root: &Path,
 ) -> Result<LocalVersion> {
-    let response = send_request(client, version).await;
+    match version.version_type {
+        VersionType::Standard => {
+            let response = send_request(client, &version.tag_name).await;
 
-    match response {
-        Ok(response) => {
-            if response.status() == 200 {
-                let total_size = response.content_length().unwrap();
-                let mut response_bytes = response.bytes_stream();
+            match response {
+                Ok(response) => {
+                    if response.status() == 200 {
+                        let total_size = response.content_length().unwrap();
+                        let mut response_bytes = response.bytes_stream();
 
-                // Progress Bar Setup
-                let pb = ProgressBar::new(total_size);
-                pb.set_style(ProgressStyle::default_bar()
+                        // Progress Bar Setup
+                        let pb = ProgressBar::new(total_size);
+                        pb.set_style(ProgressStyle::default_bar()
                     .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
                     .progress_chars("█  "));
-                pb.set_message(format!("Downloading version: {version}"));
+                        pb.set_message(format!("Downloading version: {}", version.tag_name));
 
-                let file_type = utils::get_file_type();
-                let mut file = tokio::fs::File::create(format!("{version}.{file_type}")).await?;
+                        let file_type = utils::get_file_type();
+                        let mut file =
+                            tokio::fs::File::create(format!("{}.{file_type}", version.tag_name))
+                                .await?;
 
-                let mut downloaded: u64 = 0;
+                        let mut downloaded: u64 = 0;
 
-                while let Some(item) = response_bytes.next().await {
-                    let chunk = item.or(anyhow::private::Err(anyhow::Error::msg("hello")))?;
-                    file.write(&chunk).await?;
-                    let new = min(downloaded + (chunk.len() as u64), total_size);
-                    downloaded = new;
-                    pb.set_position(new);
+                        while let Some(item) = response_bytes.next().await {
+                            let chunk =
+                                item.or(anyhow::private::Err(anyhow::Error::msg("hello")))?;
+                            file.write(&chunk).await?;
+                            let new = min(downloaded + (chunk.len() as u64), total_size);
+                            downloaded = new;
+                            pb.set_position(new);
+                        }
+
+                        pb.finish_with_message(format!(
+                            "Downloaded version {} to {}/{}.{file_type}",
+                            version.tag_name,
+                            root.display(),
+                            version.tag_name
+                        ));
+
+                        Ok(LocalVersion {
+                            file_name: version.tag_name.to_owned(),
+                            file_format: file_type.to_string(),
+                            path: root.display().to_string(),
+                        })
+                    } else {
+                        Err(anyhow!("Please provide an existing neovim version"))
+                    }
                 }
-
-                pb.finish_with_message(format!(
-                    "Downloaded version {version} to {}/{version}.{file_type}",
-                    root.display()
-                ));
-
-                Ok(LocalVersion {
-                    file_name: String::from(version),
-                    file_format: file_type.to_string(),
-                    path: root.display().to_string(),
-                })
-            } else {
-                Err(anyhow!("Please provide an existing neovim version"))
+                Err(error) => Err(anyhow!(error)),
             }
         }
-        Err(error) => Err(anyhow!(error)),
+        VersionType::Hash => todo!(),
     }
 }
 

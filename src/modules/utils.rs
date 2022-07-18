@@ -150,7 +150,7 @@ pub fn get_platform_name() -> &'static str {
     }
 }
 
-pub async fn get_upstream_nightly(client: &Client) -> UpstreamVersion {
+pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
     let response = client
         .get("https://api.github.com/repos/neovim/neovim/releases/tags/nightly")
         .header("user-agent", "bob")
@@ -161,7 +161,10 @@ pub async fn get_upstream_nightly(client: &Client) -> UpstreamVersion {
         .text()
         .await
         .unwrap();
-    serde_json::from_str(&response).unwrap()
+    match serde_json::from_str(&response) {
+        Ok(value) => return Ok(value),
+        Err(_) => Err(anyhow!("Failed to get upstream nightly version, aborting...")),
+    }
 }
 
 pub async fn get_local_nightly(config: &Config) -> Result<UpstreamVersion> {
