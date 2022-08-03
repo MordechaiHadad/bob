@@ -67,10 +67,15 @@ jobs:
         with:
           command: build
           args: --profile optimized
-      - name: Upload Bob Windows binary
+      - name: Setup Bob build directory
+        run: |
+          mkdir build
+          copy .\\bin\\vcruntime140.dll .\\build
+          copy .\\target\\optimized\\bob.exe .\\build
+      - name: Upload Bob Windows build
         uses: actions/upload-artifact@v2
         with:
           name: "bob-windows-x86_64"
-          path: "target\\optimized\\bob.exe"
+          path: "build"
           if-no-files-found: error
           retention-days: 7
