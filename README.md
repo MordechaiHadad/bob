@@ -6,11 +6,11 @@ Bob is a cross-platform and easy-to-use Neovim version manager, allowing for eas
 
 ## Prerequisites
 
-Make sure you don't have Neovim already installed via other ways e.g. package manager.
+Make sure you don't have Neovim already installed via other ways e.g. a package manager.
 
 ### Building from source
 
-Make sure to you have [rustup](https://www.rust-lang.org/tools/install) installed.
+Make sure you have [rustup](https://www.rust-lang.org/tools/install) installed.
 
 ## :wrench: Installation
 
