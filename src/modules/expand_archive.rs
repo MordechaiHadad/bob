@@ -8,10 +8,16 @@ use std::{fs, io};
 
 pub async fn start(file: DownloadedVersion) -> Result<()> {
     let temp_file = file.clone();
-    tokio::task::spawn_blocking(move || {
-        expand(temp_file).unwrap();
+    match tokio::task::spawn_blocking(move || {
+        match expand(temp_file) {
+            Ok(_) => return Ok(()),
+            Err(error) => return Err(anyhow!(error)),
+        }
     })
-    .await?;
+    .await {
+        Ok(_) => (),
+        Err(error) => return Err(anyhow!(error)),
+    }
     tokio::fs::remove_file(format!(
         "{}/{}.{}",
         file.path, file.file_name, file.file_format
