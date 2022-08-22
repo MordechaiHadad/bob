@@ -1,5 +1,5 @@
 use crate::models::DownloadedVersion;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::cmp::min;
 use std::fs::File;
@@ -85,10 +85,13 @@ fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
         fs::remove_dir_all(&downloaded_file.file_name)?;
     }
 
-    let file = File::open(format!(
+    let file = match File::open(format!(
         "{}.{}",
         downloaded_file.file_name, downloaded_file.file_format
-    ))?;
+    )) {
+        Ok(value) => value,
+        Err(error) => return Err(anyhow!("Failed to open file {}.{}, file doesn't exist. additional info: {error}", downloaded_file.file_name, downloaded_file.file_format)),
+    };
     let decompress_stream = GzDecoder::new(file);
     let mut archive = Archive::new(decompress_stream);
 
