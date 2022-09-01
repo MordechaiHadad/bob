@@ -114,9 +114,17 @@ pub fn get_file_type() -> &'static str {
 
 pub async fn is_version_installed(version: &str, config: &Config) -> bool {
     let downloads_dir = get_downloads_folder(config).await.unwrap();
-    fs::metadata(format!("{}/{version}", downloads_dir.display()))
-        .await
-        .is_ok()
+    let mut dir = tokio::fs::read_dir(&downloads_dir).await.unwrap();
+
+    while let Some(directory) = dir.next_entry().await.unwrap() {
+        let name = directory.file_name().to_str().unwrap().to_owned();
+        if !version.contains(&name) {
+            continue;
+        } else {
+            return true;
+        }
+    }
+    false
 }
 
 pub async fn is_version_used(version: &str, config: &Config) -> Result<bool> {

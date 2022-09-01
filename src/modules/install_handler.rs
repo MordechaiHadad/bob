@@ -226,6 +226,10 @@ async fn download_version(
                 .wait()
                 .await?;
 
+            if fs::metadata("build").await.is_ok() {
+                fs::remove_dir_all("build").await?;
+            }
+
             let mut downloads_location = utils::get_downloads_folder(config).await?;
             downloads_location.push(&version.tag_name[0..7]);
             downloads_location.push(utils::get_platform_name());
