@@ -8,7 +8,10 @@ use tokio::fs;
 use tracing::info;
 
 pub async fn start(version: InputVersion, client: &Client, config: Config) -> Result<()> {
-    let is_version_used = utils::is_version_used(&version.tag_name).await;
+    let is_version_used = match utils::is_version_used(&version.tag_name, &config).await {
+        Ok(value) => value,
+        Err(error) => return Err(error),
+    };
     if is_version_used && version.tag_name != "nightly" {
         info!("{} is already installed and used!", version.tag_name);
         return Ok(());
@@ -26,15 +29,16 @@ pub async fn start(version: InputVersion, client: &Client, config: Config) -> Re
         Err(error) => return Err(error),
     }
 
-    if let Err(error) = link_version(&version.tag_name, &config).await {
+    if let Err(error) = link_version(&version.tag_name, &config, is_version_used).await {
         return Err(error);
     }
+    fs::write("used", &version.tag_name).await?;
     info!("You can now use {}!", version.tag_name);
 
     Ok(())
 }
 
-async fn link_version(version: &str, config: &Config) -> Result<()> {
+async fn link_version(version: &str, config: &Config, is_version_used: bool) -> Result<()> {
     let installation_dir = match utils::get_installation_folder(&config) {
         Err(_) => return Err(anyhow!("Couldn't get data dir")),
         Ok(value) => value,
@@ -76,7 +80,7 @@ async fn link_version(version: &str, config: &Config) -> Result<()> {
         }
     }
 
-    if !utils::is_version_used(version).await {
+    if !is_version_used {
         cfg_if::cfg_if! {
             if #[cfg(windows)] {
                 use winreg::enums::*;

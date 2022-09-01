@@ -1,5 +1,5 @@
 use super::utils;
-use crate::enums::{InstallResult, VersionType};
+use crate::enums::{InstallResult, PostDownloadVersionType, VersionType};
 use crate::models::{Config, InputVersion, LocalVersion, UpstreamVersion};
 use crate::modules::expand_archive;
 use anyhow::{anyhow, Result};
@@ -9,8 +9,8 @@ use reqwest::Client;
 use std::cmp::min;
 use std::env;
 use std::path::Path;
-use tokio::{fs, process::Command};
 use tokio::io::AsyncWriteExt;
+use tokio::{fs, process::Command};
 use tracing::info;
 use yansi::Paint;
 
@@ -57,19 +57,23 @@ pub async fn start(
         None
     };
 
-    let downloaded_file = match download_version(client, &version, root).await {
+    let downloaded_file = match download_version(client, &version, root, config).await {
         Ok(value) => value,
         Err(error) => return Err(anyhow!(error)),
     };
-    if let Err(error) = expand_archive::start(downloaded_file).await {
-        return Err(anyhow!(error));
+
+    if let PostDownloadVersionType::Standard(downloaded_file) = downloaded_file {
+        if let Err(error) = expand_archive::start(downloaded_file).await {
+            return Err(anyhow!(error));
+        }
+
+        if let Some(nightly_version) = nightly_version {
+            let nightly_string = serde_json::to_string(&nightly_version)?;
+            let mut file = fs::File::create("nightly/bob.json").await?;
+            file.write_all(nightly_string.as_bytes()).await?;
+        }
     }
 
-    if let Some(nightly_version) = nightly_version {
-        let nightly_string = serde_json::to_string(&nightly_version)?;
-        let mut file = fs::File::create("nightly/bob.json").await?;
-        file.write_all(nightly_string.as_bytes()).await?;
-    }
     Ok(InstallResult::InstallationSuccess(
         root.display().to_string(),
     ))
@@ -94,7 +98,8 @@ async fn download_version(
     client: &Client,
     version: &InputVersion,
     root: &Path,
-) -> Result<LocalVersion> {
+    config: &Config,
+) -> Result<PostDownloadVersionType> {
     match version.version_type {
         VersionType::Standard => {
             let response = send_request(client, &version.tag_name).await;
@@ -135,11 +140,11 @@ async fn download_version(
                             version.tag_name
                         ));
 
-                        Ok(LocalVersion {
+                        Ok(PostDownloadVersionType::Standard(LocalVersion {
                             file_name: version.tag_name.to_owned(),
                             file_format: file_type.to_string(),
                             path: root.display().to_string(),
-                        })
+                        }))
                     } else {
                         Err(anyhow!("Please provide an existing neovim version"))
                     }
@@ -147,7 +152,97 @@ async fn download_version(
                 Err(error) => Err(anyhow!(error)),
             }
         }
-        VersionType::Hash => todo!(),
+        VersionType::Hash => {
+            let is_clang_present = match Command::new("clang").output().await {
+                Ok(_) => true,
+                Err(error) => match error.kind() {
+                    std::io::ErrorKind::NotFound => false,
+                    _ => true,
+                },
+            };
+            let is_gcc_present = match Command::new("gcc").output().await {
+                Ok(_) => true,
+                Err(error) => match error.kind() {
+                    std::io::ErrorKind::NotFound => false,
+                    _ => true,
+                },
+            };
+            if !is_gcc_present && !is_clang_present {
+                return Err(anyhow!(
+                    "Clang or GCC have to be installed in order to build neovim from source"
+                ));
+            }
+
+            match Command::new("cmake").output().await {
+                Ok(_) => (),
+                Err(error) => match error.kind() {
+                    std::io::ErrorKind::NotFound => {
+                        return Err(anyhow!(
+                            "Cmake has to be installed in order to build neovim from source"
+                        ))
+                    }
+                    _ => (),
+                },
+            }
+
+            let (mut child, is_installed) = if fs::metadata("neovim-git").await.is_err() {
+                // check if neovim-git
+                // directory exists
+                // to clone repo, else
+                // git pull changes
+                let child = match Command::new("git")
+                    .arg("clone")
+                    .arg("https://github.com/neovim/neovim")
+                    .arg("neovim-git")
+                    .spawn()
+                {
+                    Ok(value) => value,
+                    Err(error) => match error.kind() {
+                        std::io::ErrorKind::NotFound => {
+                            return Err(anyhow!(
+                                "Git has to be instaled in order to build neovim from source"
+                            ))
+                        }
+                        _ => return Err(anyhow!("Failed to clone neovim's repository")),
+                    },
+                };
+                (child, false)
+            } else {
+                env::set_current_dir("neovim-git")?; // cd into neovim-git
+                let child = match Command::new("git").arg("pull").spawn() {
+                    Ok(value) => value,
+                    Err(_) => return Err(anyhow!("Failed to pull upstream updates")),
+                };
+                (child, true)
+            };
+            child.wait().await?;
+            if !is_installed {
+                env::set_current_dir("neovim-git")?; // cd into neovim-git
+            }
+            Command::new("git")
+                .arg("checkout")
+                .arg(&version.tag_name)
+                .spawn()?
+                .wait()
+                .await?;
+
+            let mut downloads_location = utils::get_downloads_folder(config).await?;
+            downloads_location.push(&version.tag_name[0..7]);
+            downloads_location.push(utils::get_platform_name());
+            let location_arg = format!(
+                "CMAKE_EXTRA_FLAGS=\"-DCMAKE_INSTALL_PREFIX={}\"",
+                downloads_location.display()
+            );
+            Command::new("make")
+                .arg(location_arg)
+                .spawn()?
+                .wait()
+                .await?;
+            Command::new("make").arg("install").spawn()?.wait().await?;
+
+            info!("Successfully installed {}", version.tag_name);
+            Ok(PostDownloadVersionType::Hash)
+        }
     }
 }
 

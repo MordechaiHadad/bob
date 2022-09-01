@@ -39,5 +39,5 @@ pub struct Config {
 
 pub struct InputVersion {
     pub tag_name: String,
-    pub version_type: VersionType
+    pub version_type: VersionType,
 }

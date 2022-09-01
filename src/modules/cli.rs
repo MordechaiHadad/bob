@@ -53,7 +53,10 @@ pub async fn start(config: Config) -> Result<()> {
 
             match install_handler::start(&version, &client, &config).await? {
                 InstallResult::InstallationSuccess(location) => {
-                    info!("{} has been successfully installed in {location}", version.tag_name);
+                    info!(
+                        "{} has been successfully installed in {location}",
+                        version.tag_name
+                    );
                 }
                 InstallResult::VersionAlreadyInstalled => {
                     info!("{} is already installed", version.tag_name);

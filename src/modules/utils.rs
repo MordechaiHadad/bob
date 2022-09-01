@@ -5,7 +5,8 @@ use dirs::data_local_dir;
 use regex::Regex;
 use reqwest::Client;
 use std::path::PathBuf;
-use tokio::{fs, process::Command};
+use tokio::fs;
+use tokio::process::Command;
 
 pub async fn parse_version_type(client: &Client, version: &str) -> Result<InputVersion> {
     match version {
@@ -118,26 +119,34 @@ pub async fn is_version_installed(version: &str, config: &Config) -> bool {
         .is_ok()
 }
 
-pub async fn is_version_used(version: &str) -> bool {
-    let installed_version = match get_current_version().await {
-        None => return false,
-        Some(value) => value,
-    };
-
-    installed_version.contains(version)
+pub async fn is_version_used(version: &str, config: &Config) -> Result<bool> {
+    match get_current_version(config).await {
+        Ok(value) => Ok(value == version),
+        Err(error) => return Err(error),
+    }
 }
 
-pub async fn get_current_version() -> Option<String> {
-    let output = match Command::new("nvim").arg("--version").output().await {
+pub async fn get_current_version(config: &Config) -> Result<String> {
+    let mut downloads_dir = get_downloads_folder(config).await.unwrap();
+    downloads_dir.push("used");
+    match fs::read_to_string(&downloads_dir).await {
+        Ok(value) => Ok(value),
+        Err(error) => match error.kind() { // If used file doesn't exist try directly via neovim
+            std::io::ErrorKind::NotFound => {
+   let output = match Command::new("nvim").arg("--version").output().await {
         Ok(value) => value,
-        Err(_) => return None,
+        Err(_) => return Err(anyhow!("Neovim is not installed")),
     };
     let output = String::from_utf8_lossy(&*output.stdout).to_string();
     if output.contains("dev") {
-        return Some(String::from("nightly"));
+        return Ok(String::from("nightly"));
     }
     let regex = Regex::new(r"v[0-9]\.[0-9]\.[0-9]").unwrap();
-    Some(regex.find(output.as_str()).unwrap().as_str().to_owned())
+    Ok(regex.find(output.as_str()).unwrap().as_str().to_owned())
+            },
+            _ => return Err(anyhow!("{} is corrupted, try running bob use again or open an issue at https://github.com/MordechaiHadad/bob", downloads_dir.display())),
+        },
+    }
 }
 
 pub fn get_platform_name() -> &'static str {
@@ -163,7 +172,9 @@ pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
         .unwrap();
     match serde_json::from_str(&response) {
         Ok(value) => return Ok(value),
-        Err(_) => Err(anyhow!("Failed to get upstream nightly version, aborting...")),
+        Err(_) => Err(anyhow!(
+            "Failed to get upstream nightly version, aborting..."
+        )),
     }
 }
 

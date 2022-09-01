@@ -1,4 +1,4 @@
-use crate::{modules::utils, models::Config};
+use crate::{models::Config, modules::utils};
 use anyhow::{anyhow, Result};
 use reqwest::Client;
 use tokio::fs;
@@ -8,7 +8,7 @@ pub async fn start(version: &str, config: Config) -> Result<()> {
     let client = Client::new();
     let version = utils::parse_version_type(&client, version).await?;
 
-    if utils::is_version_used(&version.tag_name).await {
+    if let Ok(_) = utils::is_version_used(&version.tag_name, &config).await {
         warn!("Switch to a different version before proceeding");
         return Ok(());
     }
