@@ -233,12 +233,10 @@ async fn download_version(
             let mut downloads_location = utils::get_downloads_folder(config).await?;
             downloads_location.push(&version.tag_name[0..7]);
             downloads_location.push(utils::get_platform_name());
-            let location_arg = format!(
-                "CMAKE_EXTRA_FLAGS=\"-DCMAKE_INSTALL_PREFIX={}\"",
-                downloads_location.display()
-            );
+            let location_arg = format!("CMAKE_INSTALL_PREFIX={}", downloads_location.to_string_lossy());
             Command::new("make")
-                .arg(location_arg)
+                .arg(&location_arg)
+                .arg("CMAKE_BUILD_TYPE=RelWithDebInfo")
                 .spawn()?
                 .wait()
                 .await?;
