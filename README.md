@@ -30,7 +30,7 @@ Install [rustup](https://www.rust-lang.org/tools/install)
 
 ## :question: Usage
 
-- `bob use |nightly|stable|<version-string>|`
+- `bob use |nightly|stable|<version-string>|<commit-hash>|`
 
 Switch to the specified version, will auto-invoke install command if the version is not installed already.
 
@@ -41,11 +41,11 @@ Make sure to run the application as administrator to properly switch a version.
 
 </details>
 
-- `bob install |nightly|stable|<version-string>|`
+- `bob install |nightly|stable|<version-string>|<commit-hash>|`
 
 Install the specified version, can also be used to update out-of-date nightly version.
 
-- `bob uninstall |nightly|stable|<version-string>|`
+- `bob uninstall |nightly|stable|<version-string>|<commit-hash>|`
 
 Uninstall the specified version.
 
