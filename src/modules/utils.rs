@@ -127,10 +127,10 @@ pub async fn is_version_installed(version: &str, config: &Config) -> bool {
     false
 }
 
-pub async fn is_version_used(version: &str, config: &Config) -> Result<bool> {
+pub async fn is_version_used(version: &str, config: &Config) -> bool {
     match get_current_version(config).await {
-        Ok(value) => Ok(value == version),
-        Err(error) => return Err(error),
+        Ok(value) => value == version,
+        Err(error) => false,
     }
 }
 
