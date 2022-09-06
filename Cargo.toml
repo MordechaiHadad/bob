@@ -33,3 +33,5 @@ flate2 = "1.0"
 inherits = "release"
 opt-level = "z"
 strip = true
+lto = true
+codegen-units = 1
