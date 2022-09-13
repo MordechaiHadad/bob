@@ -1,5 +1,5 @@
 use crate::models::DownloadedVersion;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::cmp::min;
 use std::fs::File;
@@ -8,10 +8,16 @@ use std::{fs, io};
 
 pub async fn start(file: DownloadedVersion) -> Result<()> {
     let temp_file = file.clone();
-    tokio::task::spawn_blocking(move || {
-        expand(temp_file).unwrap();
+    match tokio::task::spawn_blocking(move || {
+        match expand(temp_file) {
+            Ok(_) => return Ok(()),
+            Err(error) => return Err(anyhow!(error)),
+        }
     })
-    .await?;
+    .await {
+        Ok(_) => (),
+        Err(error) => return Err(anyhow!(error)),
+    }
     tokio::fs::remove_file(format!(
         "{}/{}.{}",
         file.path, file.file_name, file.file_format
@@ -85,10 +91,13 @@ fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
         fs::remove_dir_all(&downloaded_file.file_name)?;
     }
 
-    let file = File::open(format!(
+    let file = match File::open(format!(
         "{}.{}",
         downloaded_file.file_name, downloaded_file.file_format
-    ))?;
+    )) {
+        Ok(value) => value,
+        Err(error) => return Err(anyhow!("Failed to open file {}.{}, file doesn't exist. additional info: {error}", downloaded_file.file_name, downloaded_file.file_format)),
+    };
     let decompress_stream = GzDecoder::new(file);
     let mut archive = Archive::new(decompress_stream);
 
