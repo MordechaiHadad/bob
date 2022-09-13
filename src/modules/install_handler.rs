@@ -109,7 +109,7 @@ async fn download_version(
                 let mut downloaded: u64 = 0;
 
                 while let Some(item) = response_bytes.next().await {
-                    let chunk = item.or(anyhow::private::Err(anyhow::Error::msg("hello")))?;
+                    let chunk = item.or(Err(anyhow!("hello")))?;
                     file.write(&chunk).await?;
                     let new = min(downloaded + (chunk.len() as u64), total_size);
                     downloaded = new;
