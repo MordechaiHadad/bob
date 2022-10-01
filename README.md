@@ -30,11 +30,11 @@ This issue needs a little more researching to possibly fix, but for now it will 
 
 #### For Linux OpenSSL v1.1 and windows/macos users
 
-1. `cargo install --git https://github.com/MordechaiHadad/bob.git -F bob/openssl`
+1. `cargo install --git https://github.com/MordechaiHadad/bob.git --features bob/openssl`
 
 #### For OpenSSL v3.0.+ users
 
-1. `cargo install --git https://github.com/MordechaiHadad/bob.git -F bob/rustls`
+1. `cargo install --git https://github.com/MordechaiHadad/bob.git --features bob/rustls`
 2. Run bob with `bob`
 
 ## :question: Usage
