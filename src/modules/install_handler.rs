@@ -163,7 +163,7 @@ async fn handle_building_from_source(
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
             if let Err(_) = env::var("VisualStudioVersion") {
-                return Err("Please make sure you are using Developer PowerShell/Command Prompt for VS");
+                return Err(anyhow!("Please make sure you are using Developer PowerShell/Command Prompt for VS"));
             }
 
         } else {
@@ -261,7 +261,7 @@ async fn handle_building_from_source(
             Command::new("cmake").arg("--build").arg(".").spawn()?.wait().await?;
 
             let current_dir = env::current_dir()?;
-            let parent = current_dir.parent()?;
+            let parent = current_dir.parent().unwarp();
 
             info!("Current directory: {}", env::current_dir().unwrap().display());
 
