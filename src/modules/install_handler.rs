@@ -261,7 +261,7 @@ async fn handle_building_from_source(
             Command::new("cmake").arg("--build").arg(".").spawn()?.wait().await?;
 
             let current_dir = env::current_dir()?;
-            let parent = current_dir.parent().unwarp();
+            let parent = current_dir.parent().unwrap();
 
             info!("Current directory: {}", env::current_dir().unwrap().display());
 
