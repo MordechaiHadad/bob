@@ -108,15 +108,16 @@ pub async fn remove_dir(directory: &str) -> Result<()> {
                     return Err(anyhow!("Failed to remove {}: {}", path.display(), e));
                 }
             }
+            removed += 1;
+            pb.set_position(removed);
         }
-
-        removed += 1;
-        pb.set_position(removed);
     }
 
     if let Err(e) = fs::remove_dir(directory).await {
         return Err(anyhow!("Failed to remove {directory}: {}", e));
     }
+
+    pb.finish_with_message(format!("Finished removing {}", path.display()));
 
     Ok(())
 }
