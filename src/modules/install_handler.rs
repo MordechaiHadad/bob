@@ -262,9 +262,8 @@ async fn handle_building_from_source(
             // Command::new("cmake").arg("--build").arg(".").spawn()?.wait().await?;
 
             let current_dir = env::current_dir()?;
-            let mut build_dir = current_dir.parent().unwrap();
-            build_dir.push("build");
-            env::set_current_dir(build_dir);
+            let parent = current_dir.parent().unwrap();
+            env::set_current_dir(parent.join("build"));
 
             Command::new("cmake").arg("..").spawn()?.wait().await?;
             Command::new("cmake").arg("--build").arg(".").spawn()?.wait().await?;
