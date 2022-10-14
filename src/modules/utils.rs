@@ -2,9 +2,10 @@ use crate::enums::VersionType;
 use crate::models::{Config, InputVersion, RepoCommit, UpstreamVersion};
 use anyhow::{anyhow, Result};
 use dirs::data_local_dir;
+use indicatif::{ProgressBar, ProgressStyle};
 use regex::Regex;
 use reqwest::Client;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 use tokio::fs;
 use tokio::process::Command;
 
@@ -82,27 +83,42 @@ pub async fn get_downloads_folder(config: &Config) -> Result<PathBuf> {
 }
 
 pub async fn remove_dir(directory: &str) -> Result<()> {
-    let read_dir = Path::new(directory).read_dir()?;
+    let path = Path::new(directory);
+    let size = path.read_dir()?.count();
+    let read_dir = path.read_dir()?;
+
+    let pb = ProgressBar::new(size.try_into()?);
+    pb.set_style(ProgressStyle::default_bar()
+                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
+                    .progress_chars("█  "));
+    pb.set_message(format!("Deleting {}", path.display()));
+
+    let mut removed: u64 = 0;
 
     for entry in read_dir {
         if let Ok(entry) = entry {
             let path = entry.path();
-            println!("removing {}", path.display());
 
             if path.is_dir() {
                 if let Err(e) = fs::remove_dir_all(path.to_owned()).await {
-                    return Err(anyhow!("Failed to remove {}: {}", path.display(), e))
+                    return Err(anyhow!("Failed to remove {}: {}", path.display(), e));
                 }
             } else {
                 if let Err(e) = fs::remove_file(path.to_owned()).await {
-                    return Err(anyhow!("Failed to remove {}: {}", path.display(), e))
+                    return Err(anyhow!("Failed to remove {}: {}", path.display(), e));
                 }
             }
         }
+
+        removed += 1;
+        pb.set_position(removed);
+    }
+
+    if let Err(e) = fs::remove_dir(directory).await {
+        return Err(anyhow!("Failed to remove {directory}: {}", e));
     }
 
     Ok(())
-
 }
 
 pub fn get_installation_folder(config: &Config) -> Result<PathBuf> {
