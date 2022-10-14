@@ -4,7 +4,7 @@ use anyhow::{anyhow, Result};
 use dirs::data_local_dir;
 use regex::Regex;
 use reqwest::Client;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 use tokio::fs;
 use tokio::process::Command;
 
@@ -79,6 +79,30 @@ pub async fn get_downloads_folder(config: &Config) -> Result<PathBuf> {
     };
 
     Ok(PathBuf::from(path_string))
+}
+
+pub async fn remove_dir(directory: &str) -> Result<()> {
+    let read_dir = Path::new(directory).read_dir()?;
+
+    for entry in read_dir {
+        if let Ok(entry) = entry {
+            let path = entry.path();
+            println!("removing {}", path.display());
+
+            if path.is_dir() {
+                if let Err(e) = fs::remove_dir_all(path.to_owned()).await {
+                    return Err(anyhow!("Failed to remove {}: {}", path.display(), e))
+                }
+            } else {
+                if let Err(e) = fs::remove_file(path.to_owned()).await {
+                    return Err(anyhow!("Failed to remove {}: {}", path.display(), e))
+                }
+            }
+        }
+    }
+
+    Ok(())
+
 }
 
 pub fn get_installation_folder(config: &Config) -> Result<PathBuf> {

@@ -243,7 +243,7 @@ async fn handle_building_from_source(
         .await?;
 
     if fs::metadata("build").await.is_ok() {
-        fs::remove_dir_all("build").await?;
+        utils::remove_dir("build").await?;
     }
     fs::create_dir("build").await?;
 
@@ -267,7 +267,6 @@ async fn handle_building_from_source(
             //
             // Command::new("cmake").arg("..").spawn()?.wait().await?;
             // Command::new("cmake").arg("--build").arg(".").spawn()?.wait().await?;
-            println!("{}", downloads_location.display());
         } else {
             let location_arg = format!(
                 "CMAKE_INSTALL_PREFIX={}",
