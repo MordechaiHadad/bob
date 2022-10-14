@@ -252,7 +252,6 @@ async fn handle_building_from_source(
 
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
-            println!("Breakpoint 1");
             if fs::metadata(".deps").await.is_ok() {
                 fs::remove_dir_all(".deps").await?;
             }
@@ -263,6 +262,7 @@ async fn handle_building_from_source(
 
             let current_dir = env::current_dir()?;
             let parent = current_dir.parent().unwrap();
+            env::set_current_dir(parent);
 
             info!("Current directory: {}", env::current_dir().unwrap().display());
 
