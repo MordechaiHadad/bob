@@ -245,6 +245,7 @@ async fn handle_building_from_source(
     if fs::metadata("build").await.is_ok() {
         fs::remove_dir_all("build").await?;
     }
+    fs::create_dir("build").await?;
 
     let mut downloads_location = utils::get_downloads_folder(config).await?;
     downloads_location.push(&version.tag_name[0..7]);
@@ -252,20 +253,21 @@ async fn handle_building_from_source(
 
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
-            if fs::metadata(".deps").await.is_ok() {
-                fs::remove_dir_all(".deps").await?;
-            }
-            fs::create_dir(".deps").await?;
-            env::set_current_dir(".deps")?;
-            Command::new("cmake").arg("../cmake.deps").spawn()?.wait().await?;
-            Command::new("cmake").arg("--build").arg(".").spawn()?.wait().await?;
+            // if fs::metadata(".deps").await.is_ok() {
+            //     fs::remove_dir_all(".deps").await?;
+            // }
+            // fs::create_dir(".deps").await?;
+            // env::set_current_dir(".deps")?;
+            // Command::new("cmake").arg("../cmake.deps").spawn()?.wait().await?;
+            // Command::new("cmake").arg("--build").arg(".").spawn()?.wait().await?;
 
             let current_dir = env::current_dir()?;
-            let parent = current_dir.parent().unwrap();
-            env::set_current_dir(parent);
+            let mut build_dir = current_dir.parent().unwrap();
+            build_dir.push("build");
+            env::set_current_dir(build_dir);
 
-            info!("Current directory: {}", env::current_dir().unwrap().display());
-
+            Command::new("cmake").arg("..").spawn()?.wait().await?;
+            Command::new("cmake").arg("--build").arg(".").spawn()?.wait().await?;
         } else {
             let location_arg = format!(
                 "CMAKE_INSTALL_PREFIX={}",
