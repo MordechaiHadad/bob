@@ -11,20 +11,20 @@ enum Cli {
     /// Switch to the specified version, will auto-invoke install command
     /// if the version is not installed already
     Use {
-        /// Version to switch to
+        /// Version to switch to |nightly|stable|<version-string>|
         version: String,
     },
 
     /// Install the specified version, can also be used to update
     /// out-of-date nightly version
     Install {
-        /// Version to be installed
+        /// Version to be installed |nightly|stable|<version-string>|
         version: String,
     },
 
     /// Uninstall the specified version
     Uninstall {
-        /// Version to be uninstalled
+        /// Version to be uninstalled |nightly|stable|<version-string>|
         version: String,
     },
 
