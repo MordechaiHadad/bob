@@ -282,7 +282,6 @@ async fn handle_building_from_source(
             Command::new("make").arg("install").spawn()?.wait().await?;
         }
     }
-    info!("Successfully installed {}", version.tag_name);
     Ok(PostDownloadVersionType::Hash)
 }
 
