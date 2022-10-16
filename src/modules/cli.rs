@@ -1,12 +1,12 @@
 use super::{erase_handler, install_handler, ls_handler, uninstall_handler, use_handler, utils};
 use crate::{enums::InstallResult, models::Config};
 use anyhow::Result;
-use clap::{AppSettings, Parser};
+use clap::Parser;
 use reqwest::Client;
 use tracing::info;
 
 #[derive(Debug, Parser)]
-#[clap(global_setting = AppSettings::DeriveDisplayOrder)]
+#[command(version)]
 enum Cli {
     /// Switch to the specified version, will auto-invoke install command
     /// if the version is not installed already
