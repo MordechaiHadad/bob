@@ -267,6 +267,7 @@ async fn handle_building_from_source(
 
             Command::new("cmake").arg("..").spawn()?.wait().await?;
             Command::new("cmake").arg("--build").arg(".").spawn()?.wait().await?;
+            Command::new("cmake").arg("--install").arg(".").arg("--prefix").arg(downloads_location).spawn()?.wait().await?;
         } else {
             let location_arg = format!(
                 "CMAKE_INSTALL_PREFIX={}",
