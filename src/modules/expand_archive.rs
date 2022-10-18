@@ -1,10 +1,11 @@
-use crate::models::DownloadedVersion;
 use anyhow::{Result, anyhow};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::cmp::min;
 use std::fs::File;
 use std::path::Path;
 use std::{fs, io};
+
+use crate::models::LocalVersion;
 
 pub async fn start(file: LocalVersion) -> Result<()> {
     let temp_file = file.clone();

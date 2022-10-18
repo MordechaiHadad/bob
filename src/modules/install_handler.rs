@@ -66,12 +66,6 @@ pub async fn start(
         if let Err(error) = expand_archive::start(downloaded_file).await {
             return Err(anyhow!(error));
         }
-
-        if let Some(nightly_version) = nightly_version {
-            let nightly_string = serde_json::to_string(&nightly_version)?;
-            let mut file = fs::File::create("nightly/bob.json").await?;
-            file.write_all(nightly_string.as_bytes()).await?;
-        }
     }
 
     if let Some(nightly_version) = nightly_version {
