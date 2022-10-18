@@ -11,10 +11,6 @@ pub async fn start(config: Config) -> Result<()> {
     };
 
     let paths = std::fs::read_dir(downloads_dir)?;
-    let used_version = match utils::get_current_version(&config).await {
-        Ok(value) => value,
-        Err(error) => return Err(error),
-    };
     const VERSION_MAX_LEN: usize = 7;
 
     println!("Version | Status");
@@ -29,7 +25,7 @@ pub async fn start(config: Config) -> Result<()> {
 
         let width = (VERSION_MAX_LEN - path_name.len()) + 1;
         if path.is_dir() {
-            if path_name.contains(&used_version) {
+            if utils::is_version_used(path_name, &config).await {
                 println!("{path_name}{}| {}", " ".repeat(width), Paint::green("Used"));
             } else {
                 println!(
