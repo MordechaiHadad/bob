@@ -18,7 +18,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --profile optimized --features openssl
+          args: --profile optimized
       - name: Upload Bob Linux binary
         uses: actions/upload-artifact@v2
         with:
