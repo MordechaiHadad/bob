@@ -26,21 +26,9 @@ Make sure you have [rustup](https://www.rust-lang.org/tools/install) installed.
 2. Unzip it
 3. And now run it with `bob`
 
-#### For Debian and Linux OpenSSL v3.0.+ users
-
-Due to some weird reasoning bob requires OpenSSL v1.1(even thought it was built using an Ubuntu machine) users of OpenSSL v3.0.+ will need to use the `bob-linux-rustls-x86_64.zip` package.
-
-This issue needs a little more researching to possibly fix, but for now it will stay like this.
-
 ### Install from source
 
-#### For Linux OpenSSL v1.1 and windows/macos users
-
-1. `cargo install --git https://github.com/MordechaiHadad/bob.git --features bob/openssl`
-
-#### For OpenSSL v3.0.+ users
-
-1. `cargo install --git https://github.com/MordechaiHadad/bob.git --features bob/rustls`
+1. `cargo install --git https://github.com/MordechaiHadad/bob.git`
 2. Run bob with `bob`
 
 ## :question: Usage
