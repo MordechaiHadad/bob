@@ -59,7 +59,7 @@ Install the specified version, can also be used to update out-of-date nightly ve
 
 ---
 
-- `bob uninstall |nightly|stable|<version-string>|`
+- `bob uninstall |nightly|stable|<version-string>|<commit-hash>|`
 
 Uninstall the specified version.
 
