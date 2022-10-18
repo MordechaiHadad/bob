@@ -103,10 +103,8 @@ pub async fn remove_dir(directory: &str) -> Result<()> {
                 if let Err(e) = fs::remove_dir_all(path.to_owned()).await {
                     return Err(anyhow!("Failed to remove {}: {}", path.display(), e));
                 }
-            } else {
-                if let Err(e) = fs::remove_file(path.to_owned()).await {
-                    return Err(anyhow!("Failed to remove {}: {}", path.display(), e));
-                }
+            } else if let Err(e) = fs::remove_file(path.to_owned()).await {
+                return Err(anyhow!("Failed to remove {}: {}", path.display(), e));
             }
             removed += 1;
             pb.set_position(removed);

@@ -27,7 +27,12 @@ pub async fn start(version: InputVersion, client: &Client, config: Config) -> Re
 
     std::env::set_current_dir(utils::get_downloads_folder(&config).await?)?;
 
-    if let Err(error) = link_version(&version.tag_name, &config, is_version_used).await {
+    let version_link = match version.version_type {
+        crate::enums::VersionType::Standard => &version.tag_name,
+        crate::enums::VersionType::Hash => &version.tag_name[0..7],
+    };
+
+    if let Err(error) = link_version(version_link, &config, is_version_used).await {
         return Err(error);
     }
     fs::write("used", &version.tag_name).await?;
@@ -43,7 +48,7 @@ async fn link_version(version: &str, config: &Config, is_version_used: bool) -> 
     };
 
     let current_path = std::env::current_dir()?;
-    let base_path = &format!("{}/{}", current_path.display(), &version[0..7]);
+    let base_path = &format!("{}/{}", current_path.display(), version);
 
     if fs::metadata(&installation_dir).await.is_ok() {
         fs::remove_dir_all(&installation_dir).await?;
