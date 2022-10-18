@@ -23,6 +23,7 @@ enum Cli {
     },
 
     /// Uninstall the specified version
+    #[clap(visible_alias = "rm")]
     Uninstall {
         /// Version to be uninstalled |nightly|stable|<version-string>|<commit-hash>|
         version: String,
