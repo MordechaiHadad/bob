@@ -3,7 +3,6 @@ use crate::models::{Config, InputVersion};
 use crate::modules::{install_handler, utils};
 use anyhow::{anyhow, Result};
 use reqwest::Client;
-use std::env;
 use tokio::fs;
 use tracing::info;
 
@@ -26,6 +25,8 @@ pub async fn start(version: InputVersion, client: &Client, config: Config) -> Re
         Err(error) => return Err(error),
     }
 
+    std::env::set_current_dir(utils::get_downloads_folder(&config).await?)?;
+
     if let Err(error) = link_version(&version.tag_name, &config, is_version_used).await {
         return Err(error);
     }
@@ -40,9 +41,9 @@ async fn link_version(version: &str, config: &Config, is_version_used: bool) -> 
         Err(_) => return Err(anyhow!("Couldn't get data dir")),
         Ok(value) => value,
     };
-    let current_dir = env::current_dir()?;
 
-    let base_path = &format!("{}/{}", current_dir.display(), version);
+    let current_path = std::env::current_dir()?;
+    let base_path = &format!("{}/{}", current_path.display(), &version[0..7]);
 
     if fs::metadata(&installation_dir).await.is_ok() {
         fs::remove_dir_all(&installation_dir).await?;

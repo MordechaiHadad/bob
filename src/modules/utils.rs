@@ -214,8 +214,7 @@ pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
         .header("user-agent", "bob")
         .header("Accept", "application/vnd.github.v3+json")
         .send()
-        .await
-        .unwrap()
+        .await?
         .text()
         .await
         .unwrap();
