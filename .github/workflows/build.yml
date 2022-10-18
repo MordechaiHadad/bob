@@ -18,11 +18,35 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --profile optimized
+          args: --profile optimized --features openssl
       - name: Upload Bob Linux binary
         uses: actions/upload-artifact@v2
         with:
           name: "bob-linux-x86_64"
+          path: "target/optimized/bob"
+          if-no-files-found: error
+          retention-days: 7
+
+  linux-rustls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - name: Build Bob
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --profile optimized --features rustls
+      - name: Upload Bob Linux binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: "bob-linux-rustls-x86_64"
           path: "target/optimized/bob"
           if-no-files-found: error
           retention-days: 7
@@ -42,7 +66,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --profile optimized
+          args: --profile optimized --features openssl
       - name: Upload Bob MacOS binary
         uses: actions/upload-artifact@v2
         with:
@@ -66,11 +90,16 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --profile optimized
-      - name: Upload Bob Windows binary
+          args: --profile optimized --features openssl
+      - name: Setup Bob build directory
+        run: |
+          mkdir build
+          copy .\\bin\\vcruntime140.dll .\\build
+          copy .\\target\\optimized\\bob.exe .\\build
+      - name: Upload Bob Windows build
         uses: actions/upload-artifact@v2
         with:
           name: "bob-windows-x86_64"
-          path: "target\\optimized\\bob.exe"
+          path: "build"
           if-no-files-found: error
           retention-days: 7

@@ -6,26 +6,41 @@
 
 # Bob
 
-> Struggle to keep your neovim versions in check? Bob provides an easy way to install and switch versions on any system!
+> Struggle to keep your Neovim versions in check? Bob provides an easy way to install and switch versions on any system!
 
-Bob is a cross-platform and easy-to-use neovim version manager, allowing for easy switching between versions right from the command line.
+Bob is a cross-platform and easy-to-use Neovim version manager, allowing for easy switching between versions right from the command line.
 
 ## Prerequisites
 
-Make sure you don't have neovim already installed via other ways e.g. package manager.
+Make sure you don't have Neovim already installed via other ways e.g. a package manager.
 
-<details>
-<summary>When building from source</summary>
+### Building from source
 
-Install [rustup](https://www.rust-lang.org/tools/install)
-
-</details>
+Make sure you have [rustup](https://www.rust-lang.org/tools/install) installed.
 
 ## :wrench: Installation
 
+### Install from releases
+
+1. Download `bob-{platform}-x86_64.zip`
+2. Unzip it
+3. And now run it with `bob`
+
+#### For Debian and Linux OpenSSL v3.0.+ users
+
+Due to some weird reasoning bob requires OpenSSL v1.1(even thought it was built using an Ubuntu machine) users of OpenSSL v3.0.+ will need to use the `bob-linux-rustls-x86_64.zip` package.
+
+This issue needs a little more researching to possibly fix, but for now it will stay like this.
+
 ### Install from source
 
-1. `cargo install --git https://github.com/MordechaiHadad/bob.git`
+#### For Linux OpenSSL v1.1 and windows/macos users
+
+1. `cargo install --git https://github.com/MordechaiHadad/bob.git --features bob/openssl`
+
+#### For OpenSSL v3.0.+ users
+
+1. `cargo install --git https://github.com/MordechaiHadad/bob.git --features bob/rustls`
 2. Run bob with `bob`
 
 ## :question: Usage
@@ -34,27 +49,35 @@ Install [rustup](https://www.rust-lang.org/tools/install)
 
 Switch to the specified version, will auto-invoke install command if the version is not installed already.
 
-<details>
-<summary>Windows side note</summary>
+**Windows side note:** make sure to run the application as administrator to properly switch a version.
 
-Make sure to run the application as administrator to properly switch a version.
-
-</details>
+---
 
 - `bob install |nightly|stable|<version-string>|<commit-hash>|`
 
 Install the specified version, can also be used to update out-of-date nightly version.
 
-- `bob uninstall |nightly|stable|<version-string>|<commit-hash>|`
+---
+
+- `bob uninstall |nightly|stable|<version-string>|`
 
 Uninstall the specified version.
 
+---
+
 - `bob erase`
 
-Erase any change bob ever made including neovim installation, neovim verion downloads and registry changes.
+Erase any change bob ever made including Neovim installation, Neovim version downloads and registry changes.
+
+---
 
 - `bob list`
-  List all installed and used versions
+
+List all installed and used versions.
+
+---
+
+## Showcase
 
 A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
 
@@ -75,13 +98,13 @@ Bob's configuration file will have to be in `config_dir/bob/config.json`, to be 
 <details>
 <summary>On Windows</summary>
 
-`C:\Users\User\AppData\Roaming\bob\config.json`
+`C:\Users\user\AppData\Roaming\bob\config.json`
 
 </details>
 <details>
 <summary>On MacOS</summary>
 
-`/Users/User/Library/Application Support/bob/config.json`
+`/Users/user/Library/Application Support/bob/config.json`
 
 </details>
 
@@ -99,7 +122,7 @@ Bob's configuration file will have to be in `config_dir/bob/config.json`, to be 
 ## :heart: Credits And Inspiration
 
 - [nvm](https://github.com/nvm-sh/nvm) A node version manager
-- [nvenv](https://github.com/NTBBloodbath/nvenv) A neovim version manager written by NTBBloodbath
+- [nvenv](https://github.com/NTBBloodbath/nvenv) A Neovim version manager written by NTBBloodbath
 
 ### Contributors
 

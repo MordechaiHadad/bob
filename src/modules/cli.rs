@@ -1,30 +1,30 @@
 use super::{erase_handler, install_handler, ls_handler, uninstall_handler, use_handler, utils};
 use crate::{enums::InstallResult, models::Config};
 use anyhow::Result;
-use clap::{AppSettings, Parser};
+use clap::Parser;
 use reqwest::Client;
 use tracing::info;
 
 #[derive(Debug, Parser)]
-#[clap(global_setting = AppSettings::DeriveDisplayOrder)]
+#[command(version)]
 enum Cli {
     /// Switch to the specified version, will auto-invoke install command
     /// if the version is not installed already
     Use {
-        /// Version to switch to
+        /// Version to switch to |nightly|stable|<version-string>|
         version: String,
     },
 
     /// Install the specified version, can also be used to update
     /// out-of-date nightly version
     Install {
-        /// Version to be installed
+        /// Version to be installed |nightly|stable|<version-string>|
         version: String,
     },
 
     /// Uninstall the specified version
     Uninstall {
-        /// Version to be uninstalled
+        /// Version to be uninstalled |nightly|stable|<version-string>|
         version: String,
     },
 

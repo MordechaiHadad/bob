@@ -1,5 +1,5 @@
-use crate::models::LocalVersion;
-use anyhow::Result;
+use crate::models::DownloadedVersion;
+use anyhow::{Result, anyhow};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::cmp::min;
 use std::fs::File;
@@ -8,10 +8,16 @@ use std::{fs, io};
 
 pub async fn start(file: LocalVersion) -> Result<()> {
     let temp_file = file.clone();
-    tokio::task::spawn_blocking(move || {
-        expand(temp_file).unwrap();
+    match tokio::task::spawn_blocking(move || {
+        match expand(temp_file) {
+            Ok(_) => return Ok(()),
+            Err(error) => return Err(anyhow!(error)),
+        }
     })
-    .await?;
+    .await {
+        Ok(_) => (),
+        Err(error) => return Err(anyhow!(error)),
+    }
     tokio::fs::remove_file(format!(
         "{}/{}.{}",
         file.path, file.file_name, file.file_format
@@ -81,14 +87,19 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
     use tar::Archive;
 
+    use crate::modules::utils;
+
     if fs::metadata(&downloaded_file.file_name).is_ok() {
         fs::remove_dir_all(&downloaded_file.file_name)?;
     }
 
-    let file = File::open(format!(
+    let file = match File::open(format!(
         "{}.{}",
         downloaded_file.file_name, downloaded_file.file_format
-    ))?;
+    )) {
+        Ok(value) => value,
+        Err(error) => return Err(anyhow!("Failed to open file {}.{}, file doesn't exist. additional info: {error}", downloaded_file.file_name, downloaded_file.file_format)),
+    };
     let decompress_stream = GzDecoder::new(file);
     let mut archive = Archive::new(decompress_stream);
 
@@ -129,11 +140,10 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
         "Finished expanding to {}/{}",
         downloaded_file.path, downloaded_file.file_name
     ));
-    let platform = if cfg!(target_os = "macos") {
-        "nvim-osx64"
-    } else {
-        "nvim-linux64"
-    };
+    if fs::metadata(format!("{}/nvim-osx64", downloaded_file.file_name)).is_ok() {
+        fs::rename(format!("{}/nvim-osx64", downloaded_file.file_name), "nvim-macos")?;
+    }
+    let platform = utils::get_platform_name();
     let file = &format!("{}/{platform}/bin/nvim", downloaded_file.file_name);
     let mut perms = fs::metadata(file)?.permissions();
     perms.set_mode(0o111);

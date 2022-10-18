@@ -74,6 +74,14 @@ pub async fn start(
         }
     }
 
+    if let Some(nightly_version) = nightly_version {
+        let nightly_string = serde_json::to_string(&nightly_version)?;
+        let mut file = match fs::File::create("nightly/bob.json").await {
+            Ok(value) => value,
+            Err(error) => return Err(anyhow!("Failed to create file nightly/bob.json, reason: {error}")),
+        };
+        file.write_all(nightly_string.as_bytes()).await?;
+    }
     Ok(InstallResult::InstallationSuccess(
         root.display().to_string(),
     ))

@@ -66,11 +66,10 @@ async fn link_version(version: &str, config: &Config, is_version_used: bool) -> 
             }
         } else {
             use std::os::unix::fs::symlink;
-            let folder_name = if cfg!(target_os = "macos") {
-                "nvim-osx64"
-            } else {
-                "nvim-linux64"
-            };
+            if fs::metadata(format!("{base_path}/nvim-osx64")).await.is_ok() {
+                fs::rename(format!("{base_path}/nvim-osx64"), "nvim-macos").await?;
+            }
+            let folder_name = utils::get_platform_name();
             if let Err(error) = symlink(format!("{base_path}/{folder_name}"), &installation_dir) {
                 return Err(anyhow!(error))
             }
