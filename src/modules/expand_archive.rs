@@ -47,7 +47,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
 
     let pb = ProgressBar::new(totalsize);
     pb.set_style(ProgressStyle::default_bar()
-        .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos:>7}/{len:>7}")
+        .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len}")
         .progress_chars("█  "));
     pb.set_message("Expanding archive");
 
@@ -107,7 +107,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     let totalsize = 1692; // hard coding this is pretty unwise, but you cant get the length of an archive in tar-rs unlike zip-rs
     let pb = ProgressBar::new(totalsize);
     pb.set_style(ProgressStyle::default_bar()
-        .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos:>7}/{len:>7}")
+        .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len}")
         .progress_chars("█  "));
     pb.set_message("Expanding archive");
 
