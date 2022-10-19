@@ -10,28 +10,61 @@
 
 Bob is a cross-platform and easy-to-use Neovim version manager, allowing for easy switching between versions right from the command line.
 
-## Prerequisites
+## 📦 Requirements
 
 Make sure you don't have Neovim already installed via other ways e.g. a package manager.
 
-### Building from source
+### Build prerequisites
 
-Make sure you have [rustup](https://www.rust-lang.org/tools/install) installed.
+#### Building bob
 
-## :wrench: Installation
+Make sure [rustup](https://www.rust-lang.org/tools/install) is installed.
+
+#### Building Neovim
+
+For further information refer to the [Neovim wiki](https://github.com/neovim/neovim/wiki/Building-Neovim#build-prerequisites).
+
+<details>
+<summary>All platforms</summary>
+
+- CMake
+- Git
+
+</details>
+
+<details>
+<summary>Windows</summary>
+
+- [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with C++ extension pack
+
+</details>
+
+<details>
+<summary>Unix</summary>
+
+- Clang or GCC
+
+</details>
+
+## 🔧 Installation
 
 ### Install from releases
 
 1. Download `bob-{platform}-x86_64.zip`
 2. Unzip it
-3. And now run it with `bob`
+3. Run it with `bob`
+
+### Install from AUR
+
+1. Install the `bob-bin` package with an AUR helper e.g. [paru](https://github.com/Morganamilo/paru): `paru -S bob-bin`
+2. Run it with `bob`
 
 ### Install from source
 
 1. `cargo install --git https://github.com/MordechaiHadad/bob.git`
 2. Run bob with `bob`
 
-## :question: Usage
+## ❓ Usage
 
 - `bob use |nightly|stable|<version-string>|<commit-hash>|`
 
@@ -65,13 +98,13 @@ List all installed and used versions.
 
 ---
 
-## Showcase
+## 🌟 Showcase
 
 A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
 
 <img src="https://user-images.githubusercontent.com/33547558/164478344-2707eb41-5b26-452e-ba05-c18282a3503a.gif">
 
-## Configuration
+## ⚙ Configuration
 
 This section is a bit more advanced and thus the user will have to do the work himself since bob doesn't do that.
 
