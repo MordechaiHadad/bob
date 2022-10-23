@@ -31,7 +31,7 @@ pub async fn start(version: &str, client: &Client, config: &Config) -> Result<In
             let local_nightly = utils::get_local_nightly(&config).await?;
 
             match config.enable_nightly_info {
-                Some(boolean) if boolean == true => {
+                Some(boolean) if boolean => {
                     print_commits(&client, &local_nightly, &upstream_nightly).await
                 }
                 None => print_commits(&client, &local_nightly, &upstream_nightly).await,
