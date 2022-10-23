@@ -26,9 +26,7 @@ pub async fn start(version: &str, client: &Client, config: Config) -> Result<()>
         Err(error) => return Err(error),
     }
 
-    if let Err(error) = link_version(version, &config).await {
-        return Err(error);
-    }
+    link_version(version, &config).await?;
     info!("You can now use {version}!");
 
     Ok(())
