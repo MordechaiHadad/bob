@@ -70,7 +70,7 @@ pub async fn get_downloads_folder(config: &Config) -> Result<PathBuf> {
                     Some(home) => home,
                     None => return Err(anyhow!("Couldn't get home directory")),
                 };
-                home_dir.push("/.local/share");
+                home_dir.push(".local/share");
                 home_dir
             } else {
                 let data_dir = match data_local_dir() {
