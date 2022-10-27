@@ -72,7 +72,11 @@ pub async fn start(
         let nightly_string = serde_json::to_string(&nightly_version)?;
         let mut file = match fs::File::create("nightly/bob.json").await {
             Ok(value) => value,
-            Err(error) => return Err(anyhow!("Failed to create file nightly/bob.json, reason: {error}")),
+            Err(error) => {
+                return Err(anyhow!(
+                    "Failed to create file nightly/bob.json, reason: {error}"
+                ))
+            }
         };
         file.write_all(nightly_string.as_bytes()).await?;
     }
@@ -127,8 +131,7 @@ async fn download_version(
                         let mut downloaded: u64 = 0;
 
                         while let Some(item) = response_bytes.next().await {
-                            let chunk =
-                                item.or(Err(anyhow!("hello")))?;
+                            let chunk = item.or(Err(anyhow!("hello")))?;
                             file.write(&chunk).await?;
                             let new = min(downloaded + (chunk.len() as u64), total_size);
                             downloaded = new;

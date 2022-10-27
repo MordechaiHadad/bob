@@ -2,8 +2,8 @@ use crate::models::Config;
 
 use super::utils;
 use anyhow::{anyhow, Result};
-use yansi::Paint;
 use tracing::info;
+use yansi::Paint;
 
 pub async fn start(config: Config) -> Result<()> {
     let downloads_dir = match utils::get_downloads_folder(&config).await {

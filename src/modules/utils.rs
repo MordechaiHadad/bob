@@ -1,7 +1,7 @@
 use crate::enums::VersionType;
 use crate::models::{Config, InputVersion, RepoCommit, UpstreamVersion};
 use anyhow::{anyhow, Result};
-use dirs::data_local_dir;
+use dirs::{data_local_dir, home_dir};
 use indicatif::{ProgressBar, ProgressStyle};
 use regex::Regex;
 use reqwest::Client;
@@ -135,6 +135,14 @@ pub fn get_installation_folder(config: &Config) -> Result<PathBuf> {
 
                     Ok(PathBuf::from(full_path))
                 } else {
+                    if cfg!(target_os = "macos") {
+                        let home_dir = match home_dir() {
+                            Some(home) => home,
+                            None => return Err(anyhow!("Couldn't get home directory"))
+                        };
+                        let full_path = &format!("{}/.local/share", home_dir.to_str().unwrap());
+                        return Ok(PathBuf::from(full_path));
+                    }
                     let full_path = &format!("{}/neovim", data_dir.to_str().unwrap());
                     Ok(PathBuf::from(full_path))
                 }

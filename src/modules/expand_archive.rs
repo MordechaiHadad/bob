@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::cmp::min;
 use std::fs::File;
@@ -9,13 +9,12 @@ use crate::models::LocalVersion;
 
 pub async fn start(file: LocalVersion) -> Result<()> {
     let temp_file = file.clone();
-    match tokio::task::spawn_blocking(move || {
-        match expand(temp_file) {
-            Ok(_) => return Ok(()),
-            Err(error) => return Err(anyhow!(error)),
-        }
+    match tokio::task::spawn_blocking(move || match expand(temp_file) {
+        Ok(_) => return Ok(()),
+        Err(error) => return Err(anyhow!(error)),
     })
-    .await {
+    .await
+    {
         Ok(_) => (),
         Err(error) => return Err(anyhow!(error)),
     }
@@ -46,9 +45,13 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     let totalsize: u64 = archive.len() as u64;
 
     let pb = ProgressBar::new(totalsize);
-    pb.set_style(ProgressStyle::default_bar()
-        .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len}")
-        .progress_chars("█  "));
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template(
+                "{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len}",
+            )
+            .progress_chars("█  "),
+    );
     pb.set_message("Expanding archive");
 
     std::fs::create_dir(downloaded_file.file_name.clone())?;
@@ -99,16 +102,26 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
         downloaded_file.file_name, downloaded_file.file_format
     )) {
         Ok(value) => value,
-        Err(error) => return Err(anyhow!("Failed to open file {}.{}, file doesn't exist. additional info: {error}", downloaded_file.file_name, downloaded_file.file_format)),
+        Err(error) => {
+            return Err(anyhow!(
+                "Failed to open file {}.{}, file doesn't exist. additional info: {error}",
+                downloaded_file.file_name,
+                downloaded_file.file_format
+            ))
+        }
     };
     let decompress_stream = GzDecoder::new(file);
     let mut archive = Archive::new(decompress_stream);
 
     let totalsize = 1692; // hard coding this is pretty unwise, but you cant get the length of an archive in tar-rs unlike zip-rs
     let pb = ProgressBar::new(totalsize);
-    pb.set_style(ProgressStyle::default_bar()
-        .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len}")
-        .progress_chars("█  "));
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template(
+                "{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len}",
+            )
+            .progress_chars("█  "),
+    );
     pb.set_message("Expanding archive");
 
     let mut downloaded: u64 = 0;
@@ -142,7 +155,10 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
         downloaded_file.path, downloaded_file.file_name
     ));
     if fs::metadata(format!("{}/nvim-osx64", downloaded_file.file_name)).is_ok() {
-        fs::rename(format!("{}/nvim-osx64", downloaded_file.file_name), "nvim-macos")?;
+        fs::rename(
+            format!("{}/nvim-osx64", downloaded_file.file_name),
+            "nvim-macos",
+        )?;
     }
     let platform = utils::get_platform_name();
     let file = &format!("{}/{platform}/bin/nvim", downloaded_file.file_name);
