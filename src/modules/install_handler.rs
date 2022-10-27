@@ -2,6 +2,7 @@ use super::utils;
 use crate::enums::{InstallResult, PostDownloadVersionType, VersionType};
 use crate::models::{Config, InputVersion, LocalVersion, UpstreamVersion};
 use crate::modules::expand_archive;
+use crate::modules::utils::handle_subprocess;
 use anyhow::{anyhow, Result};
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -263,28 +264,23 @@ async fn handle_building_from_source(
             }
             fs::create_dir(".deps").await?;
             env::set_current_dir(".deps")?;
-            Command::new("cmake").arg("../cmake.deps").spawn()?.wait().await?;
-            Command::new("cmake").arg("--build").arg(".").spawn()?.wait().await?;
+            handle_subprocess(Command::new("cmake").arg("../cmake.deps")).await?;
+            handle_subprocess(Command::new("cmake").arg("--build").arg(".")).await?;
 
             let current_dir = env::current_dir()?;
             let parent = current_dir.parent().unwrap();
             env::set_current_dir(parent.join("build"))?;
 
-            Command::new("cmake").arg("..").spawn()?.wait().await?;
-            Command::new("cmake").arg("--build").arg(".").spawn()?.wait().await?;
-            Command::new("cmake").arg("--install").arg(".").arg("--prefix").arg(downloads_location).spawn()?.wait().await?;
+            handle_subprocess(Command::new("cmake").arg("..")).await?;
+            handle_subprocess(Command::new("cmake").arg("--build").arg(".")).await?;
+            handle_subprocess(Command::new("cmake").arg("--install").arg(".").arg("--prefix").arg(downloads_location)).await?;
         } else {
             let location_arg = format!(
                 "CMAKE_INSTALL_PREFIX={}",
                 downloads_location.to_string_lossy()
             );
-            Command::new("make")
-                .arg(&location_arg)
-                .arg("CMAKE_BUILD_TYPE=RelWithDebInfo")
-                .spawn()?
-                .wait()
-                .await?;
-            Command::new("make").arg("install").spawn()?.wait().await?;
+            handle_subprocess(Command::new("make").arg(&location_arg).arg("CMAKE_BUILD_TYPE=RelWithDebInfo")).await?;
+            handle_subprocess(Command::new("make").arg("install")).await?;
         }
     }
     Ok(PostDownloadVersionType::Hash)

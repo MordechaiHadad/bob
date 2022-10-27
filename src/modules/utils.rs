@@ -56,30 +56,41 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<InputV
 }
 
 pub async fn get_downloads_folder(config: &Config) -> Result<PathBuf> {
-    let path_string = match &config.downloads_dir {
+    let path = match &config.downloads_dir {
         Some(path) => {
             if tokio::fs::metadata(path).await.is_err() {
                 return Err(anyhow!("Custom directory {path} doesn't exist!"));
             }
 
-            path.clone()
+            PathBuf::from(path)
         }
         None => {
-            let data_dir = match data_local_dir() {
-                None => return Err(anyhow!("Couldn't get local data folder")),
-                Some(value) => value,
+            let mut data_dir = if cfg!(target_os = "macos") {
+                let mut home_dir = match home_dir() {
+                    Some(home) => home,
+                    None => return Err(anyhow!("Couldn't get home directory")),
+                };
+                home_dir.push("/.local/share");
+                home_dir
+            } else {
+                let data_dir = match data_local_dir() {
+                    None => return Err(anyhow!("Couldn't get local data folder")),
+                    Some(value) => value,
+                };
+                data_dir
             };
-            let path_string = format!("{}/bob", data_dir.to_str().unwrap());
-            let does_folder_exist = tokio::fs::metadata(&path_string).await.is_ok();
 
-            if !does_folder_exist && tokio::fs::create_dir(&path_string).await.is_err() {
+            data_dir.push("bob");
+            let does_folder_exist = tokio::fs::metadata(&data_dir).await.is_ok();
+
+            if !does_folder_exist && tokio::fs::create_dir(&data_dir).await.is_err() {
                 return Err(anyhow!("Couldn't create downloads directory"));
             }
-            path_string
+            data_dir
         }
     };
 
-    Ok(PathBuf::from(path_string))
+    Ok(path)
 }
 
 pub async fn remove_dir(directory: &str) -> Result<()> {
@@ -135,14 +146,6 @@ pub fn get_installation_folder(config: &Config) -> Result<PathBuf> {
 
                     Ok(PathBuf::from(full_path))
                 } else {
-                    if cfg!(target_os = "macos") {
-                        let home_dir = match home_dir() {
-                            Some(home) => home,
-                            None => return Err(anyhow!("Couldn't get home directory"))
-                        };
-                        let full_path = &format!("{}/.local/share", home_dir.to_str().unwrap());
-                        return Ok(PathBuf::from(full_path));
-                    }
                     let full_path = &format!("{}/neovim", data_dir.to_str().unwrap());
                     Ok(PathBuf::from(full_path))
                 }
@@ -260,4 +263,11 @@ pub async fn get_commits_for_nightly(
         .await?;
 
     Ok(serde_json::from_str(&response)?)
+}
+
+pub async fn handle_subprocess(process: &mut Command) -> Result<()> {
+    match process.status().await?.code().unwrap() {
+        0 => Ok(()),
+        code => Err(anyhow!(code)),
+    }
 }
