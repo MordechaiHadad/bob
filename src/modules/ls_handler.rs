@@ -17,10 +17,10 @@ pub async fn start(config: Config) -> Result<()> {
     let mut paths = std::fs::read_dir(downloads_dir)?;
     const VERSION_MAX_LEN: usize = 7;
 
-    if !&paths.next().is_some() {
-        info!("There are no versions installed");
-        return Ok(());
-    }
+    // if !&paths.next().is_some() {
+    //     info!("There are no versions installed");
+    //     return Ok(());
+    // }
 
     println!("Version | Status");
     println!("{}+{}", "-".repeat(7 + 1), "-".repeat(10));
