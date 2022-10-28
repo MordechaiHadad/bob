@@ -10,6 +10,9 @@ pub async fn start(config: Config) -> Result<()> {
         Ok(value) => value,
         Err(error) => return Err(anyhow!(error)),
     };
+    if cfg!(target_os = "macos") {
+        println!("Downloads dir is: {}", downloads_dir.display());
+    }
 
     let mut paths = std::fs::read_dir(downloads_dir)?;
     const VERSION_MAX_LEN: usize = 7;
@@ -23,6 +26,10 @@ pub async fn start(config: Config) -> Result<()> {
     println!("{}+{}", "-".repeat(7 + 1), "-".repeat(10));
 
     for path in paths {
+        if cfg!(target_os = "macos") {
+            println!("Pat info: {:?}", path);
+        }
+
         let path = path.unwrap().path();
         let path_name = path.file_name().unwrap().to_str().unwrap();
         if path_name == "neovim-git" {
