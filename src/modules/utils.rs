@@ -135,21 +135,20 @@ pub fn get_installation_folder(config: &Config) -> Result<PathBuf> {
     match &config.installation_location {
         Some(path) => Ok(PathBuf::from(path.clone())),
         None => {
-            let data_dir = match data_local_dir() {
+            if cfg!(target_os = "macos") {
+                let mut home_dir = match home_dir() {
+                    Some(home) => home,
+                    None => return Err(anyhow!("Couldn't get home directory")),
+                };
+                home_dir.push(".local/share/neovim");
+                return Ok(home_dir);
+            }
+            let mut data_dir = match data_local_dir() {
                 None => return Err(anyhow!("Couldn't get local data folder")),
                 Some(value) => value,
             };
-            cfg_if::cfg_if! {
-                if #[cfg(windows)] {
-
-                    let full_path = &format!("{}\\neovim", data_dir.to_str().unwrap());
-
-                    Ok(PathBuf::from(full_path))
-                } else {
-                    let full_path = &format!("{}/neovim", data_dir.to_str().unwrap());
-                    Ok(PathBuf::from(full_path))
-                }
-            }
+            data_dir.push("neovim");
+            Ok(data_dir)
         }
     }
 }
