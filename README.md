@@ -14,6 +14,10 @@ Bob is a cross-platform and easy-to-use Neovim version manager, allowing for eas
 
 <img src="https://user-images.githubusercontent.com/33547558/164478344-2707eb41-5b26-452e-ba05-c18282a3503a.gif">
 
+## 🔔 Notices
+
+- **2022-10-29**: Moved bob's symbolic link and downloads folder on macos from `/Users/user/Library/Application Support` to `~/.local/share` please make sure to move all of your downloads to the new folder, run `bob use <your desired version>` and update your PATH
+
 ## 📦 Requirements
 
 Make sure you don't have Neovim already installed via other ways e.g. a package manager.
@@ -26,7 +30,7 @@ Make sure [rustup](https://www.rust-lang.org/tools/install) is installed.
 
 #### Building Neovim
 
-For further information refer to the [Neovim wiki](https://github.com/neovim/neovim/wiki/Building-Neovim#build-prerequisites). MacOS only: [follow these instructions](https://github.com/neovim/neovim/wiki/Building-Neovim#macos--homebrew)
+For further information refer to the [Neovim wiki](https://github.com/neovim/neovim/wiki/Building-Neovim#build-prerequisites).
 
 <details>
 <summary>All platforms</summary>
@@ -47,6 +51,8 @@ For further information refer to the [Neovim wiki](https://github.com/neovim/neo
 <summary>Unix</summary>
 
 - Clang or GCC
+
+**MacOS note**: [follow these instructions](https://github.com/neovim/neovim/wiki/Building-Neovim#macos--homebrew)
 
 </details>
 
@@ -128,8 +134,6 @@ Bob's configuration file will have to be in `config_dir/bob/config.json`, to be 
 <summary>On MacOS</summary>
 
 `/Users/user/Library/Application Support/bob/config.json`
-
-**NOTE:** Neovim symbolic link and bob downloads are located in `~/.local/share`
 
 </details>
 
