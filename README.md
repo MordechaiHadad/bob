@@ -10,6 +10,14 @@
 
 Bob is a cross-platform and easy-to-use Neovim version manager, allowing for easy switching between versions right from the command line.
 
+## 🌟 Showcase
+
+<img src="https://user-images.githubusercontent.com/33547558/164478344-2707eb41-5b26-452e-ba05-c18282a3503a.gif">
+
+## 🔔 Notices
+
+- **2022-10-29**: Moved bob's symbolic link and downloads folder on macos from `/Users/user/Library/Application Support` to `~/.local/share` please make sure to move all of your downloads to the new folder, run `bob use <your desired version>` and update your PATH
+
 ## 📦 Requirements
 
 Make sure you don't have Neovim already installed via other ways e.g. a package manager.
@@ -44,6 +52,8 @@ For further information refer to the [Neovim wiki](https://github.com/neovim/neo
 
 - Clang or GCC
 
+**MacOS note**: [follow these instructions](https://github.com/neovim/neovim/wiki/Building-Neovim#macos--homebrew)
+
 </details>
 
 ## 🔧 Installation
@@ -65,6 +75,10 @@ For further information refer to the [Neovim wiki](https://github.com/neovim/neo
 2. Run bob with `bob`
 
 ## ❓ Usage
+
+A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
+
+---
 
 - `bob use |nightly|stable|<version-string>|<commit-hash>|`
 
@@ -97,12 +111,6 @@ Erase any change bob ever made including Neovim installation, Neovim version dow
 List all installed and used versions.
 
 ---
-
-## 🌟 Showcase
-
-A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
-
-<img src="https://user-images.githubusercontent.com/33547558/164478344-2707eb41-5b26-452e-ba05-c18282a3503a.gif">
 
 ## ⚙ Configuration
 
