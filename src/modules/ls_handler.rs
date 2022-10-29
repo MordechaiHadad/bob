@@ -2,7 +2,7 @@ use crate::models::Config;
 
 use super::utils;
 use anyhow::{anyhow, Result};
-use tracing::info;
+use std::fs;
 use yansi::Paint;
 
 pub async fn start(config: Config) -> Result<()> {
@@ -14,23 +14,20 @@ pub async fn start(config: Config) -> Result<()> {
         println!("Downloads dir is: {}", downloads_dir.display());
     }
 
-    let mut paths = std::fs::read_dir(downloads_dir)?;
+    let paths = fs::read_dir(downloads_dir)?
+        .filter_map(|e| e.ok())
+        .map(|entry| entry.path())
+        .collect::<Vec<_>>();
     const VERSION_MAX_LEN: usize = 7;
 
-    // if !&paths.next().is_some() {
-    //     info!("There are no versions installed");
-    //     return Ok(());
-    // }
+    if paths.len() == 0 {
+        return Err(anyhow!("There are no versions installed"));
+    }
 
     println!("Version | Status");
     println!("{}+{}", "-".repeat(7 + 1), "-".repeat(10));
 
     for path in paths {
-        if cfg!(target_os = "macos") {
-            println!("Pat info: {:?}", path);
-        }
-
-        let path = path.unwrap().path();
         let path_name = path.file_name().unwrap().to_str().unwrap();
         if path_name == "neovim-git" {
             continue;

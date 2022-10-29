@@ -30,12 +30,12 @@ pub async fn start(
     let is_version_installed = utils::is_version_installed(&version.tag_name, &config).await;
 
     let nightly_version = if version.tag_name == "nightly" {
-        info!("Looking for nightly updates...");
         let upstream_nightly = match utils::get_upstream_nightly(client).await {
             Ok(value) => value,
             Err(error) => return Err(error),
         };
         if is_version_installed {
+            info!("Looking for nightly updates...");
             let local_nightly = utils::get_local_nightly(&config).await?;
 
             match config.enable_nightly_info {
