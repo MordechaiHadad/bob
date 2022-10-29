@@ -26,7 +26,7 @@ Make sure [rustup](https://www.rust-lang.org/tools/install) is installed.
 
 #### Building Neovim
 
-For further information refer to the [Neovim wiki](https://github.com/neovim/neovim/wiki/Building-Neovim#build-prerequisites). **MacOS only:** [follow these instructions](https://github.com/neovim/neovim/wiki/Building-Neovim#macos--homebrew)
+For further information refer to the [Neovim wiki](https://github.com/neovim/neovim/wiki/Building-Neovim#build-prerequisites). MacOS only: [follow these instructions](https://github.com/neovim/neovim/wiki/Building-Neovim#macos--homebrew)
 
 <details>
 <summary>All platforms</summary>
