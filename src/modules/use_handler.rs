@@ -1,20 +1,19 @@
 use crate::enums::InstallResult;
-use crate::models::Config;
+use crate::models::{Config, InputVersion};
 use crate::modules::{install_handler, utils};
 use anyhow::{anyhow, Result};
 use reqwest::Client;
-use std::env;
 use tokio::fs;
 use tracing::info;
 
-pub async fn start(version: &str, client: &Client, config: Config) -> Result<()> {
-    let is_version_used = utils::is_version_used(version).await;
-    if is_version_used && version != "nightly" {
-        info!("{version} is already installed and used!");
+pub async fn start(version: InputVersion, client: &Client, config: Config) -> Result<()> {
+    let is_version_used = utils::is_version_used(&version.tag_name, &config).await;
+    if is_version_used && version.tag_name != "nightly" {
+        info!("{} is already installed and used!", version.tag_name);
         return Ok(());
     }
 
-    match install_handler::start(version, client, &config).await {
+    match install_handler::start(&version, client, &config).await {
         Ok(success) => {
             if let InstallResult::NightlyIsUpdated = success {
                 if is_version_used {
@@ -26,20 +25,30 @@ pub async fn start(version: &str, client: &Client, config: Config) -> Result<()>
         Err(error) => return Err(error),
     }
 
-    link_version(version, &config).await?;
-    info!("You can now use {version}!");
+    std::env::set_current_dir(utils::get_downloads_folder(&config).await?)?;
+
+    let version_link = match version.version_type {
+        crate::enums::VersionType::Standard => &version.tag_name,
+        crate::enums::VersionType::Hash => &version.tag_name[0..7],
+    };
+
+    if let Err(error) = link_version(version_link, &config, is_version_used).await {
+        return Err(error);
+    }
+    fs::write("used", &version.tag_name).await?;
+    info!("You can now use {}!", version.tag_name);
 
     Ok(())
 }
 
-async fn link_version(version: &str, config: &Config) -> Result<()> {
+async fn link_version(version: &str, config: &Config, is_version_used: bool) -> Result<()> {
     let installation_dir = match utils::get_installation_folder(&config) {
         Err(_) => return Err(anyhow!("Couldn't get data dir")),
         Ok(value) => value,
     };
-    let current_dir = env::current_dir()?;
 
-    let base_path = &format!("{}/{}", current_dir.display(), version);
+    let current_path = std::env::current_dir()?;
+    let base_path = &format!("{}/{}", current_path.display(), version);
 
     if fs::metadata(&installation_dir).await.is_ok() {
         fs::remove_dir_all(&installation_dir).await?;
@@ -73,7 +82,7 @@ async fn link_version(version: &str, config: &Config) -> Result<()> {
         }
     }
 
-    if !utils::is_version_used(version).await {
+    if !is_version_used {
         cfg_if::cfg_if! {
             if #[cfg(windows)] {
                 use winreg::enums::*;
@@ -88,7 +97,7 @@ async fn link_version(version: &str, config: &Config) -> Result<()> {
                 };
                 env.set_value("Path", &new_path)?;
             } else {
-                info!("Please add {}/bin to PATH", installation_dir.display());
+                info!("Make sure to have {}/bin in PATH", installation_dir.display());
             }
         }
     }

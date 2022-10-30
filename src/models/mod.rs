@@ -1,12 +1,14 @@
+use super::enums::VersionType;
+
 use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Version {
+pub struct UpstreamVersion {
     pub tag_name: String,
     pub published_at: String,
 }
 
 #[derive(Clone)]
-pub struct DownloadedVersion {
+pub struct LocalVersion {
     pub file_name: String,
     pub file_format: String,
     pub path: String,
@@ -33,4 +35,9 @@ pub struct Config {
     pub enable_nightly_info: Option<bool>,
     pub downloads_dir: Option<String>,
     pub installation_location: Option<String>,
+}
+
+pub struct InputVersion {
+    pub tag_name: String,
+    pub version_type: VersionType,
 }

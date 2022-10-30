@@ -1,12 +1,13 @@
-use crate::models::DownloadedVersion;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::cmp::min;
 use std::fs::File;
 use std::path::Path;
 use std::{fs, io};
 
-pub async fn start(file: DownloadedVersion) -> Result<()> {
+use crate::models::LocalVersion;
+
+pub async fn start(file: LocalVersion) -> Result<()> {
     let temp_file = file.clone();
     match tokio::task::spawn_blocking(move || {
         match expand(temp_file) {
@@ -14,7 +15,8 @@ pub async fn start(file: DownloadedVersion) -> Result<()> {
             Err(error) => Err(anyhow!(error)),
         }
     })
-    .await {
+    .await
+    {
         Ok(_) => (),
         Err(error) => return Err(anyhow!(error)),
     }
@@ -29,7 +31,7 @@ pub async fn start(file: DownloadedVersion) -> Result<()> {
 // TODO: Refactor
 
 #[cfg(target_family = "windows")]
-fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
+fn expand(downloaded_file: LocalVersion) -> Result<()> {
     use zip::ZipArchive;
 
     if fs::metadata(&downloaded_file.file_name).is_ok() {
@@ -45,9 +47,13 @@ fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
     let totalsize: u64 = archive.len() as u64;
 
     let pb = ProgressBar::new(totalsize);
-    pb.set_style(ProgressStyle::default_bar()
-        .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos:>7}/{len:>7}")
-        .progress_chars("█  "));
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template(
+                "{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len}",
+            )
+            .progress_chars("█  "),
+    );
     pb.set_message("Expanding archive");
 
     std::fs::create_dir(downloaded_file.file_name.clone())?;
@@ -82,7 +88,7 @@ fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
 }
 
 #[cfg(target_family = "unix")] // I don't know if its worth making both expand functions into one function, but the API difference will cause so much if statements
-fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
+fn expand(downloaded_file: LocalVersion) -> Result<()> {
     use flate2::read::GzDecoder;
     use std::os::unix::fs::PermissionsExt;
     use tar::Archive;
@@ -98,16 +104,26 @@ fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
         downloaded_file.file_name, downloaded_file.file_format
     )) {
         Ok(value) => value,
-        Err(error) => return Err(anyhow!("Failed to open file {}.{}, file doesn't exist. additional info: {error}", downloaded_file.file_name, downloaded_file.file_format)),
+        Err(error) => {
+            return Err(anyhow!(
+                "Failed to open file {}.{}, file doesn't exist. additional info: {error}",
+                downloaded_file.file_name,
+                downloaded_file.file_format
+            ))
+        }
     };
     let decompress_stream = GzDecoder::new(file);
     let mut archive = Archive::new(decompress_stream);
 
     let totalsize = 1692; // hard coding this is pretty unwise, but you cant get the length of an archive in tar-rs unlike zip-rs
     let pb = ProgressBar::new(totalsize);
-    pb.set_style(ProgressStyle::default_bar()
-        .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos:>7}/{len:>7}")
-        .progress_chars("█  "));
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template(
+                "{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len}",
+            )
+            .progress_chars("█  "),
+    );
     pb.set_message("Expanding archive");
 
     let mut downloaded: u64 = 0;
@@ -141,7 +157,10 @@ fn expand(downloaded_file: DownloadedVersion) -> Result<()> {
         downloaded_file.path, downloaded_file.file_name
     ));
     if fs::metadata(format!("{}/nvim-osx64", downloaded_file.file_name)).is_ok() {
-        fs::rename(format!("{}/nvim-osx64", downloaded_file.file_name), "nvim-macos")?;
+        fs::rename(
+            format!("{}/nvim-osx64", downloaded_file.file_name),
+            "nvim-macos",
+        )?;
     }
     let platform = utils::get_platform_name();
     let file = &format!("{}/{platform}/bin/nvim", downloaded_file.file_name);

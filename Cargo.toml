@@ -1,6 +1,6 @@
 [package]
 name = "bob"
-version = "1.1.3"
+version = "1.2.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -10,7 +10,7 @@ clap = { version = "4.0.15", features = ["derive"] }
 regex = "1.5"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-reqwest = { version = "0.11", default-features = false, features = ["stream"] }
+reqwest = { version = "0.11", default-features = false, features = ["stream", "rustls-tls"] }
 tokio = { version = "1.16.1", features = ["full"] }
 anyhow = "1.0.52"
 indicatif = "0.16.2"
@@ -29,11 +29,9 @@ winreg = "0.10.1"
 tar = "0.4"
 flate2 = "1.0"
 
-[features]
-openssl = ["reqwest/default"]
-rustls = ["reqwest/rustls-tls"]
-
 [profile.optimized]
 inherits = "release"
 opt-level = "z"
 strip = true
+lto = true
+codegen-units = 1
