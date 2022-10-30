@@ -20,14 +20,14 @@ pub async fn start(
     client: &Client,
     config: &Config,
 ) -> Result<InstallResult> {
-    let root = match utils::get_downloads_folder(&config).await {
+    let root = match utils::get_downloads_folder(config).await {
         Ok(value) => value,
         Err(error) => return Err(anyhow!(error)),
     };
     env::set_current_dir(&root)?;
     let root = root.as_path();
 
-    let is_version_installed = utils::is_version_installed(&version.tag_name, &config).await;
+    let is_version_installed = utils::is_version_installed(&version.tag_name, config).await;
 
     let nightly_version = if version.tag_name == "nightly" {
         let upstream_nightly = match utils::get_upstream_nightly(client).await {
@@ -36,13 +36,13 @@ pub async fn start(
         };
         if is_version_installed {
             info!("Looking for nightly updates...");
-            let local_nightly = utils::get_local_nightly(&config).await?;
+            let local_nightly = utils::get_local_nightly(config).await?;
 
             match config.enable_nightly_info {
                 Some(boolean) if boolean => {
-                    print_commits(&client, &local_nightly, &upstream_nightly).await
+                    print_commits(client, &local_nightly, &upstream_nightly).await
                 }
-                None => print_commits(&client, &local_nightly, &upstream_nightly).await,
+                None => print_commits(client, &local_nightly, &upstream_nightly).await,
                 _ => (),
             }
 
@@ -58,7 +58,7 @@ pub async fn start(
         None
     };
 
-    let downloaded_file = match download_version(client, &version, root, config).await {
+    let downloaded_file = match download_version(client, version, root, config).await {
         Ok(value) => value,
         Err(error) => return Err(anyhow!(error)),
     };

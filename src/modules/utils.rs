@@ -111,10 +111,10 @@ pub async fn remove_dir(directory: &str) -> Result<()> {
             let path = entry.path();
 
             if path.is_dir() {
-                if let Err(e) = fs::remove_dir_all(path.to_owned()).await {
+                if let Err(e) = fs::remove_dir_all(&path).await {
                     return Err(anyhow!("Failed to remove {}: {}", path.display(), e));
                 }
-            } else if let Err(e) = fs::remove_file(path.to_owned()).await {
+            } else if let Err(e) = fs::remove_file(&path).await {
                 return Err(anyhow!("Failed to remove {}: {}", path.display(), e));
             }
             removed += 1;
@@ -227,7 +227,7 @@ pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
         .await
         .unwrap();
     match serde_json::from_str(&response) {
-        Ok(value) => return Ok(value),
+        Ok(value) => Ok(value),
         Err(_) => Err(anyhow!(
             "Failed to get upstream nightly version, aborting..."
         )),
