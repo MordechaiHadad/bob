@@ -9,9 +9,11 @@ use crate::models::LocalVersion;
 
 pub async fn start(file: LocalVersion) -> Result<()> {
     let temp_file = file.clone();
-    match tokio::task::spawn_blocking(move || match expand(temp_file) {
-        Ok(_) => return Ok(()),
-        Err(error) => return Err(anyhow!(error)),
+    match tokio::task::spawn_blocking(move || {
+        match expand(temp_file) {
+            Ok(_) => Ok(()),
+            Err(error) => Err(anyhow!(error)),
+        }
     })
     .await
     {
@@ -132,7 +134,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
                 let outpath = Path::new(temp);
 
                 let file_name = format!("{}", file.path()?.display()); // file.path()?.is_dir() always returns false... weird
-                if file_name.ends_with("/") {
+                if file_name.ends_with('/') {
                     fs::create_dir_all(outpath)?;
                 } else {
                     if let Some(parent) = outpath.parent() {
