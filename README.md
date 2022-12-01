@@ -66,7 +66,7 @@ For further information refer to the [Neovim wiki](https://github.com/neovim/neo
 
 ### Install from AUR
 
-1. Install the `bob-bin` package with an AUR helper e.g. [paru](https://github.com/Morganamilo/paru): `paru -S bob-bin`
+1. Install the [`bob`](https://aur.archlinux.org/packages/bob) or [`bob-bin`](https://aur.archlinux.org/packages/bob-bin) package with an AUR helper e.g. [paru](https://github.com/Morganamilo/paru): `paru -S bob`
 2. Run it with `bob`
 
 ### Install from source
