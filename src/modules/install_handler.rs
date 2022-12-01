@@ -222,7 +222,7 @@ async fn handle_building_from_source(
             Err(error) => match error.kind() {
                 std::io::ErrorKind::NotFound => {
                     return Err(anyhow!(
-                        "Git has to be instaled in order to build neovim from source"
+                        "Git has to be installed in order to build neovim from source"
                     ))
                 }
                 _ => return Err(anyhow!("Failed to clone neovim's repository")),

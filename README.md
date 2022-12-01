@@ -143,7 +143,7 @@ Bob's configuration file will have to be in `config_dir/bob/config.json`, to be 
 // /home/user/.config/bob/config.json
 {
   "enable_nightly_info": true, // Will show new commits associated with new nightly release if enabled
-  "downloads_dir": "/home/user/.local/share/bob/", // The folder in which neovim versions will be installed too, bob will error if this option is specfied but the folder doesn't exist
+  "downloads_dir": "/home/user/.local/share/bob/", // The folder in which neovim versions will be installed too, bob will error if this option is specified but the folder doesn't exist
   "installation_location": "/home/user/.local/share/neovim" // The path in which the used neovim version will be located in
 }
 ```
