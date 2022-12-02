@@ -11,5 +11,6 @@
   - [ ] Add ARM support
   - [x] Add configuration
   - [x] Make the list command more visually appealing
-  - [ ] Allow building neovim from source
-  -- [ ] Rewrite how to get currently used version
+  - [x] Allow building neovim from source
+  -- [x] Rewrite how to get currently used version
+  - [ ] Allow passing env variables in config file
