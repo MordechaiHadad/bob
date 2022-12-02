@@ -9,11 +9,9 @@ use crate::models::LocalVersion;
 
 pub async fn start(file: LocalVersion) -> Result<()> {
     let temp_file = file.clone();
-    match tokio::task::spawn_blocking(move || {
-        match expand(temp_file) {
-            Ok(_) => Ok(()),
-            Err(error) => Err(anyhow!(error)),
-        }
+    match tokio::task::spawn_blocking(move || match expand(temp_file) {
+        Ok(_) => Ok(()),
+        Err(error) => Err(anyhow!(error)),
     })
     .await
     {

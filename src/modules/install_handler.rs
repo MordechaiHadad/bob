@@ -27,7 +27,7 @@ pub async fn start(
     env::set_current_dir(&root)?;
     let root = root.as_path();
 
-    let is_version_installed = utils::is_version_installed(&version.tag_name, config).await;
+    let is_version_installed = utils::is_version_installed(&version.tag_name, config).await?;
 
     let nightly_version = if version.tag_name == "nightly" {
         let upstream_nightly = match utils::get_upstream_nightly(client).await {
@@ -40,9 +40,9 @@ pub async fn start(
 
             match config.enable_nightly_info {
                 Some(boolean) if boolean => {
-                    print_commits(client, &local_nightly, &upstream_nightly).await
+                    print_commits(client, &local_nightly, &upstream_nightly).await?
                 }
-                None => print_commits(client, &local_nightly, &upstream_nightly).await,
+                None => print_commits(client, &local_nightly, &upstream_nightly).await?,
                 _ => (),
             }
 
@@ -86,11 +86,13 @@ pub async fn start(
     ))
 }
 
-async fn print_commits(client: &Client, local: &UpstreamVersion, upstream: &UpstreamVersion) {
+async fn print_commits(
+    client: &Client,
+    local: &UpstreamVersion,
+    upstream: &UpstreamVersion,
+) -> Result<()> {
     let commits =
-        utils::get_commits_for_nightly(client, &local.published_at, &upstream.published_at)
-            .await
-            .unwrap();
+        utils::get_commits_for_nightly(client, &local.published_at, &upstream.published_at).await?;
 
     for commit in commits {
         println!(
@@ -99,6 +101,8 @@ async fn print_commits(client: &Client, local: &UpstreamVersion, upstream: &Upst
             commit.commit.message.replace('\n', "\n| ")
         );
     }
+
+    Ok(())
 }
 
 async fn download_version(

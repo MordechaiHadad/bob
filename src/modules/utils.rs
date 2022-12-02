@@ -161,19 +161,19 @@ pub fn get_file_type() -> &'static str {
     }
 }
 
-pub async fn is_version_installed(version: &str, config: &Config) -> bool {
-    let downloads_dir = get_downloads_folder(config).await.unwrap();
-    let mut dir = tokio::fs::read_dir(&downloads_dir).await.unwrap();
+pub async fn is_version_installed(version: &str, config: &Config) -> Result<bool> {
+    let downloads_dir = get_downloads_folder(config).await?;
+    let mut dir = tokio::fs::read_dir(&downloads_dir).await?;
 
-    while let Some(directory) = dir.next_entry().await.unwrap() {
+    while let Some(directory) = dir.next_entry().await? {
         let name = directory.file_name().to_str().unwrap().to_owned();
         if !version.contains(&name) {
             continue;
         } else {
-            return true;
+            return Ok(true);
         }
     }
-    false
+    Ok(false)
 }
 
 pub async fn is_version_used(version: &str, config: &Config) -> bool {
@@ -184,7 +184,7 @@ pub async fn is_version_used(version: &str, config: &Config) -> bool {
 }
 
 pub async fn get_current_version(config: &Config) -> Result<String> {
-    let mut downloads_dir = get_downloads_folder(config).await.unwrap();
+    let mut downloads_dir = get_downloads_folder(config).await?;
     downloads_dir.push("used");
     match fs::read_to_string(&downloads_dir).await {
         Ok(value) => Ok(value),
@@ -198,7 +198,7 @@ pub async fn get_current_version(config: &Config) -> Result<String> {
     if output.contains("dev") {
         return Ok(String::from("nightly"));
     }
-    let regex = Regex::new(r"v[0-9]\.[0-9]\.[0-9]").unwrap();
+    let regex = Regex::new(r"v[0-9]\.[0-9]\.[0-9]")?;
     Ok(regex.find(output.as_str()).unwrap().as_str().to_owned())
             },
             _ => return Err(anyhow!("{} is corrupted, try running bob use again or open an issue at https://github.com/MordechaiHadad/bob", downloads_dir.display())),
@@ -224,8 +224,7 @@ pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
         .send()
         .await?
         .text()
-        .await
-        .unwrap();
+        .await?;
     match serde_json::from_str(&response) {
         Ok(value) => Ok(value),
         Err(_) => Err(anyhow!(
@@ -235,11 +234,11 @@ pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
 }
 
 pub async fn get_local_nightly(config: &Config) -> Result<UpstreamVersion> {
-    let downloads_dir = get_downloads_folder(config).await.unwrap();
+    let downloads_dir = get_downloads_folder(config).await?;
     if let Ok(file) =
         fs::read_to_string(format!("{}/nightly/bob.json", downloads_dir.display())).await
     {
-        let file_json: UpstreamVersion = serde_json::from_str(&file).unwrap();
+        let file_json: UpstreamVersion = serde_json::from_str(&file)?;
         Ok(file_json)
     } else {
         Err(anyhow!("Couldn't find bob.json"))
@@ -265,8 +264,9 @@ pub async fn get_commits_for_nightly(
 }
 
 pub async fn handle_subprocess(process: &mut Command) -> Result<()> {
-    match process.status().await?.code().unwrap() {
-        0 => Ok(()),
-        code => Err(anyhow!(code)),
+    match process.status().await?.code() {
+        Some(0) => Ok(()),
+        Some(code) => Err(anyhow!(code)),
+        None => Err(anyhow!("process terminated by signal")),
     }
 }
