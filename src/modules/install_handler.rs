@@ -136,7 +136,7 @@ async fn download_version(
                         let mut downloaded: u64 = 0;
 
                         while let Some(item) = response_bytes.next().await {
-                            let chunk = item.or(Err(anyhow!("hello")))?;
+                            let chunk = item.map_err(|_| anyhow!("hello"))?;
                             file.write_all(&chunk).await?;
                             let new = min(downloaded + (chunk.len() as u64), total_size);
                             downloaded = new;
@@ -172,7 +172,7 @@ async fn handle_building_from_source(
 ) -> Result<PostDownloadVersionType> {
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
-            if let Err(_) = env::var("VisualStudioVersion") {
+            if env::var("VisualStudioVersion").is_err() {
                 return Err(anyhow!("Please make sure you are using Developer PowerShell/Command Prompt for VS"));
             }
 
