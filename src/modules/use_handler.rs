@@ -32,9 +32,7 @@ pub async fn start(version: InputVersion, client: &Client, config: Config) -> Re
         crate::enums::VersionType::Hash => &version.tag_name[0..7],
     };
 
-    if let Err(error) = link_version(version_link, &config, is_version_used).await {
-        return Err(error);
-    }
+    link_version(version_link, &config, is_version_used).await?;
     fs::write("used", &version.tag_name).await?;
     info!("You can now use {}!", version.tag_name);
 
@@ -42,7 +40,7 @@ pub async fn start(version: InputVersion, client: &Client, config: Config) -> Re
 }
 
 async fn link_version(version: &str, config: &Config, is_version_used: bool) -> Result<()> {
-    let installation_dir = match utils::get_installation_folder(&config) {
+    let installation_dir = match utils::get_installation_folder(config) {
         Err(_) => return Err(anyhow!("Couldn't get data dir")),
         Ok(value) => value,
     };

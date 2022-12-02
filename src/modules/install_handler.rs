@@ -137,7 +137,7 @@ async fn download_version(
 
                         while let Some(item) = response_bytes.next().await {
                             let chunk = item.or(Err(anyhow!("hello")))?;
-                            file.write(&chunk).await?;
+                            file.write_all(&chunk).await?;
                             let new = min(downloaded + (chunk.len() as u64), total_size);
                             downloaded = new;
                             pb.set_position(new);
@@ -179,17 +179,11 @@ async fn handle_building_from_source(
         } else {
             let is_clang_present = match Command::new("clang").output().await {
                 Ok(_) => true,
-                Err(error) => match error.kind() {
-                    std::io::ErrorKind::NotFound => false,
-                    _ => true,
-                },
+                Err(error) => !matches!(error.kind(), std::io::ErrorKind::NotFound)
             };
             let is_gcc_present = match Command::new("gcc").output().await {
                 Ok(_) => true,
-                Err(error) => match error.kind() {
-                    std::io::ErrorKind::NotFound => false,
-                    _ => true,
-                },
+                Err(error) => !matches!(error.kind(), std::io::ErrorKind::NotFound)
             };
             if !is_gcc_present && !is_clang_present {
                 return Err(anyhow!(
@@ -202,14 +196,13 @@ async fn handle_building_from_source(
     }
     match Command::new("cmake").output().await {
         Ok(_) => (),
-        Err(error) => match error.kind() {
-            std::io::ErrorKind::NotFound => {
+        Err(error) => {
+            if error.kind() == std::io::ErrorKind::NotFound {
                 return Err(anyhow!(
                     "Cmake has to be installed in order to build neovim from source"
-                ))
+                ));
             }
-            _ => (),
-        },
+        }
     }
     let (mut child, is_installed) = if fs::metadata("neovim-git").await.is_err() {
         // check if neovim-git
