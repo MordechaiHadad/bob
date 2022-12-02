@@ -6,7 +6,7 @@ license = "MIT"
 readme = "README.md"
 repository = "https://github.com/MordechaiHadad/bob"
 edition = "2021"
-exclude = ["resources/", "*.norg", "cliff.toml"] # Shame can't include target specific
+exclude = ["resources/", "*.norg", "cliff.toml", ".github"] # Shame can't include target specific
 keywords = ["neovim", "version-manager"]
 categories = ["command-line"]
 
