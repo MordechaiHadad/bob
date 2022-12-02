@@ -8,7 +8,7 @@ repository = "https://github.com/MordechaiHadad/bob"
 edition = "2021"
 exclude = ["resources/", "*.norg", "cliff.toml", ".github"] # Shame can't include target specific
 keywords = ["neovim", "version-manager"]
-categories = ["command-line"]
+categories = ["command-line-utilities"]
 
 [[bin]]
 name = "bob"
