@@ -20,7 +20,7 @@ pub async fn start(config: Config) -> Result<()> {
         .collect::<Vec<_>>();
     const VERSION_MAX_LEN: usize = 7;
 
-    if paths.len() == 0 {
+    if paths.is_empty() {
         return Err(anyhow!("There are no versions installed"));
     }
 

@@ -106,20 +106,18 @@ pub async fn remove_dir(directory: &str) -> Result<()> {
 
     let mut removed: u64 = 0;
 
-    for entry in read_dir {
-        if let Ok(entry) = entry {
-            let path = entry.path();
+    for entry in read_dir.flatten() {
+        let path = entry.path();
 
-            if path.is_dir() {
-                if let Err(e) = fs::remove_dir_all(&path).await {
-                    return Err(anyhow!("Failed to remove {}: {}", path.display(), e));
-                }
-            } else if let Err(e) = fs::remove_file(&path).await {
+        if path.is_dir() {
+            if let Err(e) = fs::remove_dir_all(&path).await {
                 return Err(anyhow!("Failed to remove {}: {}", path.display(), e));
             }
-            removed += 1;
-            pb.set_position(removed);
+        } else if let Err(e) = fs::remove_file(&path).await {
+            return Err(anyhow!("Failed to remove {}: {}", path.display(), e));
         }
+        removed += 1;
+        pb.set_position(removed);
     }
 
     if let Err(e) = fs::remove_dir(directory).await {
@@ -194,7 +192,7 @@ pub async fn get_current_version(config: &Config) -> Result<String> {
         Ok(value) => value,
         Err(_) => return Err(anyhow!("Neovim is not installed")),
     };
-    let output = String::from_utf8_lossy(&*output.stdout).to_string();
+    let output = String::from_utf8_lossy(&output.stdout).to_string();
     if output.contains("dev") {
         return Ok(String::from("nightly"));
     }
