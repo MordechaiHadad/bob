@@ -73,11 +73,10 @@ pub async fn get_downloads_folder(config: &Config) -> Result<PathBuf> {
                 home_dir.push(".local/share");
                 home_dir
             } else {
-                let data_dir = match data_local_dir() {
+                match data_local_dir() {
                     None => return Err(anyhow!("Couldn't get local data folder")),
                     Some(value) => value,
-                };
-                data_dir
+                }
             };
 
             data_dir.push("bob");
@@ -199,7 +198,7 @@ pub async fn get_current_version(config: &Config) -> Result<String> {
     let regex = Regex::new(r"v[0-9]\.[0-9]\.[0-9]")?;
     Ok(regex.find(output.as_str()).unwrap().as_str().to_owned())
             },
-            _ => return Err(anyhow!("{} is corrupted, try running bob use again or open an issue at https://github.com/MordechaiHadad/bob", downloads_dir.display())),
+            _ => Err(anyhow!("{} is corrupted, try running bob use again or open an issue at https://github.com/MordechaiHadad/bob", downloads_dir.display())),
         },
     }
 }
