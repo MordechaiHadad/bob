@@ -74,6 +74,11 @@ For further information refer to the [Neovim wiki](https://github.com/neovim/neo
 1. `cargo install --git https://github.com/MordechaiHadad/bob.git`
 2. Run bob with `bob`
 
+## Install from crates.io
+
+1. `cargo install bob-nvim`
+2. Run bob with `bob`
+
 ## ❓ Usage
 
 A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
