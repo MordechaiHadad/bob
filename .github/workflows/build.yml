@@ -61,6 +61,37 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  macos-m1:
+      runs-on: macos-latest
+      steps:
+        - uses: actions/checkout@v2
+        - name: Install Rust
+          uses: actions-rs/toolchain@v1
+          with:
+            toolchain: stable
+            target: aarch64-apple-darwin
+            profile: minimal
+            override: true
+        - uses: Swatinem/rust-cache@v1
+        - name: Build Bob
+          uses: actions-rs/cargo@v1
+          with:
+            command: build
+            args: --profile optimized
+        - name: Check lints
+          uses: actions-rs/cargo@v1
+          with:
+            command: clippy
+            args: --verbose -- -D warnings
+        - name: Upload Bob M1 MacOS binary
+          uses: actions/upload-artifact@v2
+          with:
+            name: "bob-macos-arm"
+            path: "target/optimized/bob"
+            if-no-files-found: error
+            retention-days: 7
+
+
   windows:
     runs-on: windows-latest
     steps:
