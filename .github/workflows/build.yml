@@ -69,7 +69,6 @@ jobs:
           uses: actions-rs/toolchain@v1
           with:
             toolchain: stable
-            target: aarch64-apple-darwin
             profile: minimal
             override: true
         - uses: Swatinem/rust-cache@v1
@@ -77,7 +76,7 @@ jobs:
           uses: actions-rs/cargo@v1
           with:
             command: build
-            args: --profile optimized
+            args: --profile optimized --target aarch64-apple-darwin
         - name: Check lints
           uses: actions-rs/cargo@v1
           with:
