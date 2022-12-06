@@ -87,7 +87,7 @@ jobs:
           uses: actions/upload-artifact@v2
           with:
             name: "bob-macos-arm"
-            path: "target/optimized/bob"
+            path: "target/aarch64-apple-darwin/optimized/bob"
             if-no-files-found: error
             retention-days: 7
 
