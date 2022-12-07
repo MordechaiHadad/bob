@@ -23,5 +23,22 @@ Type "bob ls"
 Sleep 500ms
 Enter
 
+Sleep 3s
+
+Type "nvim -v"
+Sleep 500ms
+Enter
+
+Sleep 3s
+
+Type "bob use nightly"
+Sleep 500ms
+Enter
+
+Sleep 5s
+
+Type "nvim -v"
+Sleep 500ms
+Enter
 
 Sleep 5s
