@@ -12,7 +12,7 @@ Bob is a cross-platform and easy-to-use Neovim version manager, allowing for eas
 
 ## 🌟 Showcase
 
-<img src="https://user-images.githubusercontent.com/33547558/164478344-2707eb41-5b26-452e-ba05-c18282a3503a.gif">
+<img src="https://user-images.githubusercontent.com/33547558/206171339-d256de56-e100-4ad5-a212-d1fa45df487d.gif">
 
 ## 🔔 Notices
 
