@@ -5,7 +5,6 @@ Require bob
 Set FontSize 20
 Set Width 1300
 Set Height 650
-Set LoopOffset 50%
 
 Type "bob install 0.8.1"
 Sleep 500ms
