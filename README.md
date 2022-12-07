@@ -74,7 +74,7 @@ For further information refer to the [Neovim wiki](https://github.com/neovim/neo
 1. `cargo install --git https://github.com/MordechaiHadad/bob.git`
 2. Run bob with `bob`
 
-## Install from crates.io
+### Install from crates.io
 
 1. `cargo install bob-nvim`
 2. Run bob with `bob`
