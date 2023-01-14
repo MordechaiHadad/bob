@@ -92,6 +92,22 @@ pub async fn get_downloads_folder(config: &Config) -> Result<PathBuf> {
     Ok(path)
 }
 
+pub async fn get_sync_version_file_path(config: &Config) -> Result<Option<PathBuf>> {
+    let path = match &config.sync_version_file_path {
+        Some(path) => {
+            if let Err(e) = tokio::fs::metadata(path).await {
+                return Err(anyhow!(
+                    "Error when trying to retrieve sync_version_file_path {path}: {e}"
+                ));
+            }
+            Some(PathBuf::from(path))
+        }
+        None => return Ok(None),
+    };
+
+    Ok(path)
+}
+
 pub async fn remove_dir(directory: &str) -> Result<()> {
     let path = Path::new(directory);
     let size = path.read_dir()?.count();
