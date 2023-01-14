@@ -35,6 +35,7 @@ pub struct Config {
     pub enable_nightly_info: Option<bool>,
     pub downloads_dir: Option<String>,
     pub installation_location: Option<String>,
+    pub sync_version_file_path: Option<String>,
 }
 
 pub struct InputVersion {
