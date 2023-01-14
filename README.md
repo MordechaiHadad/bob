@@ -99,6 +99,12 @@ Install the specified version, can also be used to update out-of-date nightly ve
 
 ---
 
+- `bob sync`
+
+If Config::sync_version_file_path is set, the version in that file will be parsed and installed.
+
+---
+
 - `bob uninstall |nightly|stable|<version-string>|<commit-hash>|`
 
 Uninstall the specified version.
