@@ -1,4 +1,6 @@
-use super::{erase_handler, install_handler, ls_handler, uninstall_handler, use_handler, utils};
+use super::{
+    erase_handler, install_handler, ls_handler, sync_handler, uninstall_handler, use_handler, utils,
+};
 use crate::{enums::InstallResult, models::Config};
 use anyhow::Result;
 use clap::Parser;
@@ -21,6 +23,10 @@ enum Cli {
         /// Version to be installed |nightly|stable|<version-string>|<commit-hash>|
         version: String,
     },
+
+    /// If Config::sync_version_file_path is set, the version in that file
+    /// will be parsed and installed
+    Sync,
 
     /// Uninstall the specified version
     #[clap(visible_alias = "rm")]
@@ -66,6 +72,11 @@ pub async fn start(config: Config) -> Result<()> {
                     info!("Nightly up to date!");
                 }
             }
+        }
+        Cli::Sync => {
+            let client = Client::new();
+            info!("Starting sync process");
+            sync_handler::start(&client, config).await?;
         }
         Cli::Uninstall { version } => {
             info!("Starting uninstallation process");
