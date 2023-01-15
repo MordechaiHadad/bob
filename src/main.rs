@@ -55,13 +55,17 @@ fn handle_envars(config: &mut Config) -> Result<()> {
     let re = Regex::new(r"\$([A-Z_]+)").unwrap();
 
     if let Some(value) = &config.downloads_dir {
-        let new_value = handle_envar(value, &re)?;
-        config.downloads_dir = Some(new_value);
+        if re.is_match(value) {
+            let new_value = handle_envar(value, &re)?;
+            config.downloads_dir = Some(new_value);
+        }
     }
 
     if let Some(value) = &config.installation_location {
-        let new_value = handle_envar(value, &re)?;
-        config.installation_location = Some(new_value);
+        if re.is_match(value) {
+            let new_value = handle_envar(value, &re)?;
+            config.installation_location = Some(new_value);
+        }
     }
 
     Ok(())
