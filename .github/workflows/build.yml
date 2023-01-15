@@ -32,6 +32,36 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  linux-arm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          target: aarch64-unknown-linux-gnu
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - name: Build Bob
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --profile optimized --target aarch64-unknown-linux-gnu
+      - name: Check lints
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --verbose -- -D warnings
+      - name: Upload Bob ARM Linux binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: "bob-linux-arm"
+          path: "target/aarch64-unknown-linux-gnu/optimized/bob"
+          if-no-files-found: error
+          retention-days: 7
+
   macos:
     runs-on: macos-latest
     steps:
@@ -62,35 +92,34 @@ jobs:
           retention-days: 7
 
   macos-m1:
-      runs-on: macos-latest
-      steps:
-        - uses: actions/checkout@v2
-        - name: Install Rust
-          uses: actions-rs/toolchain@v1
-          with:
-            toolchain: stable
-            target: aarch64-apple-darwin
-            profile: minimal
-            override: true
-        - uses: Swatinem/rust-cache@v1
-        - name: Build Bob
-          uses: actions-rs/cargo@v1
-          with:
-            command: build
-            args: --profile optimized --target aarch64-apple-darwin
-        - name: Check lints
-          uses: actions-rs/cargo@v1
-          with:
-            command: clippy
-            args: --verbose -- -D warnings
-        - name: Upload Bob M1 MacOS binary
-          uses: actions/upload-artifact@v2
-          with:
-            name: "bob-macos-arm"
-            path: "target/aarch64-apple-darwin/optimized/bob"
-            if-no-files-found: error
-            retention-days: 7
-
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-apple-darwin
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - name: Build Bob
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --profile optimized --target aarch64-apple-darwin
+      - name: Check lints
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --verbose -- -D warnings
+      - name: Upload Bob M1 MacOS binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: "bob-macos-arm"
+          path: "target/aarch64-apple-darwin/optimized/bob"
+          if-no-files-found: error
+          retention-days: 7
 
   windows:
     runs-on: windows-latest
@@ -122,6 +151,41 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: "bob-windows-x86_64"
+          path: "build"
+          if-no-files-found: error
+          retention-days: 7
+
+  windows-arm:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          target: aarch64-pc-windows-msvc
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - name: Build Bob
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --profile optimized
+      - name: Check lints
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --verbose -- -D warnings
+      - name: Setup Bob build directory
+        run: |
+          mkdir build
+          copy .\\bin\\vcruntime140.dll .\\build
+          copy .\\target\\aarch64-pc-windows-msvc\\optimized\\bob.exe .\\build
+      - name: Upload Bob ARM Windows build
+        uses: actions/upload-artifact@v2
+        with:
+          name: "bob-windows-arm"
           path: "build"
           if-no-files-found: error
           retention-days: 7
