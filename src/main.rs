@@ -55,22 +55,22 @@ fn handle_envars(config: &mut Config) -> Result<()> {
     let re = Regex::new(r"\$([A-Z_]+)").unwrap();
 
     if let Some(value) = &config.downloads_dir {
-        let extract = re.captures(value).unwrap().get(1).unwrap().as_str();
-
-        let var = env::var(extract)?;
-
-        let new_value = value.replace(&format!("${extract}"), &var);
+        let new_value = handle_envar(value, &re)?;
         config.downloads_dir = Some(new_value);
     }
 
     if let Some(value) = &config.installation_location {
-        let extract = re.captures(value).unwrap().get(1).unwrap().as_str();
-
-        let var = env::var(extract)?;
-
-        let new_value = value.replace(&format!("${extract}"), &var);
+        let new_value = handle_envar(value, &re)?;
         config.installation_location = Some(new_value);
     }
 
     Ok(())
+}
+
+fn handle_envar(value: &str, re: &Regex) -> Result<String> {
+    let extract = re.captures(value).unwrap().get(1).unwrap().as_str();
+
+    let var = env::var(extract)?;
+
+    Ok(value.replace(&format!("${extract}"), &var))
 }
