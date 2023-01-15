@@ -69,6 +69,13 @@ fn handle_envars(config: &mut Config) -> Result<()> {
         }
     }
 
+    if let Some(value) = &config.sync_version_file_path {
+        if re.is_match(value) {
+            let new_value = handle_envar(value, &re)?;
+            config.sync_version_file_path = Some(new_value);
+        }
+    }
+
     Ok(())
 }
 
