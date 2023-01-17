@@ -34,6 +34,21 @@ pub async fn start(version: InputVersion, client: &Client, config: Config) -> Re
 
     link_version(version_link, &config, is_version_used).await?;
     fs::write("used", &version.tag_name).await?;
+    if let Some(sync_version_file_path) = utils::get_sync_version_file_path(&config).await? {
+        // Write the used version to sync_version_file_path only if it's different
+        let stored_version = fs::read_to_string(&sync_version_file_path).await?;
+        if stored_version != version.tag_name {
+            fs::write(&sync_version_file_path, &version.tag_name).await?;
+            info!(
+                "Written version to {}",
+                sync_version_file_path
+                    .into_os_string()
+                    .into_string()
+                    .unwrap()
+            );
+        }
+    }
+
     info!("You can now use {}!", version.tag_name);
 
     Ok(())

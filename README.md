@@ -99,6 +99,12 @@ Install the specified version, can also be used to update out-of-date nightly ve
 
 ---
 
+- `bob sync`
+
+If Config::sync_version_file_path is set, the version in that file will be parsed and installed.
+
+---
+
 - `bob uninstall |nightly|stable|<version-string>|<commit-hash>|`
 
 Uninstall the specified version.
@@ -149,7 +155,8 @@ Bob's configuration file will have to be in `config_dir/bob/config.json`, to be 
 {
   "enable_nightly_info": true, // Will show new commits associated with new nightly release if enabled
   "downloads_dir": "/home/user/.local/share/bob/", // The folder in which neovim versions will be installed too, bob will error if this option is specified but the folder doesn't exist
-  "installation_location": "/home/user/.local/share/neovim" // The path in which the used neovim version will be located in
+  "installation_location": "/home/user/.local/share/neovim", // The path in which the used neovim version will be located in
+  "sync_version_file_path": "/home/user/.config/nvim/nvim.version", // The path to a file that will hold the neovim version string, useful for config version tracking, bob will error if the specified file is not a valid file path
 }
 ```
 

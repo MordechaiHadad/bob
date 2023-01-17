@@ -45,6 +45,7 @@ fn handle_config(config_file: Result<String, std::io::Error>) -> Result<Config> 
             enable_nightly_info: None,
             downloads_dir: None,
             installation_location: None,
+            sync_version_file_path: None,
         },
     };
 
@@ -65,6 +66,13 @@ fn handle_envars(config: &mut Config) -> Result<()> {
         if re.is_match(value) {
             let new_value = handle_envar(value, &re)?;
             config.installation_location = Some(new_value);
+        }
+    }
+
+    if let Some(value) = &config.sync_version_file_path {
+        if re.is_match(value) {
+            let new_value = handle_envar(value, &re)?;
+            config.sync_version_file_path = Some(new_value);
         }
     }
 
