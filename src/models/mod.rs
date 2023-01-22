@@ -36,6 +36,7 @@ pub struct Config {
     pub downloads_dir: Option<String>,
     pub installation_location: Option<String>,
     pub sync_version_file_path: Option<String>,
+    pub rollback_limit: Option<u8>,
 }
 
 pub struct InputVersion {

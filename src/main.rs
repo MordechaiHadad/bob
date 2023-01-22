@@ -46,6 +46,7 @@ fn handle_config(config_file: Result<String, std::io::Error>) -> Result<Config> 
             downloads_dir: None,
             installation_location: None,
             sync_version_file_path: None,
+            rollback_limit: None,
         },
     };
 

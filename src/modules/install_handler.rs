@@ -6,6 +6,7 @@ use crate::modules::utils::handle_subprocess;
 use anyhow::{anyhow, Result};
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
+use regex::Regex;
 use reqwest::Client;
 use std::cmp::min;
 use std::env;
@@ -30,10 +31,8 @@ pub async fn start(
     let is_version_installed = utils::is_version_installed(&version.tag_name, config).await?;
 
     let nightly_version = if version.tag_name == "nightly" {
-        let upstream_nightly = match utils::get_upstream_nightly(client).await {
-            Ok(value) => value,
-            Err(error) => return Err(error),
-        };
+        let upstream_nightly = utils::get_upstream_nightly(client).await?;
+
         if is_version_installed {
             info!("Looking for nightly updates...");
             let local_nightly = utils::get_local_nightly(config).await?;
@@ -58,10 +57,7 @@ pub async fn start(
         None
     };
 
-    let downloaded_file = match download_version(client, version, root, config).await {
-        Ok(value) => value,
-        Err(error) => return Err(anyhow!(error)),
-    };
+    let downloaded_file = download_version(client, version, root, config).await?;
 
     if let PostDownloadVersionType::Standard(downloaded_file) = downloaded_file {
         if let Err(error) = expand_archive::start(downloaded_file).await {
@@ -84,6 +80,30 @@ pub async fn start(
     Ok(InstallResult::InstallationSuccess(
         root.display().to_string(),
     ))
+}
+
+async fn handle_rollback(config: &Config) -> Result<()> {
+    let rollback_limit = match config.rollback_limit {
+        Some(value) => value,
+        None => 3,
+    };
+    let downloads_dir = utils::get_downloads_folder(config).await?;
+    let mut paths = fs::read_dir(&downloads_dir).await?;
+
+    let regex = Regex::new(r"nightly-\d+")?;
+    let mut amount = 0;
+
+    while let Some(path) = paths.next_entry().await? {
+        let name = path.file_name().into_string().unwrap();
+
+        if regex.is_match(&name) {
+            amount += 1;
+        }
+    }
+
+    if amount >= rollback_limit {}
+
+    Ok(())
 }
 
 async fn print_commits(
