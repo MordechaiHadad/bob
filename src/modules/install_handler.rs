@@ -1,9 +1,10 @@
 use super::utils;
 use crate::enums::{InstallResult, PostDownloadVersionType, VersionType};
-use crate::models::{Config, InputVersion, LocalVersion, UpstreamVersion};
+use crate::models::{Config, InputVersion, LocalVersion, Nightly};
 use crate::modules::expand_archive;
 use crate::modules::utils::handle_subprocess;
 use anyhow::{anyhow, Result};
+use chrono::{DateTime, TimeZone, Utc};
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use regex::Regex;
@@ -83,34 +84,49 @@ pub async fn start(
 }
 
 async fn handle_rollback(config: &Config) -> Result<()> {
-    let rollback_limit = match config.rollback_limit {
-        Some(value) => value,
-        None => 3,
-    };
+    let rollback_limit = config.rollback_limit.unwrap_or(3);
+
+    if rollback_limit == 0 {
+        return Ok(());
+    }
+
     let downloads_dir = utils::get_downloads_folder(config).await?;
     let mut paths = fs::read_dir(&downloads_dir).await?;
 
-    let regex = Regex::new(r"nightly-\d+")?;
-    let mut amount = 0;
+    let regex = Regex::new(r"nightly-[a-zA-Z0-9]{8}")?;
+
+    let mut nightly_vec: Vec<Nightly> = Vec::new();
 
     while let Some(path) = paths.next_entry().await? {
         let name = path.file_name().into_string().unwrap();
 
-        if regex.is_match(&name) {
-            amount += 1;
+        if !regex.is_match(&name) {
+            continue;
         }
+
+        let nightly_content = path.path().join("bob.json");
+        let nightly_string = fs::read_to_string(nightly_content).await?;
+
+        let nightly_entry: Nightly = serde_json::from_str(&nightly_string)?;
+
+
+        nightly_vec.push(nightly_entry);
     }
 
-    if amount >= rollback_limit {}
+    if nightly_vec.len() >= rollback_limit.into() {}
 
     Ok(())
 }
 
-async fn print_commits(
-    client: &Client,
-    local: &UpstreamVersion,
-    upstream: &UpstreamVersion,
-) -> Result<()> {
+fn generate_random_nightly_id() -> String {
+    use rand::distributions::{Alphanumeric, DistString};
+
+    let id = Alphanumeric.sample_string(&mut rand::thread_rng(), 8);
+
+    id
+}
+
+async fn print_commits(client: &Client, local: &Nightly, upstream: &Nightly) -> Result<()> {
     let commits =
         utils::get_commits_for_nightly(client, &local.published_at, &upstream.published_at).await?;
 

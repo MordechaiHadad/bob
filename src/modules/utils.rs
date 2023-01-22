@@ -1,5 +1,5 @@
 use crate::enums::VersionType;
-use crate::models::{Config, InputVersion, RepoCommit, UpstreamVersion};
+use crate::models::{Config, InputVersion, RepoCommit, Nightly};
 use anyhow::{anyhow, Result};
 use dirs::{data_local_dir, home_dir};
 use indicatif::{ProgressBar, ProgressStyle};
@@ -25,7 +25,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<InputV
                 .text()
                 .await?;
 
-            let latest: UpstreamVersion = serde_json::from_str(&response)?;
+            let latest: Nightly = serde_json::from_str(&response)?;
 
             Ok(InputVersion {
                 tag_name: latest.tag_name,
@@ -229,7 +229,7 @@ pub fn get_platform_name() -> &'static str {
     }
 }
 
-pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
+pub async fn get_upstream_nightly(client: &Client) -> Result<Nightly> {
     let response = client
         .get("https://api.github.com/repos/neovim/neovim/releases/tags/nightly")
         .header("user-agent", "bob")
@@ -246,12 +246,12 @@ pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
     }
 }
 
-pub async fn get_local_nightly(config: &Config) -> Result<UpstreamVersion> {
+pub async fn get_local_nightly(config: &Config) -> Result<Nightly> {
     let downloads_dir = get_downloads_folder(config).await?;
     if let Ok(file) =
         fs::read_to_string(format!("{}/nightly/bob.json", downloads_dir.display())).await
     {
-        let file_json: UpstreamVersion = serde_json::from_str(&file)?;
+        let file_json: Nightly = serde_json::from_str(&file)?;
         Ok(file_json)
     } else {
         Err(anyhow!("Couldn't find bob.json"))
