@@ -1,10 +1,9 @@
 use super::utils;
 use crate::enums::{InstallResult, PostDownloadVersionType, VersionType};
-use crate::models::{Config, InputVersion, LocalVersion, Nightly};
+use crate::models::{Config, InputVersion, LocalNightly, LocalVersion, Nightly};
 use crate::modules::expand_archive;
 use crate::modules::utils::handle_subprocess;
 use anyhow::{anyhow, Result};
-use chrono::{DateTime, TimeZone, Utc};
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use regex::Regex;
@@ -58,12 +57,11 @@ pub async fn start(
         None
     };
 
+    handle_rollback(&config).await?;
     let downloaded_file = download_version(client, version, root, config).await?;
 
     if let PostDownloadVersionType::Standard(downloaded_file) = downloaded_file {
-        if let Err(error) = expand_archive::start(downloaded_file).await {
-            return Err(anyhow!(error));
-        }
+        expand_archive::start(downloaded_file).await?
     }
 
     if let Some(nightly_version) = nightly_version {
@@ -90,30 +88,17 @@ async fn handle_rollback(config: &Config) -> Result<()> {
         return Ok(());
     }
 
-    let downloads_dir = utils::get_downloads_folder(config).await?;
-    let mut paths = fs::read_dir(&downloads_dir).await?;
-
-    let regex = Regex::new(r"nightly-[a-zA-Z0-9]{8}")?;
-
-    let mut nightly_vec: Vec<Nightly> = Vec::new();
-
-    while let Some(path) = paths.next_entry().await? {
-        let name = path.file_name().into_string().unwrap();
-
-        if !regex.is_match(&name) {
-            continue;
-        }
-
-        let nightly_content = path.path().join("bob.json");
-        let nightly_string = fs::read_to_string(nightly_content).await?;
-
-        let nightly_entry: Nightly = serde_json::from_str(&nightly_string)?;
-
-
-        nightly_vec.push(nightly_entry);
+    let mut nightly_vec = super::rollback_handler::produce_nightly_vec(config).await?;
+ 
+    if nightly_vec.len() >= rollback_limit.into() {
+        let oldest_path = nightly_vec.pop().unwrap().path;
+        fs::remove_dir_all(oldest_path).await?;
     }
 
-    if nightly_vec.len() >= rollback_limit.into() {}
+    let id = generate_random_nightly_id();
+
+    info!("Creating rollback: nightly-{id}");
+    super::fs::copy_dir("nightly", format!("nightly-{id}")).await?;
 
     Ok(())
 }
@@ -282,7 +267,7 @@ async fn handle_building_from_source(
         .await?;
 
     if fs::metadata("build").await.is_ok() {
-        utils::remove_dir("build").await?;
+        super::fs::remove_dir("build").await?;
     }
     fs::create_dir("build").await?;
 

@@ -1,14 +1,18 @@
+use std::path::PathBuf;
 use super::enums::VersionType;
-use chrono::serde::ts_seconds;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Nightly {
     pub tag_name: String,
-
-    #[serde(with = "ts_seconds")]
     pub published_at: DateTime<Utc>,
+}
+
+#[derive(Debug)]
+pub struct LocalNightly {
+    pub data: Nightly,
+    pub path: PathBuf,
 }
 
 #[derive(Clone)]

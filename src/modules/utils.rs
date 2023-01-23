@@ -1,11 +1,11 @@
 use crate::enums::VersionType;
 use crate::models::{Config, InputVersion, RepoCommit, Nightly};
 use anyhow::{anyhow, Result};
+use chrono::{Utc, DateTime };
 use dirs::{data_local_dir, home_dir};
-use indicatif::{ProgressBar, ProgressStyle};
 use regex::Regex;
 use reqwest::Client;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tokio::fs;
 use tokio::process::Command;
 
@@ -108,42 +108,6 @@ pub async fn get_sync_version_file_path(config: &Config) -> Result<Option<PathBu
     Ok(path)
 }
 
-pub async fn remove_dir(directory: &str) -> Result<()> {
-    let path = Path::new(directory);
-    let size = path.read_dir()?.count();
-    let read_dir = path.read_dir()?;
-
-    let pb = ProgressBar::new(size.try_into()?);
-    pb.set_style(ProgressStyle::default_bar()
-                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len} ({per_sec}, {eta})")
-                    .progress_chars("█  "));
-    pb.set_message(format!("Deleting {}", path.display()));
-
-    let mut removed: u64 = 0;
-
-    for entry in read_dir.flatten() {
-        let path = entry.path();
-
-        if path.is_dir() {
-            if let Err(e) = fs::remove_dir_all(&path).await {
-                return Err(anyhow!("Failed to remove {}: {}", path.display(), e));
-            }
-        } else if let Err(e) = fs::remove_file(&path).await {
-            return Err(anyhow!("Failed to remove {}: {}", path.display(), e));
-        }
-        removed += 1;
-        pb.set_position(removed);
-    }
-
-    if let Err(e) = fs::remove_dir(directory).await {
-        return Err(anyhow!("Failed to remove {directory}: {}", e));
-    }
-
-    pb.finish_with_message(format!("Finished removing {}", path.display()));
-
-    Ok(())
-}
-
 pub fn get_installation_folder(config: &Config) -> Result<PathBuf> {
     match &config.installation_location {
         Some(path) => Ok(PathBuf::from(path.clone())),
@@ -240,7 +204,7 @@ pub async fn get_upstream_nightly(client: &Client) -> Result<Nightly> {
         .await?;
     match serde_json::from_str(&response) {
         Ok(value) => Ok(value),
-        Err(_) => Err(anyhow!(
+        Err(error) => Err(anyhow!(
             "Failed to get upstream nightly version, aborting..."
         )),
     }
@@ -260,8 +224,8 @@ pub async fn get_local_nightly(config: &Config) -> Result<Nightly> {
 
 pub async fn get_commits_for_nightly(
     client: &Client,
-    since: &str,
-    until: &str,
+    since: &DateTime<Utc>,
+    until: &DateTime<Utc>,
 ) -> Result<Vec<RepoCommit>> {
     let response = client
         .get(format!(

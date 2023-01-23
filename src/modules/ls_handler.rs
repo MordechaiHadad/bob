@@ -18,7 +18,7 @@ pub async fn start(config: Config) -> Result<()> {
         .filter_map(|e| e.ok())
         .map(|entry| entry.path())
         .collect::<Vec<_>>();
-    const VERSION_MAX_LEN: usize = 7;
+    const VERSION_MAX_LEN: usize = 16;
 
     if paths.is_empty() {
         return Err(anyhow!("There are no versions installed"));

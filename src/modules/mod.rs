@@ -7,3 +7,5 @@ pub mod sync_handler;
 pub mod uninstall_handler;
 pub mod use_handler;
 pub mod utils;
+pub mod fs;
+pub mod rollback_handler;
