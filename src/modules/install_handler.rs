@@ -1,12 +1,11 @@
 use super::utils;
 use crate::enums::{InstallResult, PostDownloadVersionType, VersionType};
-use crate::models::{Config, InputVersion, LocalNightly, LocalVersion, Nightly};
+use crate::models::{Config, InputVersion, LocalVersion, Nightly};
 use crate::modules::expand_archive;
 use crate::modules::utils::handle_subprocess;
 use anyhow::{anyhow, Result};
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
-use regex::Regex;
 use reqwest::Client;
 use std::cmp::min;
 use std::env;
@@ -57,7 +56,7 @@ pub async fn start(
         None
     };
 
-    handle_rollback(&config).await?;
+    handle_rollback(config).await?;
     let downloaded_file = download_version(client, version, root, config).await?;
 
     if let PostDownloadVersionType::Standard(downloaded_file) = downloaded_file {
@@ -106,9 +105,7 @@ async fn handle_rollback(config: &Config) -> Result<()> {
 fn generate_random_nightly_id() -> String {
     use rand::distributions::{Alphanumeric, DistString};
 
-    let id = Alphanumeric.sample_string(&mut rand::thread_rng(), 8);
-
-    id
+    Alphanumeric.sample_string(&mut rand::thread_rng(), 8)
 }
 
 async fn print_commits(client: &Client, local: &Nightly, upstream: &Nightly) -> Result<()> {

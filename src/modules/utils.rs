@@ -204,7 +204,7 @@ pub async fn get_upstream_nightly(client: &Client) -> Result<Nightly> {
         .await?;
     match serde_json::from_str(&response) {
         Ok(value) => Ok(value),
-        Err(error) => Err(anyhow!(
+        Err(_) => Err(anyhow!(
             "Failed to get upstream nightly version, aborting..."
         )),
     }
