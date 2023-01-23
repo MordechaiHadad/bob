@@ -86,7 +86,7 @@ pub async fn start(config: Config) -> Result<()> {
             info!("Starting uninstallation process");
             uninstall_handler::start(&version, config).await?;
         }
-        Cli::Rollback => rollback_handler::start(&config).await?,
+        Cli::Rollback => rollback_handler::start(config).await?,
         Cli::Erase => erase_handler::start(config).await?,
         Cli::List => ls_handler::start(config).await?,
     }

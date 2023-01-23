@@ -1,13 +1,21 @@
 use crate::enums::InstallResult;
-use crate::models::{Config, InputVersion};
+use crate::models::{Config, InputVersion, LocalNightly};
 use crate::modules::{install_handler, utils};
 use anyhow::{anyhow, Result};
 use reqwest::Client;
 use tokio::fs;
 use tracing::info;
 
-pub async fn start(version: InputVersion, client: &Client, config: Config) -> Result<()> {
+pub async fn start(
+    version: InputVersion,
+    client: &Client,
+    config: Config,
+) -> Result<()> {
+
+
     let is_version_used = utils::is_version_used(&version.tag_name, &config).await;
+
+
     if is_version_used && version.tag_name != "nightly" {
         info!("{} is already installed and used!", version.tag_name);
         return Ok(());
@@ -25,7 +33,15 @@ pub async fn start(version: InputVersion, client: &Client, config: Config) -> Re
         Err(error) => return Err(error),
     }
 
-    std::env::set_current_dir(utils::get_downloads_folder(&config).await?)?;
+    switch(&config, &version, is_version_used).await?;
+
+    info!("You can now use {}!", version.tag_name);
+
+    Ok(())
+}
+
+pub async fn switch(config: &Config, version: &InputVersion, is_version_used: bool) -> Result<()> {
+    std::env::set_current_dir(utils::get_downloads_folder(config).await?)?;
 
     let version_link = match version.version_type {
         crate::enums::VersionType::Standard => &version.tag_name,
@@ -48,8 +64,6 @@ pub async fn start(version: InputVersion, client: &Client, config: Config) -> Re
             );
         }
     }
-
-    info!("You can now use {}!", version.tag_name);
 
     Ok(())
 }

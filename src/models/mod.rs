@@ -3,13 +3,13 @@ use super::enums::VersionType;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Nightly {
     pub tag_name: String,
     pub published_at: DateTime<Utc>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LocalNightly {
     pub data: Nightly,
     pub path: PathBuf,
