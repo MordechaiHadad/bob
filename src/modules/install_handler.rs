@@ -275,7 +275,7 @@ async fn handle_building_from_source(
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
             if fs::metadata(".deps").await.is_ok() {
-                utils::remove_dir(".deps").await?;
+                super::fs::::remove_dir(".deps").await?;
             }
             fs::create_dir(".deps").await?;
             env::set_current_dir(".deps")?;
