@@ -45,7 +45,6 @@ pub async fn copy_dir(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<()
 
     let mut entries = fs::read_dir(path).await?;
 
-
     while let Some(entry) = entries.next_entry().await? {
         let path = entry.path();
 
@@ -56,7 +55,6 @@ pub async fn copy_dir(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<()
             let new_dest = destination.join(path.strip_prefix("nightly")?);
             fs::copy(path, new_dest).await?;
         }
-
     }
 
     Ok(())

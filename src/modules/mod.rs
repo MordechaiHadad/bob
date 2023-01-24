@@ -1,11 +1,11 @@
 pub mod cli;
 pub mod erase_handler;
 mod expand_archive;
+pub mod fs;
 pub mod install_handler;
 pub mod ls_handler;
+pub mod rollback_handler;
 pub mod sync_handler;
 pub mod uninstall_handler;
 pub mod use_handler;
 pub mod utils;
-pub mod fs;
-pub mod rollback_handler;

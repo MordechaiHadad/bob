@@ -1,7 +1,7 @@
-use std::path::PathBuf;
 use super::enums::VersionType;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Nightly {

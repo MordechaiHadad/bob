@@ -56,7 +56,9 @@ pub async fn start(
         None
     };
 
-    handle_rollback(config).await?;
+    if version.tag_name.eq("nightly") {
+        handle_rollback(config).await?;
+    }
     let downloaded_file = download_version(client, version, root, config).await?;
 
     if let PostDownloadVersionType::Standard(downloaded_file) = downloaded_file {
@@ -88,7 +90,7 @@ async fn handle_rollback(config: &Config) -> Result<()> {
     }
 
     let mut nightly_vec = super::rollback_handler::produce_nightly_vec(config).await?;
- 
+
     if nightly_vec.len() >= rollback_limit.into() {
         let oldest_path = nightly_vec.pop().unwrap().path;
         fs::remove_dir_all(oldest_path).await?;

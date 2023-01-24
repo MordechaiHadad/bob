@@ -1,7 +1,7 @@
 use crate::enums::VersionType;
-use crate::models::{Config, InputVersion, RepoCommit, Nightly};
+use crate::models::{Config, InputVersion, Nightly, RepoCommit};
 use anyhow::{anyhow, Result};
-use chrono::{Utc, DateTime };
+use chrono::{DateTime, Utc};
 use dirs::{data_local_dir, home_dir};
 use regex::Regex;
 use reqwest::Client;
