@@ -1,7 +1,7 @@
 use super::{use_handler, utils};
 use crate::models::{Config, LocalNightly, Nightly};
 use anyhow::Result;
-use chrono::{Utc, Duration};
+use chrono::{Duration, Utc};
 use dialoguer::{console::Term, theme::ColorfulTheme, Select};
 use regex::Regex;
 use tokio::fs;
@@ -32,6 +32,13 @@ pub async fn start(config: Config) -> Result<()> {
 
     match selection {
         Some(i) => {
+            let is_version_used = utils::is_version_used(&name_list[i], &config).await;
+
+            if is_version_used {
+                info!("{} is already used.", &name_list[i]);
+                return Ok(());
+            }
+
             use_handler::switch(
                 &config,
                 &crate::models::InputVersion {
@@ -57,10 +64,8 @@ pub async fn start(config: Config) -> Result<()> {
 
             let now = Utc::now();
             let since = now.signed_duration_since(find.data.published_at);
-            info!(
-                "Rolled back to version {} {}",
-                name_list[i], since
-            );
+            let humanized = humanize_duration(since)?;
+            info!("Rolled back to version {} {}", name_list[i], humanized);
         }
         None => info!("Rollback aborted..."),
     }
@@ -88,15 +93,45 @@ pub async fn produce_nightly_vec(config: &Config) -> Result<Vec<LocalNightly>> {
 
         let nightly_data: Nightly = serde_json::from_str(&nightly_string)?;
 
-        let nightly_entry = LocalNightly {
+        let mut nightly_entry = LocalNightly {
             data: nightly_data,
             path: path.path(),
         };
 
+        nightly_entry.data.tag_name = name;
+
         nightly_vec.push(nightly_entry);
     }
 
-    nightly_vec.sort_by(|a, b| a.data.published_at.cmp(&b.data.published_at));
+    nightly_vec.sort_by(|a, b| b.data.published_at.cmp(&a.data.published_at));
 
     Ok(nightly_vec)
+}
+
+fn humanize_duration(duration: Duration) -> Result<String> {
+    let mut humanized_duration = String::new();
+
+    let total_hours = duration.num_hours();
+
+    let weeks = total_hours / 24 / 7;
+    let days = (total_hours / 24) % 7;
+    let hours = total_hours % 24;
+
+    if weeks != 0 {
+        humanized_duration += &format!("{} week{}", weeks, if weeks > 1 { "s" } else { "" });
+    }
+    if days != 0 {
+        if !humanized_duration.is_empty() {
+            humanized_duration += " ";
+        }
+        humanized_duration += &format!("{} day{}", days, if days > 1 { "s" } else { "" });
+    }
+    if hours != 0 {
+        if !humanized_duration.is_empty() {
+            humanized_duration += " ";
+        }
+        humanized_duration += &format!("{} hour{}", hours, if hours > 1 { "s" } else { "" });
+    }
+
+    Ok(humanized_duration)
 }

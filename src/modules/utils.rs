@@ -155,7 +155,7 @@ pub async fn is_version_installed(version: &str, config: &Config) -> Result<bool
 
 pub async fn is_version_used(version: &str, config: &Config) -> bool {
     match get_current_version(config).await {
-        Ok(value) => value.contains(version),
+        Ok(value) => value.eq(version),
         Err(_) => false,
     }
 }

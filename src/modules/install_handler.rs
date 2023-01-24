@@ -98,6 +98,8 @@ async fn handle_rollback(config: &Config) -> Result<()> {
 
     info!("Creating rollback: nightly-{id}");
     super::fs::copy_dir("nightly", format!("nightly-{id}")).await?;
+    let json_file = serde_json::to_string(&nightly_vec.first().unwrap().data)?;
+    fs::write(format!("nightly-{id}/bob.json"), json_file).await?;
 
     Ok(())
 }
