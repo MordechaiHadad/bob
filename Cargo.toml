@@ -70,20 +70,15 @@ optional = false
 [dependencies.tracing-subscriber]
 version = "0.2"
 optional = false
+
 [target."cfg(unix)".dependencies]
 flate2 = "1.0"
 tar = "0.4"
 
-[target."cfg(unix)".dev-dependencies]
-
-[target."cfg(unix)".build-dependencies]
 [target."cfg(windows)".dependencies]
 winreg = "0.10.1"
 zip = "0.5"
 
-[target."cfg(windows)".dev-dependencies]
-
-[target."cfg(windows)".build-dependencies]
 
 [[bin]]
 path = "src/main.rs"
@@ -91,3 +86,10 @@ name = "bob"
 plugin = false
 proc-macro = false
 required-features = []
+
+[profile.optimized]
+inherits = "release"
+opt-level = "z"
+strip = true
+lto = true
+codegen-units = 1
