@@ -111,6 +111,12 @@ Uninstall the specified version.
 
 ---
 
+- `bob rollback`
+
+Rollback to an existing nightly rollback
+
+---
+
 - `bob erase`
 
 Erase any change bob ever made including Neovim installation, Neovim version downloads and registry changes.
