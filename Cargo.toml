@@ -44,7 +44,6 @@ default-features = false
 version = "1.5"
 features = []
 optional = false
-default-features = false
 
 [dependencies.reqwest]
 version = "0.11"
