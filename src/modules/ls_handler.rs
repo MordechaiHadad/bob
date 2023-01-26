@@ -1,24 +1,19 @@
 use crate::models::Config;
 
-use super::utils;
+use super::{rollback_handler, utils};
 use anyhow::{anyhow, Result};
 use std::fs;
 use yansi::Paint;
 
 pub async fn start(config: Config) -> Result<()> {
-    let downloads_dir = match utils::get_downloads_folder(&config).await {
-        Ok(value) => value,
-        Err(error) => return Err(anyhow!(error)),
-    };
-    if cfg!(target_os = "macos") {
-        println!("Downloads dir is: {}", downloads_dir.display());
-    }
+    let downloads_dir = utils::get_downloads_folder(&config).await?;
 
     let paths = fs::read_dir(downloads_dir)?
         .filter_map(|e| e.ok())
         .map(|entry| entry.path())
         .collect::<Vec<_>>();
-    const VERSION_MAX_LEN: usize = 16;
+
+    let version_max_len = if has_rollbacks(&config).await? { 16 } else { 7 };
 
     if paths.is_empty() {
         return Err(anyhow!("There are no versions installed"));
@@ -33,18 +28,26 @@ pub async fn start(config: Config) -> Result<()> {
             continue;
         }
 
-        let width = (VERSION_MAX_LEN - path_name.len()) + 1;
-        if path.is_dir() {
-            if utils::is_version_used(path_name, &config).await {
-                println!("{path_name}{}| {}", " ".repeat(width), Paint::green("Used"));
-            } else {
-                println!(
-                    "{path_name}{}| {}",
-                    " ".repeat(width),
-                    Paint::yellow("Installed")
-                );
-            }
+        let width = (version_max_len - path_name.len()) + 1;
+        if !path.is_dir() {
+            continue;
+        }
+
+        if utils::is_version_used(path_name, &config).await {
+            println!("{path_name}{}| {}", " ".repeat(width), Paint::green("Used"));
+        } else {
+            println!(
+                "{path_name}{}| {}",
+                " ".repeat(width),
+                Paint::yellow("Installed")
+            );
         }
     }
     Ok(())
+}
+
+async fn has_rollbacks(config: &Config) -> Result<bool> {
+    let list = rollback_handler::produce_nightly_vec(config).await?;
+
+    Ok(list.len() > 0)
 }
