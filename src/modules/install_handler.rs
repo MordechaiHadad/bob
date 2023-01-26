@@ -83,6 +83,10 @@ pub async fn start(
 }
 
 async fn handle_rollback(config: &Config) -> Result<()> {
+    if !utils::is_version_used("nightly", config) {
+        return Ok(())
+    }
+
     let rollback_limit = config.rollback_limit.unwrap_or(3);
 
     if rollback_limit == 0 {
