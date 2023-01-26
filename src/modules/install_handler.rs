@@ -83,7 +83,7 @@ pub async fn start(
 }
 
 async fn handle_rollback(config: &Config) -> Result<()> {
-    if !utils::is_version_used("nightly", config) {
+    if !utils::is_version_used("nightly", config).await {
         return Ok(())
     }
 
