@@ -49,5 +49,5 @@ pub async fn start(config: Config) -> Result<()> {
 async fn has_rollbacks(config: &Config) -> Result<bool> {
     let list = rollback_handler::produce_nightly_vec(config).await?;
 
-    Ok(list.len() > 0)
+    Ok(!list.is_empty())
 }
