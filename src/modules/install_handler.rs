@@ -104,7 +104,12 @@ async fn handle_rollback(config: &Config) -> Result<()> {
 
     info!("Creating rollback: nightly-{id}");
     super::fs::copy_dir("nightly", format!("nightly-{id}")).await?;
-    let json_file = serde_json::to_string(&nightly_vec.first().unwrap().data)?;
+
+    let nightly_file = fs::read_to_string("nightly/bob.json").await?;
+    let mut json_struct: Nightly = serde_json::from_str(&nightly_file)?;
+    json_struct.tag_name += &format!("-{id}");
+
+    let json_file = serde_json::to_string(&json_struct)?;
     fs::write(format!("nightly-{id}/bob.json"), json_file).await?;
 
     Ok(())
