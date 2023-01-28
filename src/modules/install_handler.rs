@@ -84,7 +84,7 @@ pub async fn start(
 
 async fn handle_rollback(config: &Config) -> Result<()> {
     if !utils::is_version_used("nightly", config).await {
-        return Ok(())
+        return Ok(());
     }
 
     let rollback_limit = config.rollback_limit.unwrap_or(3);
@@ -101,6 +101,24 @@ async fn handle_rollback(config: &Config) -> Result<()> {
     }
 
     let id = generate_random_nightly_id();
+
+    // handle this for older installations of nightly instead of introducing breaking changes
+    cfg_if::cfg_if! {
+        if #[cfg(unix)] {
+            use std::os::unix::prelude::PermissionsExt;
+
+            let platform = utils::get_platform_name();
+            let file = &format!("nightly/{platform}/bin/nvim");
+            let mut perms = fs::metadata(file).await?.permissions();
+            let octal_perms = format!("{:o}", perms.mode());
+
+            if octal_perms == "100111" {
+            perms.set_mode(0o551);
+            fs::set_permissions(file, perms).await?;
+            }
+
+        }
+    }
 
     info!("Creating rollback: nightly-{id}");
     super::fs::copy_dir("nightly", format!("nightly-{id}")).await?;

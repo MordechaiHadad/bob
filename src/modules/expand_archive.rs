@@ -163,7 +163,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     let platform = utils::get_platform_name();
     let file = &format!("{}/{platform}/bin/nvim", downloaded_file.file_name);
     let mut perms = fs::metadata(file)?.permissions();
-    perms.set_mode(0o111);
+    perms.set_mode(0o551);
     fs::set_permissions(file, perms)?;
     Ok(())
 }
