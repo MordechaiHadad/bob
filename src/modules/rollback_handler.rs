@@ -43,7 +43,7 @@ pub async fn start(config: Config) -> Result<()> {
                 &config,
                 &crate::models::InputVersion {
                     tag_name: name_list[i].clone(),
-                    version_type: crate::enums::VersionType::Hash,
+                    version_type: crate::enums::VersionType::Standard,
                 },
                 true,
             )
