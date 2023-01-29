@@ -10,6 +10,9 @@ use super::use_handler;
 pub async fn start(client: &Client, config: Config) -> Result<()> {
     if let Some(sync_version_file_path) = utils::get_sync_version_file_path(&config).await? {
         let version = fs::read_to_string(&sync_version_file_path).await?;
+        if version.contains("nightly-") {
+            return Err(anyhow!("Cannot sync nightly rollbacks."))
+        }
         info!(
             "Using version {version} set in {}",
             sync_version_file_path
