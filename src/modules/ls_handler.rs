@@ -19,8 +19,17 @@ pub async fn start(config: Config) -> Result<()> {
         return Err(anyhow!("There are no versions installed"));
     }
 
-    println!("Version | Status");
-    println!("{}+{}", "-".repeat(7 + 1), "-".repeat(10));
+    let padding = if version_max_len == 16 { 7 } else { 2 };
+
+    println!("┌{}┬{}┐", "─".repeat(version_max_len + 5), "─".repeat(12));
+    println!(
+        "│{}Version{}│{}Status{}│",
+        " ".repeat(padding),
+        " ".repeat(padding),
+        " ".repeat(3),
+        " ".repeat(3)
+    );
+    println!("├{}┼{}┤", "─".repeat(11), "─".repeat(12));
 
     for path in paths {
         let path_name = path.file_name().unwrap().to_str().unwrap();
@@ -28,21 +37,29 @@ pub async fn start(config: Config) -> Result<()> {
             continue;
         }
 
-        let width = (version_max_len - path_name.len()) + 1;
+        let width = (version_max_len - path_name.len()) + 2;
         if !path.is_dir() {
             continue;
         }
 
         if utils::is_version_used(path_name, &config).await {
-            println!("{path_name}{}| {}", " ".repeat(width), Paint::green("Used"));
+            println!(
+                "│  {path_name}{}│  {} {}│",
+                " ".repeat(width),
+                Paint::green("Used"),
+                " ".repeat(5)
+            );
         } else {
             println!(
-                "{path_name}{}| {}",
+                "│  {path_name}{}│  {} │",
                 " ".repeat(width),
                 Paint::yellow("Installed")
             );
         }
     }
+
+    println!("└{}┴{}┘", "─".repeat(11), "─".repeat(12));
+
     Ok(())
 }
 
