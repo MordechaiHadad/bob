@@ -163,6 +163,7 @@ Bob's configuration file will have to be in `config_dir/bob/config.json`, to be 
   "downloads_dir": "$HOME/.local/share/bob", // The folder in which neovim versions will be installed too, bob will error if this option is specified but the folder doesn't exist
   "installation_location": "/home/user/.local/share/neovim", // The path in which the used neovim version will be located in
   "sync_version_file_path": "/home/user/.config/nvim/nvim.version", // The path to a file that will hold the neovim version string, useful for config version tracking, bob will error if the specified file is not a valid file path
+  "rollback_limit": 3 // The amount of rollbacks before bob starts to delete older ones, can be up to 225
 }
 ```
 
