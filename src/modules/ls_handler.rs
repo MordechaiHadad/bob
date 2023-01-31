@@ -13,13 +13,13 @@ pub async fn start(config: Config) -> Result<()> {
         .map(|entry| entry.path())
         .collect::<Vec<_>>();
 
-    let version_max_len = if has_rollbacks(&config).await? { 16 } else { 7 };
-    let status_max_len = 9;
 
     if paths.is_empty() {
         return Err(anyhow!("There are no versions installed"));
     }
 
+    let version_max_len = if has_rollbacks(&config).await? { 16 } else { 7 };
+    let status_max_len = 9;
     let padding = 2;
 
     println!(
