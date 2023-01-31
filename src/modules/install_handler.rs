@@ -1,6 +1,6 @@
 use super::utils;
 use crate::enums::{InstallResult, PostDownloadVersionType, VersionType};
-use crate::models::{Config, InputVersion, LocalVersion, UpstreamVersion};
+use crate::models::{Config, InputVersion, LocalVersion, Nightly};
 use crate::modules::expand_archive;
 use crate::modules::utils::handle_subprocess;
 use anyhow::{anyhow, Result};
@@ -30,10 +30,8 @@ pub async fn start(
     let is_version_installed = utils::is_version_installed(&version.tag_name, config).await?;
 
     let nightly_version = if version.tag_name == "nightly" {
-        let upstream_nightly = match utils::get_upstream_nightly(client).await {
-            Ok(value) => value,
-            Err(error) => return Err(error),
-        };
+        let upstream_nightly = utils::get_upstream_nightly(client).await?;
+
         if is_version_installed {
             info!("Looking for nightly updates...");
             let local_nightly = utils::get_local_nightly(config).await?;
@@ -58,15 +56,13 @@ pub async fn start(
         None
     };
 
-    let downloaded_file = match download_version(client, version, root, config).await {
-        Ok(value) => value,
-        Err(error) => return Err(anyhow!(error)),
-    };
+    if version.tag_name.eq("nightly") {
+        handle_rollback(config).await?;
+    }
+    let downloaded_file = download_version(client, version, root, config).await?;
 
     if let PostDownloadVersionType::Standard(downloaded_file) = downloaded_file {
-        if let Err(error) = expand_archive::start(downloaded_file).await {
-            return Err(anyhow!(error));
-        }
+        expand_archive::start(downloaded_file).await?
     }
 
     if let Some(nightly_version) = nightly_version {
@@ -86,11 +82,64 @@ pub async fn start(
     ))
 }
 
-async fn print_commits(
-    client: &Client,
-    local: &UpstreamVersion,
-    upstream: &UpstreamVersion,
-) -> Result<()> {
+async fn handle_rollback(config: &Config) -> Result<()> {
+    if !utils::is_version_used("nightly", config).await {
+        return Ok(());
+    }
+
+    let rollback_limit = config.rollback_limit.unwrap_or(3);
+
+    if rollback_limit == 0 {
+        return Ok(());
+    }
+
+    let mut nightly_vec = super::rollback_handler::produce_nightly_vec(config).await?;
+
+    if nightly_vec.len() >= rollback_limit.into() {
+        let oldest_path = nightly_vec.pop().unwrap().path;
+        fs::remove_dir_all(oldest_path).await?;
+    }
+
+    let id = generate_random_nightly_id();
+
+    // handle this for older installations of nightly instead of introducing breaking changes
+    cfg_if::cfg_if! {
+        if #[cfg(unix)] {
+            use std::os::unix::prelude::PermissionsExt;
+
+            let platform = utils::get_platform_name();
+            let file = &format!("nightly/{platform}/bin/nvim");
+            let mut perms = fs::metadata(file).await?.permissions();
+            let octal_perms = format!("{:o}", perms.mode());
+
+            if octal_perms == "100111" {
+            perms.set_mode(0o551);
+            fs::set_permissions(file, perms).await?;
+            }
+
+        }
+    }
+
+    info!("Creating rollback: nightly-{id}");
+    super::fs::copy_dir("nightly", format!("nightly-{id}")).await?;
+
+    let nightly_file = fs::read_to_string("nightly/bob.json").await?;
+    let mut json_struct: Nightly = serde_json::from_str(&nightly_file)?;
+    json_struct.tag_name += &format!("-{id}");
+
+    let json_file = serde_json::to_string(&json_struct)?;
+    fs::write(format!("nightly-{id}/bob.json"), json_file).await?;
+
+    Ok(())
+}
+
+fn generate_random_nightly_id() -> String {
+    use rand::distributions::{Alphanumeric, DistString};
+
+    Alphanumeric.sample_string(&mut rand::thread_rng(), 8)
+}
+
+async fn print_commits(client: &Client, local: &Nightly, upstream: &Nightly) -> Result<()> {
     let commits =
         utils::get_commits_for_nightly(client, &local.published_at, &upstream.published_at).await?;
 
@@ -246,7 +295,7 @@ async fn handle_building_from_source(
         .await?;
 
     if fs::metadata("build").await.is_ok() {
-        utils::remove_dir("build").await?;
+        super::fs::remove_dir("build").await?;
     }
     fs::create_dir("build").await?;
 
@@ -257,7 +306,7 @@ async fn handle_building_from_source(
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
             if fs::metadata(".deps").await.is_ok() {
-                utils::remove_dir(".deps").await?;
+                super::fs::remove_dir(".deps").await?;
             }
             fs::create_dir(".deps").await?;
             env::set_current_dir(".deps")?;

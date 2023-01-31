@@ -8,6 +8,7 @@ use tracing::info;
 
 pub async fn start(version: InputVersion, client: &Client, config: Config) -> Result<()> {
     let is_version_used = utils::is_version_used(&version.tag_name, &config).await;
+
     if is_version_used && version.tag_name != "nightly" {
         info!("{} is already installed and used!", version.tag_name);
         return Ok(());
@@ -25,16 +26,24 @@ pub async fn start(version: InputVersion, client: &Client, config: Config) -> Re
         Err(error) => return Err(error),
     }
 
-    std::env::set_current_dir(utils::get_downloads_folder(&config).await?)?;
+    switch(&config, &version, is_version_used).await?;
+
+    info!("You can now use {}!", version.tag_name);
+
+    Ok(())
+}
+
+pub async fn switch(config: &Config, version: &InputVersion, is_version_used: bool) -> Result<()> {
+    std::env::set_current_dir(utils::get_downloads_folder(config).await?)?;
 
     let version_link = match version.version_type {
         crate::enums::VersionType::Standard => &version.tag_name,
         crate::enums::VersionType::Hash => &version.tag_name[0..7],
     };
 
-    link_version(version_link, &config, is_version_used).await?;
+    link_version(version_link, config, is_version_used).await?;
     fs::write("used", &version.tag_name).await?;
-    if let Some(sync_version_file_path) = utils::get_sync_version_file_path(&config).await? {
+    if let Some(sync_version_file_path) = utils::get_sync_version_file_path(config).await? {
         // Write the used version to sync_version_file_path only if it's different
         let stored_version = fs::read_to_string(&sync_version_file_path).await?;
         if stored_version != version.tag_name {
@@ -48,8 +57,6 @@ pub async fn start(version: InputVersion, client: &Client, config: Config) -> Re
             );
         }
     }
-
-    info!("You can now use {}!", version.tag_name);
 
     Ok(())
 }

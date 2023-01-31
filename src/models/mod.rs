@@ -1,10 +1,18 @@
 use super::enums::VersionType;
-
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-#[derive(Serialize, Deserialize, Debug)]
-pub struct UpstreamVersion {
+use std::path::PathBuf;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Nightly {
     pub tag_name: String,
-    pub published_at: String,
+    pub published_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone)]
+pub struct LocalNightly {
+    pub data: Nightly,
+    pub path: PathBuf,
 }
 
 #[derive(Clone)]
@@ -36,6 +44,7 @@ pub struct Config {
     pub downloads_dir: Option<String>,
     pub installation_location: Option<String>,
     pub sync_version_file_path: Option<String>,
+    pub rollback_limit: Option<u8>,
 }
 
 pub struct InputVersion {

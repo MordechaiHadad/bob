@@ -1,11 +1,11 @@
 use crate::enums::VersionType;
-use crate::models::{Config, InputVersion, RepoCommit, UpstreamVersion};
+use crate::models::{Config, InputVersion, Nightly, RepoCommit};
 use anyhow::{anyhow, Result};
+use chrono::{DateTime, Utc};
 use dirs::{data_local_dir, home_dir};
-use indicatif::{ProgressBar, ProgressStyle};
 use regex::Regex;
 use reqwest::Client;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tokio::fs;
 use tokio::process::Command;
 
@@ -25,7 +25,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<InputV
                 .text()
                 .await?;
 
-            let latest: UpstreamVersion = serde_json::from_str(&response)?;
+            let latest: Nightly = serde_json::from_str(&response)?;
 
             Ok(InputVersion {
                 tag_name: latest.tag_name,
@@ -108,42 +108,6 @@ pub async fn get_sync_version_file_path(config: &Config) -> Result<Option<PathBu
     Ok(path)
 }
 
-pub async fn remove_dir(directory: &str) -> Result<()> {
-    let path = Path::new(directory);
-    let size = path.read_dir()?.count();
-    let read_dir = path.read_dir()?;
-
-    let pb = ProgressBar::new(size.try_into()?);
-    pb.set_style(ProgressStyle::default_bar()
-                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len} ({per_sec}, {eta})")
-                    .progress_chars("█  "));
-    pb.set_message(format!("Deleting {}", path.display()));
-
-    let mut removed: u64 = 0;
-
-    for entry in read_dir.flatten() {
-        let path = entry.path();
-
-        if path.is_dir() {
-            if let Err(e) = fs::remove_dir_all(&path).await {
-                return Err(anyhow!("Failed to remove {}: {}", path.display(), e));
-            }
-        } else if let Err(e) = fs::remove_file(&path).await {
-            return Err(anyhow!("Failed to remove {}: {}", path.display(), e));
-        }
-        removed += 1;
-        pb.set_position(removed);
-    }
-
-    if let Err(e) = fs::remove_dir(directory).await {
-        return Err(anyhow!("Failed to remove {directory}: {}", e));
-    }
-
-    pb.finish_with_message(format!("Finished removing {}", path.display()));
-
-    Ok(())
-}
-
 pub fn get_installation_folder(config: &Config) -> Result<PathBuf> {
     match &config.installation_location {
         Some(path) => Ok(PathBuf::from(path.clone())),
@@ -191,7 +155,7 @@ pub async fn is_version_installed(version: &str, config: &Config) -> Result<bool
 
 pub async fn is_version_used(version: &str, config: &Config) -> bool {
     match get_current_version(config).await {
-        Ok(value) => value.contains(version),
+        Ok(value) => value.eq(version),
         Err(_) => false,
     }
 }
@@ -229,7 +193,7 @@ pub fn get_platform_name() -> &'static str {
     }
 }
 
-pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
+pub async fn get_upstream_nightly(client: &Client) -> Result<Nightly> {
     let response = client
         .get("https://api.github.com/repos/neovim/neovim/releases/tags/nightly")
         .header("user-agent", "bob")
@@ -246,12 +210,12 @@ pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
     }
 }
 
-pub async fn get_local_nightly(config: &Config) -> Result<UpstreamVersion> {
+pub async fn get_local_nightly(config: &Config) -> Result<Nightly> {
     let downloads_dir = get_downloads_folder(config).await?;
     if let Ok(file) =
         fs::read_to_string(format!("{}/nightly/bob.json", downloads_dir.display())).await
     {
-        let file_json: UpstreamVersion = serde_json::from_str(&file)?;
+        let file_json: Nightly = serde_json::from_str(&file)?;
         Ok(file_json)
     } else {
         Err(anyhow!("Couldn't find bob.json"))
@@ -260,8 +224,8 @@ pub async fn get_local_nightly(config: &Config) -> Result<UpstreamVersion> {
 
 pub async fn get_commits_for_nightly(
     client: &Client,
-    since: &str,
-    until: &str,
+    since: &DateTime<Utc>,
+    until: &DateTime<Utc>,
 ) -> Result<Vec<RepoCommit>> {
     let response = client
         .get(format!(

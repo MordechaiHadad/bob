@@ -28,9 +28,7 @@ async fn run() -> Result<()> {
     let config_dir = dirs::config_dir().ok_or_else(|| anyhow!("config directory not found"))?;
     let config_file = config_dir.join("bob").join("config.json");
     let config: Config = handle_config(tokio::fs::read_to_string(config_file).await)?;
-    if let Err(error) = modules::cli::start(config).await {
-        return Err(anyhow!(error));
-    }
+    modules::cli::start(config).await?;
     Ok(())
 }
 
@@ -46,6 +44,7 @@ fn handle_config(config_file: Result<String, std::io::Error>) -> Result<Config> 
             downloads_dir: None,
             installation_location: None,
             sync_version_file_path: None,
+            rollback_limit: None,
         },
     };
 
@@ -55,34 +54,29 @@ fn handle_config(config_file: Result<String, std::io::Error>) -> Result<Config> 
 fn handle_envars(config: &mut Config) -> Result<()> {
     let re = Regex::new(r"\$([A-Z_]+)").unwrap();
 
-    if let Some(value) = &config.downloads_dir {
-        if re.is_match(value) {
-            let new_value = handle_envar(value, &re)?;
-            config.downloads_dir = Some(new_value);
-        }
-    }
+    handle_envar(&mut config.downloads_dir, &re)?;
 
-    if let Some(value) = &config.installation_location {
-        if re.is_match(value) {
-            let new_value = handle_envar(value, &re)?;
-            config.installation_location = Some(new_value);
-        }
-    }
+    handle_envar(&mut config.installation_location, &re)?;
 
-    if let Some(value) = &config.sync_version_file_path {
-        if re.is_match(value) {
-            let new_value = handle_envar(value, &re)?;
-            config.sync_version_file_path = Some(new_value);
-        }
-    }
+    handle_envar(&mut config.sync_version_file_path, &re)?;
 
     Ok(())
 }
 
-fn handle_envar(value: &str, re: &Regex) -> Result<String> {
-    let extract = re.captures(value).unwrap().get(1).unwrap().as_str();
+fn handle_envar(item: &mut Option<String>, re: &Regex) -> Result<()> {
+    let value = if let Some(value) = item.as_ref() {
+        value
+    } else {
+        return Ok(());
+    };
 
-    let var = env::var(extract)?;
+    if re.is_match(value) {
+        let extract = re.captures(value).unwrap().get(1).unwrap().as_str();
+        let var =
+            env::var(extract).unwrap_or(format!("Couldn't find {extract} environment variable"));
 
-    Ok(value.replace(&format!("${extract}"), &var))
+        *item = Some(value.replace(&format!("${extract}"), &var))
+    }
+
+    Ok(())
 }

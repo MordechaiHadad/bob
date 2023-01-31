@@ -1,5 +1,6 @@
 use super::{
-    erase_handler, install_handler, ls_handler, sync_handler, uninstall_handler, use_handler, utils,
+    erase_handler, install_handler, ls_handler, rollback_handler, sync_handler, uninstall_handler,
+    use_handler, utils,
 };
 use crate::{enums::InstallResult, models::Config};
 use anyhow::Result;
@@ -34,6 +35,9 @@ enum Cli {
         /// Version to be uninstalled |nightly|stable|<version-string>|<commit-hash>|
         version: String,
     },
+
+    /// Rollback to an existing nightly rollback
+    Rollback,
 
     /// Erase any change bob ever made, including neovim installation,
     /// neovim version downloads and registry changes
@@ -82,12 +86,9 @@ pub async fn start(config: Config) -> Result<()> {
             info!("Starting uninstallation process");
             uninstall_handler::start(&version, config).await?;
         }
-        Cli::Erase => {
-            erase_handler::start(config).await?;
-        }
-        Cli::List => {
-            ls_handler::start(config).await?;
-        }
+        Cli::Rollback => rollback_handler::start(config).await?,
+        Cli::Erase => erase_handler::start(config).await?,
+        Cli::List => ls_handler::start(config).await?,
     }
 
     Ok(())
