@@ -72,7 +72,9 @@ fn handle_envar(item: &mut Option<String>, re: &Regex) -> Result<()> {
 
     if re.is_match(value) {
         let extract = re.captures(value).unwrap().get(1).unwrap().as_str();
-        let var = env::var(extract)?;
+        let var =
+            env::var(extract).unwrap_or(format!("Couldn't find {extract} environment variable"));
+
         *item = Some(value.replace(&format!("${extract}"), &var))
     }
 
