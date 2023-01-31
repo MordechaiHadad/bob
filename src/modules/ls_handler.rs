@@ -14,22 +14,31 @@ pub async fn start(config: Config) -> Result<()> {
         .collect::<Vec<_>>();
 
     let version_max_len = if has_rollbacks(&config).await? { 16 } else { 7 };
+    let status_max_len = 9;
 
     if paths.is_empty() {
         return Err(anyhow!("There are no versions installed"));
     }
 
-    let padding = if version_max_len == 16 { 7 } else { 2 };
+    let padding = 2;
 
-    println!("┌{}┬{}┐", "─".repeat(version_max_len + 5), "─".repeat(12));
+    println!(
+        "┌{}┬{}┐",
+        "─".repeat(version_max_len + (padding * 2)),
+        "─".repeat(status_max_len + (padding * 2))
+    );
     println!(
         "│{}Version{}│{}Status{}│",
         " ".repeat(padding),
+        " ".repeat(padding + (version_max_len - 7)),
         " ".repeat(padding),
-        " ".repeat(3),
-        " ".repeat(3)
+        " ".repeat(padding + (status_max_len - 6))
     );
-    println!("├{}┼{}┤", "─".repeat(11), "─".repeat(12));
+    println!(
+        "├{}┼{}┤",
+        "─".repeat(version_max_len + (padding * 2)),
+        "─".repeat(status_max_len + (padding * 2))
+    );
 
     for path in paths {
         let path_name = path.file_name().unwrap().to_str().unwrap();
@@ -37,28 +46,39 @@ pub async fn start(config: Config) -> Result<()> {
             continue;
         }
 
-        let width = (version_max_len - path_name.len()) + 2;
         if !path.is_dir() {
             continue;
         }
 
+        let version_pr = (version_max_len - path_name.len()) + padding;
+        let status_pr = padding + status_max_len;
+
         if utils::is_version_used(path_name, &config).await {
             println!(
-                "│  {path_name}{}│  {} {}│",
-                " ".repeat(width),
+                "│{}{path_name}{}│{}{}{}│",
+                " ".repeat(padding),
+                " ".repeat(version_pr),
+                " ".repeat(padding),
                 Paint::green("Used"),
-                " ".repeat(5)
+                " ".repeat(status_pr - 4)
             );
         } else {
             println!(
-                "│  {path_name}{}│  {} │",
-                " ".repeat(width),
-                Paint::yellow("Installed")
+                "│{}{path_name}{}│{}{}{}│",
+                " ".repeat(padding),
+                " ".repeat(version_pr),
+                " ".repeat(padding),
+                Paint::yellow("Installed"),
+                " ".repeat(status_pr - 9)
             );
         }
     }
 
-    println!("└{}┴{}┘", "─".repeat(11), "─".repeat(12));
+    println!(
+        "└{}┴{}┘",
+        "─".repeat(version_max_len + (padding * 2)),
+        "─".repeat(status_max_len + (padding * 2))
+    );
 
     Ok(())
 }
