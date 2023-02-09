@@ -165,15 +165,7 @@ pub async fn get_current_version(config: &Config) -> Result<String> {
     downloads_dir.push("used");
     match fs::read_to_string(&downloads_dir).await {
         Ok(value) => return Ok(value),
-        Err(error) => match error.kind() {
-            std::io::ErrorKind::NotFound => {
-                match Command::new("nvim").arg("--version").output().await {
-                    Ok(_) => return Err(anyhow!("Neovim is not installed via bob")),
-                    Err(_) => return Err(anyhow!("Neovim is not installed")),
-                }
-            }
-            _ => return Err(anyhow!("Neovim is not installed")),
-        },
+        Err(_) => return Err(anyhow!("The used file required by bob could not be found. This could mean that Neovim is not installed through bob.")),
     }
 }
 
