@@ -6,8 +6,12 @@ extern crate core;
 
 use anyhow::{anyhow, Result};
 use models::Config;
+use modules::utils;
 use regex::Regex;
-use std::{env, process::exit};
+use std::{
+    env,
+    process::{exit, Command},
+};
 use tracing::{error, Level};
 
 #[tokio::main]
@@ -28,6 +32,37 @@ async fn run() -> Result<()> {
     let config_dir = dirs::config_dir().ok_or_else(|| anyhow!("config directory not found"))?;
     let config_file = config_dir.join("bob").join("config.json");
     let config: Config = handle_config(tokio::fs::read_to_string(config_file).await)?;
+
+    let exe_name = &std::env::args().collect::<Vec<String>>()[0];
+
+    if !exe_name.contains("bob") {
+        let downloads_dir = utils::get_downloads_folder(&config).await?;
+        let platform = utils::get_platform_name();
+        let used_version = utils::get_current_version(&config).await?;
+
+        let location = downloads_dir
+            .join(used_version)
+            .join(platform)
+            .join("bin")
+            .join("nvim");
+        println!("{}", location.display());
+
+        let mut child = Command::new(location)
+            .spawn()
+            .expect("Failed to spawn child process");
+
+        let exit_status = child
+            .wait()
+            .expect("Failed to wait on child process")
+            .code();
+
+        match exit_status {
+            Some(0) => return Ok(()),
+            Some(code) => return Err(anyhow!("Process exited with error code {}", code)),
+            None => return Err(anyhow!("Process terminated by signal")),
+        }
+    }
+
     modules::cli::start(config).await?;
     Ok(())
 }
