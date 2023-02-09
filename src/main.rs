@@ -33,7 +33,10 @@ async fn run() -> Result<()> {
     let config_file = config_dir.join("bob").join("config.json");
     let config: Config = handle_config(tokio::fs::read_to_string(config_file).await)?;
 
-    let exe_name = &std::env::args().collect::<Vec<String>>()[0];
+    let args: Vec<String> = env::args().collect();
+
+    let exe_name = &args[0];
+    let rest_args = &args[1..];
 
     if !exe_name.contains("bob") {
         let downloads_dir = utils::get_downloads_folder(&config).await?;
@@ -48,6 +51,7 @@ async fn run() -> Result<()> {
         println!("{}", location.display());
 
         let mut child = Command::new(location)
+            .args(rest_args)
             .spawn()
             .expect("Failed to spawn child process");
 
