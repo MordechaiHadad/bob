@@ -164,21 +164,15 @@ pub async fn get_current_version(config: &Config) -> Result<String> {
     let mut downloads_dir = get_downloads_folder(config).await?;
     downloads_dir.push("used");
     match fs::read_to_string(&downloads_dir).await {
-        Ok(value) => Ok(value),
-        Err(error) => match error.kind() { // If used file doesn't exist try directly via neovim
+        Ok(value) => return Ok(value),
+        Err(error) => match error.kind() {
             std::io::ErrorKind::NotFound => {
-   let output = match Command::new("nvim").arg("--version").output().await {
-        Ok(value) => value,
-        Err(_) => return Err(anyhow!("Neovim is not installed")),
-    };
-    let output = String::from_utf8_lossy(&output.stdout).to_string();
-    if output.contains("dev") {
-        return Ok(String::from("nightly"));
-    }
-    let regex = Regex::new(r"v[0-9]\.[0-9]\.[0-9]")?;
-    Ok(regex.find(output.as_str()).unwrap().as_str().to_owned())
-            },
-            _ => Err(anyhow!("{} is corrupted, try running bob use again or open an issue at https://github.com/MordechaiHadad/bob", downloads_dir.display())),
+                match Command::new("nvim").arg("--version").output().await {
+                    Ok(_) => return Err(anyhow!("Neovim is not installed via bob")),
+                    Err(_) => return Err(anyhow!("Neovim is not installed")),
+                }
+            }
+            _ => return Err(anyhow!("Neovim is not installed")),
         },
     }
 }
