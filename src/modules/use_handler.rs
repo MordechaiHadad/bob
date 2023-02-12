@@ -99,6 +99,7 @@ fn add_to_path(installation_dir: &Path) -> Result<()> {
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
             use winreg::enums::*;
+            use winreg::RegKey;
 
             let current_usr = RegKey::predef(HKEY_CURRENT_USER);
             let env = current_usr.open_subkey_with_flags("Environment", KEY_READ | KEY_WRITE)?;
