@@ -104,9 +104,9 @@ fn add_to_path(installation_dir: &Path) -> Result<()> {
             let env = current_usr.open_subkey_with_flags("Environment", KEY_READ | KEY_WRITE)?;
             let usr_path: String = env.get_value("Path")?;
             let new_path = if usr_path.ends_with(';') {
-                format!("{usr_path}{}", installation_dir.display())
+                format!("{usr_path}{}", installation_dir)
             } else {
-                format!("{usr_path};{}", installation_dir.display())
+                format!("{usr_path};{}", installation_dir)
             };
             env.set_value("Path", &new_path)?;
         } else {
