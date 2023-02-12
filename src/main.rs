@@ -36,9 +36,10 @@ async fn run() -> Result<()> {
     let args: Vec<String> = env::args().collect();
 
     let exe_name = &args[0];
-    let rest_args = &args[1..];
 
     if !exe_name.contains("bob") {
+        let rest_args = &args[1..];
+
         let downloads_dir = utils::get_downloads_folder(&config).await?;
         let platform = utils::get_platform_name();
         let used_version = utils::get_current_version(&config).await?;
@@ -48,7 +49,6 @@ async fn run() -> Result<()> {
             .join(platform)
             .join("bin")
             .join("nvim");
-        println!("{}", location.display());
 
         let mut child = Command::new(location)
             .args(rest_args)

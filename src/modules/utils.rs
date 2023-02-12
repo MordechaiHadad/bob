@@ -108,24 +108,15 @@ pub async fn get_sync_version_file_path(config: &Config) -> Result<Option<PathBu
     Ok(path)
 }
 
-pub fn get_installation_folder(config: &Config) -> Result<PathBuf> {
+pub async fn get_installation_folder(config: &Config) -> Result<PathBuf> {
     match &config.installation_location {
         Some(path) => Ok(PathBuf::from(path.clone())),
         None => {
-            if cfg!(target_os = "macos") {
-                let mut home_dir = match home_dir() {
-                    Some(home) => home,
-                    None => return Err(anyhow!("Couldn't get home directory")),
-                };
-                home_dir.push(".local/share/neovim");
-                return Ok(home_dir);
-            }
-            let mut data_dir = match data_local_dir() {
-                None => return Err(anyhow!("Couldn't get local data folder")),
-                Some(value) => value,
-            };
-            data_dir.push("neovim");
-            Ok(data_dir)
+  
+            let mut installation_location = get_downloads_folder(config).await?;
+            installation_location.push("nvim-bin");
+
+            Ok(installation_location)
         }
     }
 }
@@ -165,7 +156,7 @@ pub async fn get_current_version(config: &Config) -> Result<String> {
     downloads_dir.push("used");
     match fs::read_to_string(&downloads_dir).await {
         Ok(value) => return Ok(value),
-        Err(_) => return Err(anyhow!("The used file required by bob could not be found. This could mean that Neovim is not installed through bob.")),
+        Err(_) => return Err(anyhow!("The used file required for bob could not be found. This could mean that Neovim is not installed through bob.")),
     }
 }
 

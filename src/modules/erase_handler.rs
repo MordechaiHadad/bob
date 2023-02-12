@@ -7,7 +7,7 @@ use tracing::info;
 
 pub async fn start(config: Config) -> Result<()> {
     let downloads = utils::get_downloads_folder(&config).await?;
-    let installation_dir = utils::get_installation_folder(&config)?;
+    let installation_dir = utils::get_installation_folder(&config).await?;
 
     if fs::remove_dir_all(&installation_dir).await.is_ok() {
         info!("Successfully removed neovim's installation folder");
