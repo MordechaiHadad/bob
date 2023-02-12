@@ -156,12 +156,23 @@ Bob's configuration file will have to be in `config_dir/bob/config.json`, to be 
 
 ### Syntax
 
+| Property                   | Description                                                                                                                                                    | Default Value                                                                                                 |
+| ---------------------------| ---------------------------------------------------------------------------------------------------------------------------------------------------------------| --------------------------------------------------------------------------------------------------------------|
+| **enable_nightly_info**    | Will show new commits associated with new nightly release if enabled                                                                                           | `true`                                                                                                        |
+| **downloads_dir**          | The folder in which neovim versions will be downloaded to, bob will error if this option is specified but the folder doesn't exist                             | unix: `/home/<username>/.local/share/bob`, windows: `C:\Users\<username>\AppData\Local\bob`                   |
+| **installation_location**  | The path in which the proxied neovim installation will be located in                                                                                           | unix: `/home/<username>/.local/share/bob/nvim-bin`, windows: `C:\Users\<username>\AppData\Local\bob\nvim-bin` |
+| **sync_version_file_path** | The path to a file that will hold the neovim version string, useful for config version tracking, bob will error if the specified file is not a valid file path | `Disabled by default`                                                                                         |
+| **rollback_limit**         | The amount of rollbacks before bob starts to delete older ones, can be up to 225                                                                               | `3`                                                                                                           |
+
+
+#### Example 
+
 ```jsonc
 // /home/user/.config/bob/config.json
 {
   "enable_nightly_info": true, // Will show new commits associated with new nightly release if enabled
   "downloads_dir": "$HOME/.local/share/bob", // The folder in which neovim versions will be installed too, bob will error if this option is specified but the folder doesn't exist
-  "installation_location": "/home/user/.local/share/neovim", // The path in which the used neovim version will be located in
+  "installation_location": "/home/user/.local/share/bob/nvim-bin", // The path in which the used neovim version will be located in
   "sync_version_file_path": "/home/user/.config/nvim/nvim.version", // The path to a file that will hold the neovim version string, useful for config version tracking, bob will error if the specified file is not a valid file path
   "rollback_limit": 3 // The amount of rollbacks before bob starts to delete older ones, can be up to 225
 }
