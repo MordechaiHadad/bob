@@ -45,7 +45,6 @@ pub async fn start(config: Config) -> Result<()> {
                     tag_name: name_list[i].clone(),
                     version_type: crate::enums::VersionType::Standard,
                 },
-                true,
             )
             .await?;
 
@@ -65,7 +64,10 @@ pub async fn start(config: Config) -> Result<()> {
             let now = Utc::now();
             let since = now.signed_duration_since(find.data.published_at);
             let humanized = humanize_duration(since)?;
-            info!("Rolled back to version {} {}", name_list[i], humanized);
+            info!(
+                "Successfully rolled back to version '{}' from {} ago",
+                name_list[i], humanized
+            );
         }
         None => info!("Rollback aborted..."),
     }
@@ -117,16 +119,29 @@ fn humanize_duration(duration: Duration) -> Result<String> {
     let days = (total_hours / 24) % 7;
     let hours = total_hours % 24;
 
+    let mut added_duration = false;
+
     if weeks != 0 {
+        if added_duration {
+            humanized_duration += ", ";
+        }
         humanized_duration += &format!("{} week{}", weeks, if weeks > 1 { "s" } else { "" });
+        added_duration = true;
     }
     if days != 0 {
+        if added_duration {
+            humanized_duration += ", ";
+        }
         if !humanized_duration.is_empty() {
             humanized_duration += " ";
         }
         humanized_duration += &format!("{} day{}", days, if days > 1 { "s" } else { "" });
+        added_duration = true;
     }
     if hours != 0 {
+        if added_duration {
+            humanized_duration += " and";
+        }
         if !humanized_duration.is_empty() {
             humanized_duration += " ";
         }

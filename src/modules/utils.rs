@@ -155,8 +155,8 @@ pub async fn get_current_version(config: &Config) -> Result<String> {
     let mut downloads_dir = get_downloads_folder(config).await?;
     downloads_dir.push("used");
     match fs::read_to_string(&downloads_dir).await {
-        Ok(value) => return Ok(value),
-        Err(_) => return Err(anyhow!("The used file required for bob could not be found. This could mean that Neovim is not installed through bob.")),
+        Ok(value) => Ok(value),
+        Err(_) => Err(anyhow!("The used file required for bob could not be found. This could mean that Neovim is not installed through bob.")),
     }
 }
 

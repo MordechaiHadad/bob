@@ -1,7 +1,7 @@
 use crate::enums::InstallResult;
 use crate::models::{Config, InputVersion};
 use crate::modules::{install_handler, utils};
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use reqwest::Client;
 use std::env;
 use std::path::Path;
@@ -29,20 +29,15 @@ pub async fn start(version: InputVersion, client: &Client, config: Config) -> Re
         Err(error) => return Err(error),
     }
 
-    switch(&config, &version, is_version_used).await?;
+    switch(&config, &version).await?;
 
     info!("You can now use {}!", version.tag_name);
 
     Ok(())
 }
 
-pub async fn switch(config: &Config, version: &InputVersion, is_version_used: bool) -> Result<()> {
+pub async fn switch(config: &Config, version: &InputVersion) -> Result<()> {
     std::env::set_current_dir(utils::get_downloads_folder(config).await?)?;
-
-    let version_link = match version.version_type {
-        crate::enums::VersionType::Standard => &version.tag_name,
-        crate::enums::VersionType::Hash => &version.tag_name[0..7],
-    };
 
     copy_nvim_bob(config).await?;
     fs::write("used", &version.tag_name).await?;
@@ -66,8 +61,6 @@ pub async fn switch(config: &Config, version: &InputVersion, is_version_used: bo
 
 async fn copy_nvim_bob(config: &Config) -> Result<()> {
     let exe_path = env::current_exe().unwrap();
-    let exe_dir = exe_path.parent().unwrap();
-    // let exe_dir = exe_dir.to_str().unwrap();
     let mut installation_dir = utils::get_installation_folder(config).await?;
 
     if fs::metadata(&installation_dir).await.is_err() {
