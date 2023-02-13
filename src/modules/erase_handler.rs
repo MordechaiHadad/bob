@@ -30,7 +30,7 @@ pub async fn start(config: Config) -> Result<()> {
             let env = current_usr.open_subkey_with_flags("Environment", KEY_READ | KEY_WRITE)?;
             let usr_path: String = env.get_value("Path")?;
             if usr_path.contains("neovim") {
-                let usr_path = usr_path.replace(&format!("{}\\bin", installation_dir.display()), "");
+                let usr_path = usr_path.replace(&format!("{}", installation_dir.display()), "");
                 env.set_value("Path", &usr_path)?;
 
                 info!("Successfully removed neovim's installation PATH from registry");
