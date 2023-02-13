@@ -97,8 +97,6 @@ A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0
 
 Switch to the specified version, will auto-invoke install command if the version is not installed already.
 
-**Windows side note:** make sure to run the application as administrator to properly switch a version.
-
 ---
 
 - `bob install |nightly|stable|<version-string>|<commit-hash>|`
