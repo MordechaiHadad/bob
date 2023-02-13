@@ -10,7 +10,7 @@ use modules::utils;
 use regex::Regex;
 use std::{
     env,
-    process::{exit, Command},
+    process::{exit, Command}, path::Path,
 };
 use tracing::{error, Level};
 
@@ -35,9 +35,10 @@ async fn run() -> Result<()> {
 
     let args: Vec<String> = env::args().collect();
 
-    let exe_name = &args[0];
+    let exe_name_path = Path::new(&args[0]);
+    let exe_name = exe_name_path.file_name().unwrap().to_str().unwrap();
 
-    println!("{exe_name}");
+
     if !exe_name.contains("bob") {
         let rest_args = &args[1..];
 
