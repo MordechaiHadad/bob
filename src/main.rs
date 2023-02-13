@@ -37,6 +37,7 @@ async fn run() -> Result<()> {
 
     let exe_name = &args[0];
 
+    println!("{exe_name}");
     if !exe_name.contains("bob") {
         let rest_args = &args[1..];
 
