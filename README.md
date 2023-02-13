@@ -24,7 +24,7 @@ Bob is a cross-platform and easy-to-use Neovim version manager, allowing for eas
         On Unix: `~/.local/share/neovim`
         On Windows: `C:\Users\<username>\AppData\Local\neovim`
 
-    Secondly The name of the downloads directory property in the configuration file has changed. Please refer to the updated list of properties for the new name.
+    Secondly the name of the downloads directory property in the configuration file has changed. Please refer to the updated list of properties for the new name.
 
 ## 📦 Requirements
 
