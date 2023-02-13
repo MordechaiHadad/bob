@@ -56,7 +56,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<InputV
 }
 
 pub async fn get_downloads_folder(config: &Config) -> Result<PathBuf> {
-    let path = match &config.downloads_dir {
+    let path = match &config.downloads_location {
         Some(path) => {
             if tokio::fs::metadata(path).await.is_err() {
                 return Err(anyhow!("Custom directory {path} doesn't exist!"));
@@ -93,7 +93,7 @@ pub async fn get_downloads_folder(config: &Config) -> Result<PathBuf> {
 }
 
 pub async fn get_sync_version_file_path(config: &Config) -> Result<Option<PathBuf>> {
-    let path = match &config.sync_version_file_path {
+    let path = match &config.version_sync_file_location {
         Some(path) => {
             if let Err(e) = tokio::fs::metadata(path).await {
                 return Err(anyhow!(

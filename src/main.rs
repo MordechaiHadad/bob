@@ -82,9 +82,9 @@ fn handle_config(config_file: Result<String, std::io::Error>) -> Result<Config> 
         }
         Err(_) => Config {
             enable_nightly_info: None,
-            downloads_dir: None,
+            downloads_location: None,
             installation_location: None,
-            sync_version_file_path: None,
+            version_sync_file_location: None,
             rollback_limit: None,
         },
     };
@@ -95,11 +95,11 @@ fn handle_config(config_file: Result<String, std::io::Error>) -> Result<Config> 
 fn handle_envars(config: &mut Config) -> Result<()> {
     let re = Regex::new(r"\$([A-Z_]+)").unwrap();
 
-    handle_envar(&mut config.downloads_dir, &re)?;
+    handle_envar(&mut config.downloads_location, &re)?;
 
     handle_envar(&mut config.installation_location, &re)?;
 
-    handle_envar(&mut config.sync_version_file_path, &re)?;
+    handle_envar(&mut config.version_sync_file_location, &re)?;
 
     Ok(())
 }

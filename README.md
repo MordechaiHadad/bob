@@ -17,6 +17,7 @@ Bob is a cross-platform and easy-to-use Neovim version manager, allowing for eas
 ## 🔔 Notices
 
 - **2022-10-29**: Moved bob's symbolic link and downloads folder on macos from `/Users/user/Library/Application Support` to `~/.local/share` please make sure to move all of your downloads to the new folder, run `bob use <your desired version>` and update your PATH
+- **2023-02-13**: Bob now uses proxy execuable for running neovim exes, to remove the old way of how bob handled exes follow these steps: 1. Remove the current neovim path from your global $PATH. 2. Delete the given path, on unix: `~/.local/share/neovim`, on windows: `C:\Users\<username>\AppData\Local\neovim`. secondly downloads directory propery name in config file has changed, see the updated property list below.
 
 ## 📦 Requirements
 
@@ -156,24 +157,24 @@ Bob's configuration file will have to be in `config_dir/bob/config.json`, to be 
 
 ### Syntax
 
-| Property                   | Description                                                                                                                                                    | Default Value                                                                                                 |
-| ---------------------------| ---------------------------------------------------------------------------------------------------------------------------------------------------------------| --------------------------------------------------------------------------------------------------------------|
-| **enable_nightly_info**    | Will show new commits associated with new nightly release if enabled                                                                                           | `true`                                                                                                        |
-| **downloads_dir**          | The folder in which neovim versions will be downloaded to, bob will error if this option is specified but the folder doesn't exist                             | unix: `/home/<username>/.local/share/bob`, windows: `C:\Users\<username>\AppData\Local\bob`                   |
-| **installation_location**  | The path in which the proxied neovim installation will be located in                                                                                           | unix: `/home/<username>/.local/share/bob/nvim-bin`, windows: `C:\Users\<username>\AppData\Local\bob\nvim-bin` |
-| **sync_version_file_path** | The path to a file that will hold the neovim version string, useful for config version tracking, bob will error if the specified file is not a valid file path | `Disabled by default`                                                                                         |
-| **rollback_limit**         | The amount of rollbacks before bob starts to delete older ones, can be up to 225                                                                               | `3`                                                                                                           |
+| Property                       | Description                                                                                                                                                    | Default Value                                                                                                 |
+| -------------------------------| ---------------------------------------------------------------------------------------------------------------------------------------------------------------| --------------------------------------------------------------------------------------------------------------|
+| **enable_nightly_info**        | Will show new commits associated with new nightly release if enabled                                                                                           | `true`                                                                                                        |
+| **downloads_location**         | The folder in which neovim versions will be downloaded to, bob will error if this option is specified but the folder doesn't exist                             | unix: `/home/<username>/.local/share/bob`, windows: `C:\Users\<username>\AppData\Local\bob`                   |
+| **installation_location**      | The path in which the proxied neovim installation will be located in                                                                                           | unix: `/home/<username>/.local/share/bob/nvim-bin`, windows: `C:\Users\<username>\AppData\Local\bob\nvim-bin` |
+| **version_sync_file_location** | The path to a file that will hold the neovim version string, useful for config version tracking, bob will error if the specified file is not a valid file path | `Disabled by default`                                                                                         |
+| **rollback_limit**             | The amount of rollbacks before bob starts to delete older ones, can be up to 225                                                                               | `3`                                                                                                           |
 
 
-#### Example 
+### Example 
 
 ```jsonc
 // /home/user/.config/bob/config.json
 {
   "enable_nightly_info": true, // Will show new commits associated with new nightly release if enabled
-  "downloads_dir": "$HOME/.local/share/bob", // The folder in which neovim versions will be installed too, bob will error if this option is specified but the folder doesn't exist
+  "downloads_location": "$HOME/.local/share/bob", // The folder in which neovim versions will be installed too, bob will error if this option is specified but the folder doesn't exist
   "installation_location": "/home/user/.local/share/bob/nvim-bin", // The path in which the used neovim version will be located in
-  "sync_version_file_path": "/home/user/.config/nvim/nvim.version", // The path to a file that will hold the neovim version string, useful for config version tracking, bob will error if the specified file is not a valid file path
+  "version_sync_file_location": "/home/user/.config/nvim/nvim.version", // The path to a file that will hold the neovim version string, useful for config version tracking, bob will error if the specified file is not a valid file path
   "rollback_limit": 3 // The amount of rollbacks before bob starts to delete older ones, can be up to 225
 }
 ```
