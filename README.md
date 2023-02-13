@@ -17,7 +17,14 @@ Bob is a cross-platform and easy-to-use Neovim version manager, allowing for eas
 ## 🔔 Notices
 
 - **2022-10-29**: Moved bob's symbolic link and downloads folder on macos from `/Users/user/Library/Application Support` to `~/.local/share` please make sure to move all of your downloads to the new folder, run `bob use <your desired version>` and update your PATH
-- **2023-02-13**: Bob now uses proxy execuable for running neovim exes, to remove the old way of how bob handled exes follow these steps: 1. Remove the current neovim path from your global $PATH. 2. Delete the given path, on unix: `~/.local/share/neovim`, on windows: `C:\Users\<username>\AppData\Local\neovim`. secondly downloads directory propery name in config file has changed, see the updated property list below.
+- **2023-02-13**: Bob has recently switched to using a proxy executable for running Neovim executables. To switch from the old method that Bob used, follow these steps:
+
+    1. Remove the current Neovim path from your global $PATH environment variable.
+    2. Delete the following directory:
+        On Unix: ~/.local/share/neovim
+        On Windows: C:\Users\<username>\AppData\Local\neovim
+
+Secondly The name of the downloads directory property in the configuration file has changed. Please refer to the updated list of properties for the new name.
 
 ## 📦 Requirements
 
