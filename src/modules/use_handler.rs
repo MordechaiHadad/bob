@@ -67,14 +67,14 @@ async fn copy_nvim_bob(config: &Config) -> Result<()> {
         fs::create_dir_all(&installation_dir).await?;
     }
 
+    add_to_path(&installation_dir)?;
+
     if cfg!(windows) {
         installation_dir.push("nvim.exe");
     } else {
         installation_dir.push("nvim");
     }
 
-    installation_dir.pop();
-    add_to_path(&installation_dir)?;
 
     if fs::metadata(&installation_dir).await.is_ok() {
         return Ok(());
