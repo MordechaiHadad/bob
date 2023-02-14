@@ -41,14 +41,11 @@ pub async fn start(config: Config) -> Result<()> {
     );
 
     for path in paths {
-        let path_name = path.file_name().unwrap().to_str().unwrap();
-        if path_name == "neovim-git" {
-            continue;
-        }
-
         if !path.is_dir() {
             continue;
         }
+
+        let path_name = path.file_name().unwrap().to_str().unwrap();
 
         if !is_version(path_name) {
             continue;
