@@ -92,19 +92,17 @@ async fn has_rollbacks(config: &Config) -> Result<bool> {
 
 fn is_version(name: &str) -> bool {
     match name {
-        "stable" => return true,
-        nightly_name if nightly_name.contains("nightly") => return true,
+        "stable" => true,
+        nightly_name if nightly_name.contains("nightly") => true,
         name => {
             let version_regex = Regex::new(r"^v?[0-9]+\.[0-9]+\.[0-9]+$").unwrap();
             let hash_regex = Regex::new(r"\b[0-9a-f]{5,40}\b").unwrap();
 
             if version_regex.is_match(name) {
                 return true;
-            } else if hash_regex.is_match(name) {
-                return true;
-            } else {
-                return false;
             }
+
+            hash_regex.is_match(name)
         }
     }
 }
