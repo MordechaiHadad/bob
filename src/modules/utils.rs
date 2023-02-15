@@ -56,7 +56,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<InputV
 }
 
 pub async fn get_downloads_folder(config: &Config) -> Result<PathBuf> {
-    let path = match &config.downloads_dir {
+    let path = match &config.downloads_location {
         Some(path) => {
             if tokio::fs::metadata(path).await.is_err() {
                 return Err(anyhow!("Custom directory {path} doesn't exist!"));
@@ -93,7 +93,7 @@ pub async fn get_downloads_folder(config: &Config) -> Result<PathBuf> {
 }
 
 pub async fn get_sync_version_file_path(config: &Config) -> Result<Option<PathBuf>> {
-    let path = match &config.sync_version_file_path {
+    let path = match &config.version_sync_file_location {
         Some(path) => {
             if let Err(e) = tokio::fs::metadata(path).await {
                 return Err(anyhow!(
@@ -108,24 +108,15 @@ pub async fn get_sync_version_file_path(config: &Config) -> Result<Option<PathBu
     Ok(path)
 }
 
-pub fn get_installation_folder(config: &Config) -> Result<PathBuf> {
+pub async fn get_installation_folder(config: &Config) -> Result<PathBuf> {
     match &config.installation_location {
         Some(path) => Ok(PathBuf::from(path.clone())),
         None => {
-            if cfg!(target_os = "macos") {
-                let mut home_dir = match home_dir() {
-                    Some(home) => home,
-                    None => return Err(anyhow!("Couldn't get home directory")),
-                };
-                home_dir.push(".local/share/neovim");
-                return Ok(home_dir);
-            }
-            let mut data_dir = match data_local_dir() {
-                None => return Err(anyhow!("Couldn't get local data folder")),
-                Some(value) => value,
-            };
-            data_dir.push("neovim");
-            Ok(data_dir)
+  
+            let mut installation_location = get_downloads_folder(config).await?;
+            installation_location.push("nvim-bin");
+
+            Ok(installation_location)
         }
     }
 }
@@ -165,21 +156,7 @@ pub async fn get_current_version(config: &Config) -> Result<String> {
     downloads_dir.push("used");
     match fs::read_to_string(&downloads_dir).await {
         Ok(value) => Ok(value),
-        Err(error) => match error.kind() { // If used file doesn't exist try directly via neovim
-            std::io::ErrorKind::NotFound => {
-   let output = match Command::new("nvim").arg("--version").output().await {
-        Ok(value) => value,
-        Err(_) => return Err(anyhow!("Neovim is not installed")),
-    };
-    let output = String::from_utf8_lossy(&output.stdout).to_string();
-    if output.contains("dev") {
-        return Ok(String::from("nightly"));
-    }
-    let regex = Regex::new(r"v[0-9]\.[0-9]\.[0-9]")?;
-    Ok(regex.find(output.as_str()).unwrap().as_str().to_owned())
-            },
-            _ => Err(anyhow!("{} is corrupted, try running bob use again or open an issue at https://github.com/MordechaiHadad/bob", downloads_dir.display())),
-        },
+        Err(_) => Err(anyhow!("The used file required for bob could not be found. This could mean that Neovim is not installed through bob.")),
     }
 }
 

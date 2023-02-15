@@ -2,6 +2,7 @@ use crate::models::Config;
 
 use super::{rollback_handler, utils};
 use anyhow::{anyhow, Result};
+use regex::Regex;
 use std::fs;
 use yansi::Paint;
 
@@ -12,7 +13,6 @@ pub async fn start(config: Config) -> Result<()> {
         .filter_map(|e| e.ok())
         .map(|entry| entry.path())
         .collect::<Vec<_>>();
-
 
     if paths.is_empty() {
         return Err(anyhow!("There are no versions installed"));
@@ -41,12 +41,13 @@ pub async fn start(config: Config) -> Result<()> {
     );
 
     for path in paths {
-        let path_name = path.file_name().unwrap().to_str().unwrap();
-        if path_name == "neovim-git" {
+        if !path.is_dir() {
             continue;
         }
 
-        if !path.is_dir() {
+        let path_name = path.file_name().unwrap().to_str().unwrap();
+
+        if !is_version(path_name) {
             continue;
         }
 
@@ -87,4 +88,21 @@ async fn has_rollbacks(config: &Config) -> Result<bool> {
     let list = rollback_handler::produce_nightly_vec(config).await?;
 
     Ok(!list.is_empty())
+}
+
+fn is_version(name: &str) -> bool {
+    match name {
+        "stable" => true,
+        nightly_name if nightly_name.contains("nightly") => true,
+        name => {
+            let version_regex = Regex::new(r"^v?[0-9]+\.[0-9]+\.[0-9]+$").unwrap();
+            let hash_regex = Regex::new(r"\b[0-9a-f]{5,40}\b").unwrap();
+
+            if version_regex.is_match(name) {
+                return true;
+            }
+
+            hash_regex.is_match(name)
+        }
+    }
 }
