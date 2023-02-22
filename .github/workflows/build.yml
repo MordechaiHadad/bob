@@ -31,6 +31,36 @@ jobs:
           path: "target/optimized/bob"
           if-no-files-found: error
           retention-days: 7
+  
+  linux-m1:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-unknown-linux-gnu
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - name: Build Bob
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --locked --profile optimized --target aarch64-unknown-linux-gnu
+      - name: Check lints
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --verbose -- -D warnings
+      - name: Upload Bob Linux-aarch64 binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: "bob-linux-aarch64"
+          path: "target/optimized/bob"
+          if-no-files-found: error
+          retention-days: 7
 
   macos:
     runs-on: macos-latest
