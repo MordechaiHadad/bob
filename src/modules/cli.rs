@@ -11,11 +11,15 @@ use tracing::info;
 #[derive(Debug, Parser)]
 #[command(version)]
 enum Cli {
-    /// Switch to the specified version, will auto-invoke install command
-    /// if the version is not installed already
+    /// Switch to the specified version, by default will auto-invoke
+    /// install command if the version is not installed already
     Use {
         /// Version to switch to |nightly|stable|<version-string>|<commit-hash>|
         version: String,
+
+        /// Whether not to auto-invoke install command
+        #[arg(short, long)]
+        no_install: bool,
     },
 
     /// Install the specified version, can also be used to update
@@ -52,11 +56,11 @@ pub async fn start(config: Config) -> Result<()> {
     let cli = Cli::parse();
 
     match cli {
-        Cli::Use { version } => {
+        Cli::Use { version, no_install } => {
             let client = Client::new();
             let version = utils::parse_version_type(&client, &version).await?;
 
-            use_handler::start(version, &client, config).await?;
+            use_handler::start(version, !no_install, &client, config).await?;
         }
         Cli::Install { version } => {
             let client = Client::new();
