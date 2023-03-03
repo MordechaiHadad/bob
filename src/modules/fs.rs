@@ -82,7 +82,7 @@ pub fn get_local_data_dir() -> Result<PathBuf> {
     let mut home_dir = get_home_dir()?;
     if cfg!(windows) {
         home_dir.push("AppData/Local");
-        return Ok(PathBuf::from(home_dir));
+        return Ok(home_dir);
     }
 
     home_dir.push(".local/share");
