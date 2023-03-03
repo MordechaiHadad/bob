@@ -8,7 +8,7 @@ use std::path::Path;
 use tokio::fs;
 use tracing::info;
 
-pub async fn start(version: InputVersion, client: &Client, config: Config) -> Result<()> {
+pub async fn start(version: InputVersion, install: bool, client: &Client, config: Config) -> Result<()> {
     let is_version_used = utils::is_version_used(&version.tag_name, &config).await;
 
     copy_nvim_bob(&config).await?;
@@ -17,16 +17,18 @@ pub async fn start(version: InputVersion, client: &Client, config: Config) -> Re
         return Ok(());
     }
 
-    match install_handler::start(&version, client, &config).await {
-        Ok(success) => {
-            if let InstallResult::NightlyIsUpdated = success {
-                if is_version_used {
-                    info!("Nightly is already updated and used!");
-                    return Ok(());
+    if install {
+        match install_handler::start(&version, client, &config).await {
+            Ok(success) => {
+                if let InstallResult::NightlyIsUpdated = success {
+                    if is_version_used {
+                        info!("Nightly is already updated and used!");
+                        return Ok(());
+                    }
                 }
             }
+            Err(error) => return Err(error),
         }
-        Err(error) => return Err(error),
     }
 
     switch(&config, &version).await?;
