@@ -86,7 +86,7 @@ pub fn get_local_data_dir() -> Result<PathBuf> {
     }
 
     home_dir.push(".local/share");
-    Ok(PathBuf::from(home_dir))
+    Ok(home_dir)
 }
 
 pub fn get_config_dir() -> Result<PathBuf> {
@@ -102,5 +102,5 @@ pub fn get_config_dir() -> Result<PathBuf> {
 
     home_dir.push("bob/config.json");
 
-    Ok(PathBuf::from(home_dir))
+    Ok(home_dir)
 }
