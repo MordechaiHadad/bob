@@ -29,8 +29,7 @@ async fn main() -> Result<()> {
 }
 
 async fn run() -> Result<()> {
-    let config_dir = dirs::config_dir().ok_or_else(|| anyhow!("config directory not found"))?;
-    let config_file = config_dir.join("bob").join("config.json");
+    let config_file = crate::modules::fs::get_config_dir()?;
     let config: Config = handle_config(tokio::fs::read_to_string(config_file).await)?;
 
     let args: Vec<String> = env::args().collect();

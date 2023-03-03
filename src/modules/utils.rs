@@ -2,7 +2,6 @@ use crate::enums::VersionType;
 use crate::models::{Config, InputVersion, Nightly, RepoCommit};
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
-use dirs::{data_local_dir, home_dir};
 use regex::Regex;
 use reqwest::Client;
 use std::path::PathBuf;
@@ -65,19 +64,7 @@ pub async fn get_downloads_folder(config: &Config) -> Result<PathBuf> {
             PathBuf::from(path)
         }
         None => {
-            let mut data_dir = if cfg!(target_os = "macos") {
-                let mut home_dir = match home_dir() {
-                    Some(home) => home,
-                    None => return Err(anyhow!("Couldn't get home directory")),
-                };
-                home_dir.push(".local/share");
-                home_dir
-            } else {
-                match data_local_dir() {
-                    None => return Err(anyhow!("Couldn't get local data folder")),
-                    Some(value) => value,
-                }
-            };
+            let mut data_dir = super::fs::get_local_data_dir()?;
 
             data_dir.push("bob");
             let does_folder_exist = tokio::fs::metadata(&data_dir).await.is_ok();
