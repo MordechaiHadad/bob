@@ -67,7 +67,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: "bob-linux-aarch64"
-          path: "target/optimized/bob"
+          path: "target/aarch64-unknown-linux-gnu/optimized/bob"
           if-no-files-found: error
           retention-days: 7
 
