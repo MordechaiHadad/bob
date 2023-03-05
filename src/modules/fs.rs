@@ -66,15 +66,21 @@ pub async fn copy_dir(
 }
 
 pub fn get_home_dir() -> Result<PathBuf> {
-    let home_str = if cfg!(unix) {
-        let temp = std::env::var("SUDO_USER")?;
-        let mut da_str = "/home/".to_string();
-        da_str.push_str(&temp);
-        da_str
+    if cfg!(windows) {
+        let home_str = std::env::var("USERPROFILE")?;
+        return Ok(PathBuf::from(home_str));
+    }
 
-    } else {
-        std::env::var("USERPROFILE")?
-    };
+    let mut home_str = "/home/".to_string();
+    if let Ok(value) = std::env::var("SUDO_USER") {
+        home_str.push_str(&value);
+
+        return Ok(PathBuf::from(home_str));
+    }
+
+    let env_value = std::env::var("USER")?;
+    home_str.push_str(&env_value);
+
     Ok(PathBuf::from(home_str))
 }
 
