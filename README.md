@@ -95,7 +95,9 @@ A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0
 
 - `bob use |nightly|stable|<version-string>|<commit-hash>|`
 
-Switch to the specified version, will auto-invoke install command if the version is not installed already.
+`--no-install` flag will prevent bob from auto invoking install command when using `use`
+
+Switch to the specified version, by default will auto-invoke install command if the version is not installed already
 
 ---
 
@@ -168,7 +170,7 @@ Bob's configuration file will have to be in `config_dir/bob/config.json`, to be 
 | **downloads_location**         | The folder in which neovim versions will be downloaded to, bob will error if this option is specified but the folder doesn't exist                             | unix: `/home/<username>/.local/share/bob`, windows: `C:\Users\<username>\AppData\Local\bob`                   |
 | **installation_location**      | The path in which the proxied neovim installation will be located in                                                                                           | unix: `/home/<username>/.local/share/bob/nvim-bin`, windows: `C:\Users\<username>\AppData\Local\bob\nvim-bin` |
 | **version_sync_file_location** | The path to a file that will hold the neovim version string, useful for config version tracking, bob will error if the specified file is not a valid file path | `Disabled by default`                                                                                         |
-| **rollback_limit**             | The amount of rollbacks before bob starts to delete older ones, can be up to 225                                                                               | `3`                                                                                                           |
+| **rollback_limit**             | The amount of rollbacks before bob starts to delete older ones, can be up to 255                                                                               | `3`                                                                                                           |
 
 
 ### Example 
