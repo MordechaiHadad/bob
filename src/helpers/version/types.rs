@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub struct ParsedVersion {
     pub tag_name: String,
     pub version_type: VersionType,
+    pub non_parsed_string: String
 }
 
 pub enum VersionType {

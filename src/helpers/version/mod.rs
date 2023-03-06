@@ -1,5 +1,5 @@
-pub mod types;
 pub mod nightly;
+pub mod types;
 
 use self::types::{ParsedVersion, UpstreamVersion, VersionType};
 use super::directories;
@@ -15,6 +15,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
         "nightly" => Ok(ParsedVersion {
             tag_name: version.to_string(),
             version_type: VersionType::Standard,
+            non_parsed_string: version.to_string(),
         }),
         "stable" | "latest" => {
             let response = client
@@ -31,6 +32,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
             Ok(ParsedVersion {
                 tag_name: versions[1].tag_name.clone(),
                 version_type: VersionType::Standard,
+                non_parsed_string: version.to_string(),
             })
         }
         _ => {
@@ -44,11 +46,13 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                 return Ok(ParsedVersion {
                     tag_name: returned_version,
                     version_type: VersionType::Standard,
+                    non_parsed_string: version.to_string(),
                 });
             } else if hash_regex.is_match(version) {
                 return Ok(ParsedVersion {
                     tag_name: version.to_string(),
                     version_type: VersionType::Hash,
+                    non_parsed_string: version.to_string(),
                 });
             }
             Err(anyhow!("Please provide a proper version string"))
@@ -99,4 +103,16 @@ pub async fn is_version_used(version: &str, config: &Config) -> bool {
         Ok(value) => value.eq(version),
         Err(_) => false,
     }
+}
+
+pub async fn get_previous_stable(client: &Client) -> Result<String> {
+    let response = client
+        .get("https://api.github.com/repos/neovim/neovim/releases?per_page=4")
+        .header("user-agent", "bob")
+        .header("Accept", "application/vnd.github.v3+json")
+        .send()
+        .await?
+        .text()
+        .await?;
+    Ok("".to_string())
 }

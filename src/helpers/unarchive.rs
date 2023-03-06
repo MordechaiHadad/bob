@@ -6,7 +6,6 @@ use std::path::Path;
 use std::{fs, io};
 
 use super::version::types::LocalVersion;
-use crate::helpers;
 
 pub async fn start(file: LocalVersion) -> Result<()> {
     let temp_file = file.clone();
@@ -91,6 +90,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     use flate2::read::GzDecoder;
     use std::os::unix::fs::PermissionsExt;
     use tar::Archive;
+    use crate::helpers;
 
     if fs::metadata(&downloaded_file.file_name).is_ok() {
         fs::remove_dir_all(&downloaded_file.file_name)?;
