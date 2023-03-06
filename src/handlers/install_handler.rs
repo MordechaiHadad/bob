@@ -1,8 +1,7 @@
-use super::utils;
-use crate::enums::{InstallResult, PostDownloadVersionType, VersionType};
-use crate::models::{Config, InputVersion, LocalVersion, Nightly};
-use crate::modules::expand_archive;
-use crate::modules::utils::handle_subprocess;
+use crate::config::Config;
+use crate::helpers::version::nightly::{produce_nightly_vec, get_commits_for_nightly};
+use crate::helpers::version::types::{ParsedVersion, UpstreamVersion, VersionType, LocalVersion};
+use crate::helpers::{self, directories, filesystem, unarchive, handle_subprocess};
 use anyhow::{anyhow, Result};
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -15,26 +14,27 @@ use tokio::{fs, process::Command};
 use tracing::info;
 use yansi::Paint;
 
+use super::{InstallResult, PostDownloadVersionType};
+
 pub async fn start(
-    version: &InputVersion,
+    version: &ParsedVersion,
     client: &Client,
     config: &Config,
 ) -> Result<InstallResult> {
-    let root = match utils::get_downloads_folder(config).await {
-        Ok(value) => value,
-        Err(error) => return Err(anyhow!(error)),
-    };
+    let root = directories::get_downloads_directory(config).await?;
+
     env::set_current_dir(&root)?;
     let root = root.as_path();
 
-    let is_version_installed = utils::is_version_installed(&version.tag_name, config).await?;
+    let is_version_installed =
+        helpers::version::is_version_installed(&version.tag_name, config).await?;
 
     let nightly_version = if version.tag_name == "nightly" {
-        let upstream_nightly = utils::get_upstream_nightly(client).await?;
+        let upstream_nightly = helpers::version::nightly::get_upstream_nightly(client).await?;
 
         if is_version_installed {
             info!("Looking for nightly updates...");
-            let local_nightly = utils::get_local_nightly(config).await?;
+            let local_nightly = helpers::version::nightly::get_local_nightly(config).await?;
 
             match config.enable_nightly_info {
                 Some(boolean) if boolean => {
@@ -62,7 +62,7 @@ pub async fn start(
     let downloaded_file = download_version(client, version, root, config).await?;
 
     if let PostDownloadVersionType::Standard(downloaded_file) = downloaded_file {
-        expand_archive::start(downloaded_file).await?
+        unarchive::start(downloaded_file).await?
     }
 
     if let Some(nightly_version) = nightly_version {
@@ -83,7 +83,7 @@ pub async fn start(
 }
 
 async fn handle_rollback(config: &Config) -> Result<()> {
-    if !utils::is_version_used("nightly", config).await {
+    if !helpers::version::is_version_used("nightly", config).await {
         return Ok(());
     }
 
@@ -93,7 +93,7 @@ async fn handle_rollback(config: &Config) -> Result<()> {
         return Ok(());
     }
 
-    let mut nightly_vec = super::rollback_handler::produce_nightly_vec(config).await?;
+    let mut nightly_vec = produce_nightly_vec(config).await?;
 
     if nightly_vec.len() >= rollback_limit.into() {
         let oldest_path = nightly_vec.pop().unwrap().path;
@@ -107,7 +107,7 @@ async fn handle_rollback(config: &Config) -> Result<()> {
         if #[cfg(unix)] {
             use std::os::unix::prelude::PermissionsExt;
 
-            let platform = utils::get_platform_name();
+            let platform = helpers::get_platform_name();
             let file = &format!("nightly/{platform}/bin/nvim");
             let mut perms = fs::metadata(file).await?.permissions();
             let octal_perms = format!("{:o}", perms.mode());
@@ -121,11 +121,11 @@ async fn handle_rollback(config: &Config) -> Result<()> {
     }
 
     info!("Creating rollback: nightly-{id}");
-    super::fs::copy_dir("nightly", format!("nightly-{id}")).await?;
+    filesystem::copy_dir("nightly", format!("nightly-{id}")).await?;
 
     let nightly_file = fs::read_to_string("nightly/bob.json").await?;
-    let mut json_struct: Nightly = serde_json::from_str(&nightly_file)?;
-    json_struct.tag_name += &format!("-{id}");
+    let mut json_struct: UpstreamVersion = serde_json::from_str(&nightly_file)?;
+    json_struct.version_string += &format!("-{id}");
 
     let json_file = serde_json::to_string(&json_struct)?;
     fs::write(format!("nightly-{id}/bob.json"), json_file).await?;
@@ -139,9 +139,13 @@ fn generate_random_nightly_id() -> String {
     Alphanumeric.sample_string(&mut rand::thread_rng(), 8)
 }
 
-async fn print_commits(client: &Client, local: &Nightly, upstream: &Nightly) -> Result<()> {
+async fn print_commits(
+    client: &Client,
+    local: &UpstreamVersion,
+    upstream: &UpstreamVersion,
+) -> Result<()> {
     let commits =
-        utils::get_commits_for_nightly(client, &local.published_at, &upstream.published_at).await?;
+        get_commits_for_nightly(client, &local.published_at, &upstream.published_at).await?;
 
     for commit in commits {
         println!(
@@ -156,7 +160,7 @@ async fn print_commits(client: &Client, local: &Nightly, upstream: &Nightly) -> 
 
 async fn download_version(
     client: &Client,
-    version: &InputVersion,
+    version: &ParsedVersion,
     root: &Path,
     config: &Config,
 ) -> Result<PostDownloadVersionType> {
@@ -177,7 +181,7 @@ async fn download_version(
                     .progress_chars("█  "));
                         pb.set_message(format!("Downloading version: {}", version.tag_name));
 
-                        let file_type = utils::get_file_type();
+                        let file_type = helpers::get_file_type();
                         let mut file =
                             tokio::fs::File::create(format!("{}.{file_type}", version.tag_name))
                                 .await?;
@@ -216,7 +220,7 @@ async fn download_version(
 }
 
 async fn handle_building_from_source(
-    version: &InputVersion,
+    version: &ParsedVersion,
     config: &Config,
 ) -> Result<PostDownloadVersionType> {
     cfg_if::cfg_if! {
@@ -295,18 +299,18 @@ async fn handle_building_from_source(
         .await?;
 
     if fs::metadata("build").await.is_ok() {
-        super::fs::remove_dir("build").await?;
+        filesystem::remove_dir("build").await?;
     }
     fs::create_dir("build").await?;
 
-    let mut downloads_location = utils::get_downloads_folder(config).await?;
+    let mut downloads_location = directories::get_downloads_directory(config).await?;
     downloads_location.push(&version.tag_name[0..7]);
-    downloads_location.push(utils::get_platform_name());
+    downloads_location.push(helpers::get_platform_name());
 
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
             if fs::metadata(".deps").await.is_ok() {
-                super::fs::remove_dir(".deps").await?;
+                helpers::fs::remove_dir(".deps").await?;
             }
             fs::create_dir(".deps").await?;
             env::set_current_dir(".deps")?;
@@ -333,8 +337,8 @@ async fn handle_building_from_source(
 }
 
 async fn send_request(client: &Client, version: &str) -> Result<reqwest::Response, reqwest::Error> {
-    let platform = utils::get_platform_name();
-    let file_type = utils::get_file_type();
+    let platform = helpers::get_platform_name();
+    let file_type = helpers::get_file_type();
     let request_url = format!(
         "https://github.com/neovim/neovim/releases/download/{version}/{platform}.{file_type}",
     );

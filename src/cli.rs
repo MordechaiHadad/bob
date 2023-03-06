@@ -1,8 +1,4 @@
-use super::{
-    erase_handler, install_handler, ls_handler, rollback_handler, sync_handler, uninstall_handler,
-    use_handler, utils,
-};
-use crate::{enums::InstallResult, models::Config};
+use crate::{config::Config, handlers::{self, sync_handler, uninstall_handler, rollback_handler, erase_handler, list_handler, InstallResult}};
 use anyhow::Result;
 use clap::Parser;
 use reqwest::Client;
@@ -58,15 +54,15 @@ pub async fn start(config: Config) -> Result<()> {
     match cli {
         Cli::Use { version, no_install } => {
             let client = Client::new();
-            let version = utils::parse_version_type(&client, &version).await?;
+            let version = super::version::parse_version_type(&client, &version).await?;
 
-            use_handler::start(version, !no_install, &client, config).await?;
+            handlers::use_handler::start(version, !no_install, &client, config).await?;
         }
         Cli::Install { version } => {
             let client = Client::new();
-            let version = utils::parse_version_type(&client, &version).await?;
+            let version = super::version::parse_version_type(&client, &version).await?;
 
-            match install_handler::start(&version, &client, &config).await? {
+            match handlers::install_handler::start(&version, &client, &config).await? {
                 InstallResult::InstallationSuccess(location) => {
                     info!(
                         "{} has been successfully installed in {location}",
@@ -92,7 +88,7 @@ pub async fn start(config: Config) -> Result<()> {
         }
         Cli::Rollback => rollback_handler::start(config).await?,
         Cli::Erase => erase_handler::start(config).await?,
-        Cli::List => ls_handler::start(config).await?,
+        Cli::List => list_handler::start(config).await?,
     }
 
     Ok(())

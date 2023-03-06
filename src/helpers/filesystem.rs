@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use async_recursion::async_recursion;
 use indicatif::{ProgressBar, ProgressStyle};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use tokio::fs;
 
 pub async fn remove_dir(directory: &str) -> Result<()> {
@@ -63,50 +63,4 @@ pub async fn copy_dir(
     }
 
     Ok(())
-}
-
-pub fn get_home_dir() -> Result<PathBuf> {
-    if cfg!(windows) {
-        let home_str = std::env::var("USERPROFILE")?;
-        return Ok(PathBuf::from(home_str));
-    }
-
-    let mut home_str = "/home/".to_string();
-    if let Ok(value) = std::env::var("SUDO_USER") {
-        home_str.push_str(&value);
-
-        return Ok(PathBuf::from(home_str));
-    }
-
-    let env_value = std::env::var("USER")?;
-    home_str.push_str(&env_value);
-
-    Ok(PathBuf::from(home_str))
-}
-
-pub fn get_local_data_dir() -> Result<PathBuf> {
-    let mut home_dir = get_home_dir()?;
-    if cfg!(windows) {
-        home_dir.push("AppData/Local");
-        return Ok(home_dir);
-    }
-
-    home_dir.push(".local/share");
-    Ok(home_dir)
-}
-
-pub fn get_config_dir() -> Result<PathBuf> {
-    let mut home_dir = get_home_dir()?;
-
-    if cfg!(linux) {
-        home_dir.push(".config");
-    } else if cfg!(macos) {
-        home_dir.push("Library/Application Support");
-    } else {
-        home_dir.push("AppData/Roaming");
-    }
-
-    home_dir.push("bob/config.json");
-
-    Ok(home_dir)
 }

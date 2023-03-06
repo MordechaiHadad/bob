@@ -1,13 +1,12 @@
-use crate::models::Config;
-
-use super::utils;
 use anyhow::{anyhow, Result};
 use tokio::fs;
 use tracing::info;
 
+use crate::{config::Config, helpers::directories};
+
 pub async fn start(config: Config) -> Result<()> {
-    let downloads = utils::get_downloads_folder(&config).await?;
-    let installation_dir = utils::get_installation_folder(&config).await?;
+    let downloads = directories::get_downloads_directory(&config).await?;
+    let installation_dir = directories::get_installation_directory(&config).await?;
 
     if fs::remove_dir_all(&installation_dir).await.is_ok() {
         info!("Successfully removed neovim's installation folder");
