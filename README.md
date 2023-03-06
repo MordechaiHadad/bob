@@ -186,6 +186,18 @@ Bob's configuration file will have to be in `config_dir/bob/config.json`, to be 
 }
 ```
 
+## 🛠️ Troubleshooting
+
+`sudo: nvim: command not found`
+This error can be caused when `secure_path` is enabled in `/etc/sudoers` like in distros such as Fedora Workstation 37, possible workarounds:
+
+1. disable `secure_path`
+2. run `sudo env "PATH=$PATH" nvim`
+3. set `$SUDO_USER` to location of bob nvim binary: `SUDO_EDITOR='/home/user/.local/share/bob/nvim-bin/nvim`
+
+These workarounds were devised by @nfejzic, thanks to him.
+
+
 ## :heart: Credits And Inspiration
 
 - [nvm](https://github.com/nvm-sh/nvm) A node version manager

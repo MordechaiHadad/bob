@@ -12,7 +12,6 @@ repository = "https://github.com/MordechaiHadad/bob"
 [dependencies]
 anyhow = "1.0.52"
 cfg-if = "1.0"
-dirs = "4.0.0"
 indicatif = "0.16.2"
 rand = "0.8.5"
 serde_json = "1.0"
