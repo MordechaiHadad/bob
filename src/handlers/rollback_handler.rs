@@ -47,6 +47,7 @@ pub async fn start(config: Config) -> Result<()> {
                 &ParsedVersion {
                     tag_name: name_list[i].clone(),
                     version_type: crate::helpers::version::types::VersionType::Standard,
+                    non_parsed_string: "".to_string()
                 },
             )
             .await?;
