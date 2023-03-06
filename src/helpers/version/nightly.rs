@@ -6,10 +6,7 @@ use serde::{Deserialize, Serialize};
 use tokio::fs;
 
 use super::types::{LocalNightly, UpstreamVersion};
-use crate::{
-    config::Config,
-    helpers::directories,
-};
+use crate::{config::Config, helpers::directories};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RepoCommit {
@@ -37,8 +34,12 @@ pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
         .text()
         .await?;
 
-    serde_json::from_str(&response)
-        .map_err(|_| anyhow!("Failed to get upstream nightly version, aborting..."))
+    match serde_json::from_str(&response) {
+        Ok(value) => Ok(value),
+        Err(_) => Err(anyhow!(
+            "Failed to get upstream nightly version, aborting..."
+        )),
+    }
 }
 
 pub async fn get_local_nightly(config: &Config) -> Result<UpstreamVersion> {
@@ -96,7 +97,7 @@ pub async fn produce_nightly_vec(config: &Config) -> Result<Vec<LocalNightly>> {
             path: path.path(),
         };
 
-        nightly_entry.data.version_string = name;
+        nightly_entry.data.tag_name = name;
 
         nightly_vec.push(nightly_entry);
     }

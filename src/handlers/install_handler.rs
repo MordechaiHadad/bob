@@ -125,7 +125,7 @@ async fn handle_rollback(config: &Config) -> Result<()> {
 
     let nightly_file = fs::read_to_string("nightly/bob.json").await?;
     let mut json_struct: UpstreamVersion = serde_json::from_str(&nightly_file)?;
-    json_struct.version_string += &format!("-{id}");
+    json_struct.tag_name += &format!("-{id}");
 
     let json_file = serde_json::to_string(&json_struct)?;
     fs::write(format!("nightly-{id}/bob.json"), json_file).await?;
@@ -310,7 +310,7 @@ async fn handle_building_from_source(
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
             if fs::metadata(".deps").await.is_ok() {
-                helpers::fs::remove_dir(".deps").await?;
+                helpers::filesystem::remove_dir(".deps").await?;
             }
             fs::create_dir(".deps").await?;
             env::set_current_dir(".deps")?;

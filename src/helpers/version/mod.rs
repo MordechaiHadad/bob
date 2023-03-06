@@ -29,7 +29,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
             let versions: Vec<UpstreamVersion> = serde_json::from_str(&response)?;
 
             Ok(ParsedVersion {
-                tag_name: versions[1].version_string.clone(),
+                tag_name: versions[1].tag_name.clone(),
                 version_type: VersionType::Standard,
             })
         }
