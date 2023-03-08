@@ -8,7 +8,7 @@ use tracing::info;
 use crate::config::Config;
 use crate::handlers::{install_handler, InstallResult};
 use crate::helpers;
-use crate::helpers::version::types::ParsedVersion;
+use crate::helpers::version::types::{ParsedVersion, VersionType};
 
 pub async fn start(
     mut version: ParsedVersion,
@@ -40,6 +40,12 @@ pub async fn start(
 
     switch(&config, &version).await?;
 
+    if let VersionType::Latest = version.version_type {
+        if fs::metadata("stable").await.is_ok() {
+            fs::remove_dir_all("stable").await?;
+        }
+    }
+
     info!("You can now use {}!", version.tag_name);
 
     Ok(())
@@ -50,7 +56,9 @@ pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
 
     copy_nvim_bob(config).await?;
     fs::write("used", &version.tag_name).await?;
-    if let Some(sync_version_file_path) = helpers::version::get_sync_version_file_path(config).await? {
+    if let Some(sync_version_file_path) =
+        helpers::version::get_sync_version_file_path(config).await?
+    {
         // Write the used version to sync_version_file_path only if it's different
         let stored_version = fs::read_to_string(&sync_version_file_path).await?;
         if stored_version != version.tag_name {

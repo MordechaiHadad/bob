@@ -65,11 +65,6 @@ pub async fn start(
     }
 
     match version.version_type {
-        VersionType::Latest => {
-            if fs::metadata("stable").await.is_ok() {
-                fs::remove_dir_all("stable").await?;
-            }
-        }
         VersionType::Nightly => {
             if let Some(nightly_version) = nightly_version {
                 let nightly_string = serde_json::to_string(&nightly_version)?;
