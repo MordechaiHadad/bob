@@ -1,7 +1,7 @@
 use crate::config::Config;
-use crate::helpers::version::nightly::{produce_nightly_vec, get_commits_for_nightly};
-use crate::helpers::version::types::{ParsedVersion, UpstreamVersion, VersionType, LocalVersion};
-use crate::helpers::{self, directories, filesystem, unarchive, handle_subprocess};
+use crate::helpers::version::nightly::{get_commits_for_nightly, produce_nightly_vec};
+use crate::helpers::version::types::{LocalVersion, ParsedVersion, UpstreamVersion, VersionType};
+use crate::helpers::{self, directories, filesystem, handle_subprocess, unarchive};
 use anyhow::{anyhow, Result};
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -17,7 +17,7 @@ use yansi::Paint;
 use super::{InstallResult, PostDownloadVersionType};
 
 pub async fn start(
-    version: &ParsedVersion,
+    version: &mut ParsedVersion,
     client: &Client,
     config: &Config,
 ) -> Result<InstallResult> {
@@ -26,57 +26,83 @@ pub async fn start(
     env::set_current_dir(&root)?;
     let root = root.as_path();
 
+    if let VersionType::Latest = version.version_type {
+        info!("Fetching latest version");
+
+        let response = client
+            .get("https://api.github.com/repos/neovim/neovim/releases?per_page=2")
+            .header("user-agent", "bob")
+            .header("Accept", "application/vnd.github.v3+json")
+            .send()
+            .await?
+            .text()
+            .await?;
+
+        let versions: Vec<UpstreamVersion> = serde_json::from_str(&response)?;
+
+        version.tag_name = versions[1].tag_name.clone();
+    }
+
     let is_version_installed =
         helpers::version::is_version_installed(&version.tag_name, config).await?;
 
-    let nightly_version = if version.tag_name == "nightly" {
-        let upstream_nightly = helpers::version::nightly::get_upstream_nightly(client).await?;
-
-        if is_version_installed {
-            info!("Looking for nightly updates...");
-            let local_nightly = helpers::version::nightly::get_local_nightly(config).await?;
-
-            match config.enable_nightly_info {
-                Some(boolean) if boolean => {
-                    print_commits(client, &local_nightly, &upstream_nightly).await?
-                }
-                None => print_commits(client, &local_nightly, &upstream_nightly).await?,
-                _ => (),
-            }
-
-            if local_nightly.published_at == upstream_nightly.published_at {
-                return Ok(InstallResult::NightlyIsUpdated);
-            }
-        }
-        Some(upstream_nightly)
-    } else {
-        if is_version_installed {
-            return Ok(InstallResult::VersionAlreadyInstalled);
-        }
-        None
-    };
-
-    if version.tag_name.eq("nightly") {
-        handle_rollback(config).await?;
+    if is_version_installed && version.version_type != VersionType::Nightly {
+        return Ok(InstallResult::VersionAlreadyInstalled);
     }
+
+
+    let mut nightly_version = None;
+
+    if is_version_installed && version.version_type == VersionType::Nightly {
+        handle_rollback(config).await?;
+
+        info!("Looking for nightly updates");
+
+        nightly_version = Some(helpers::version::nightly::get_upstream_nightly(client).await?);
+        let upstream_nightly = nightly_version.as_ref().unwrap();
+        let local_nightly = helpers::version::nightly::get_local_nightly(config).await?;
+
+        if upstream_nightly.published_at == local_nightly.published_at {
+            return Ok(InstallResult::NightlyIsUpdated);
+        }
+
+        match config.enable_nightly_info {
+            Some(boolean) if boolean => {
+                print_commits(client, &local_nightly, &upstream_nightly).await?
+            }
+            None => print_commits(client, &local_nightly, &upstream_nightly).await?,
+            _ => (),
+        }
+    }
+
     let downloaded_file = download_version(client, version, root, config).await?;
 
     if let PostDownloadVersionType::Standard(downloaded_file) = downloaded_file {
         unarchive::start(downloaded_file).await?
     }
 
-    if let Some(nightly_version) = nightly_version {
-        let nightly_string = serde_json::to_string(&nightly_version)?;
-        let mut file = match fs::File::create("nightly/bob.json").await {
-            Ok(value) => value,
-            Err(error) => {
-                return Err(anyhow!(
-                    "Failed to create file nightly/bob.json, reason: {error}"
-                ))
+    match version.version_type {
+        VersionType::Latest => {
+            if fs::metadata("stable").await.is_ok() {
+                fs::remove_dir_all("stable").await?;
             }
-        };
-        file.write_all(nightly_string.as_bytes()).await?;
+        }
+        VersionType::Nightly => {
+            if let Some(nightly_version) = nightly_version {
+                let nightly_string = serde_json::to_string(&nightly_version)?;
+                match fs::write("nightly/bob.json", nightly_string).await {
+                    Ok(_) => (),
+                    Err(error) => {
+                        return Err(anyhow!(
+                            "Failed to create file nightly/bob.json, reason: {error}"
+                        ))
+                    }
+                }
+            }
+        }
+        _ => (),
     }
+
     Ok(InstallResult::InstallationSuccess(
         root.display().to_string(),
     ))
@@ -165,7 +191,7 @@ async fn download_version(
     config: &Config,
 ) -> Result<PostDownloadVersionType> {
     match version.version_type {
-        VersionType::Standard => {
+        VersionType::Normal | VersionType::Nightly | VersionType::Latest => {
             let response = send_request(client, &version.tag_name).await;
 
             match response {

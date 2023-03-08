@@ -54,15 +54,15 @@ pub async fn start(config: Config) -> Result<()> {
     match cli {
         Cli::Use { version, no_install } => {
             let client = Client::new();
-            let version = super::version::parse_version_type(&client, &version).await?;
+            let version = super::version::parse_version_type(&version).await?;
 
             handlers::use_handler::start(version, !no_install, &client, config).await?;
         }
         Cli::Install { version } => {
             let client = Client::new();
-            let version = super::version::parse_version_type(&client, &version).await?;
+            let mut version = super::version::parse_version_type(&version).await?;
 
-            match handlers::install_handler::start(&version, &client, &config).await? {
+            match handlers::install_handler::start(&mut version, &client, &config).await? {
                 InstallResult::InstallationSuccess(location) => {
                     info!(
                         "{} has been successfully installed in {location}",

@@ -11,7 +11,7 @@ use crate::helpers;
 use crate::helpers::version::types::ParsedVersion;
 
 pub async fn start(
-    version: ParsedVersion,
+    mut version: ParsedVersion,
     install: bool,
     client: &Client,
     config: Config,
@@ -25,7 +25,7 @@ pub async fn start(
     }
 
     if install {
-        match install_handler::start(&version, client, &config).await {
+        match install_handler::start(&mut version, client, &config).await {
             Ok(success) => {
                 if let InstallResult::NightlyIsUpdated = success {
                     if is_version_used {
