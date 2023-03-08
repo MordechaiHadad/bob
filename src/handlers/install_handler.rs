@@ -26,23 +26,6 @@ pub async fn start(
     env::set_current_dir(&root)?;
     let root = root.as_path();
 
-    if let VersionType::Latest = version.version_type {
-        info!("Fetching latest version");
-
-        let response = client
-            .get("https://api.github.com/repos/neovim/neovim/releases?per_page=2")
-            .header("user-agent", "bob")
-            .header("Accept", "application/vnd.github.v3+json")
-            .send()
-            .await?
-            .text()
-            .await?;
-
-        let versions: Vec<UpstreamVersion> = serde_json::from_str(&response)?;
-
-        version.tag_name = versions[1].tag_name.clone();
-    }
-
     let is_version_installed =
         helpers::version::is_version_installed(&version.tag_name, config).await?;
 
@@ -68,9 +51,9 @@ pub async fn start(
 
         match config.enable_nightly_info {
             Some(boolean) if boolean => {
-                print_commits(client, &local_nightly, &upstream_nightly).await?
+                print_commits(client, &local_nightly, upstream_nightly).await?
             }
-            None => print_commits(client, &local_nightly, &upstream_nightly).await?,
+            None => print_commits(client, &local_nightly, upstream_nightly).await?,
             _ => (),
         }
     }

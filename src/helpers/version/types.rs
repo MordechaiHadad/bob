@@ -9,7 +9,7 @@ pub struct ParsedVersion {
     pub non_parsed_string: String
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub enum VersionType {
     Normal,
     Latest,

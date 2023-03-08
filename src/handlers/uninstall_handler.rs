@@ -1,11 +1,13 @@
 use anyhow::{anyhow, Result};
+use reqwest::Client;
 use tokio::fs;
 use tracing::{info, warn};
 
 use crate::{config::Config, helpers::{self, directories}};
 
 pub async fn start(version: &str, config: Config) -> Result<()> {
-    let version = helpers::version::parse_version_type(version).await?;
+    let client = Client::new();
+    let version = helpers::version::parse_version_type(&client, version).await?;
 
     if helpers::version::is_version_used(&version.tag_name, &config).await {
         warn!("Switch to a different version before proceeding");
