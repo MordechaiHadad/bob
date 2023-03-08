@@ -64,21 +64,18 @@ pub async fn start(
         unarchive::start(downloaded_file).await?
     }
 
-    match version.version_type {
-        VersionType::Nightly => {
-            if let Some(nightly_version) = nightly_version {
-                let nightly_string = serde_json::to_string(&nightly_version)?;
-                match fs::write("nightly/bob.json", nightly_string).await {
-                    Ok(_) => (),
-                    Err(error) => {
-                        return Err(anyhow!(
-                            "Failed to create file nightly/bob.json, reason: {error}"
-                        ))
-                    }
+    if let VersionType::Nightly = version.version_type {
+        if let Some(nightly_version) = nightly_version {
+            let nightly_string = serde_json::to_string(&nightly_version)?;
+            match fs::write("nightly/bob.json", nightly_string).await {
+                Ok(_) => (),
+                Err(error) => {
+                    return Err(anyhow!(
+                        "Failed to create file nightly/bob.json, reason: {error}"
+                    ))
                 }
             }
         }
-        _ => (),
     }
 
     Ok(InstallResult::InstallationSuccess(
