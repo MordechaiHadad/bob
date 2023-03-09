@@ -1,14 +1,14 @@
-use super::utils;
-use crate::models::Config;
 use anyhow::{anyhow, Result};
 use reqwest::Client;
 use tokio::fs;
 use tracing::info;
 
+use crate::{config::Config, helpers::version};
+
 use super::use_handler;
 
 pub async fn start(client: &Client, config: Config) -> Result<()> {
-    let sync_version_file_path = utils::get_sync_version_file_path(&config)
+    let sync_version_file_path = version::get_sync_version_file_path(&config)
         .await?
         .ok_or_else(|| anyhow!("sync_version_file_path needs to be set to use bob sync"))?;
 
@@ -26,7 +26,7 @@ pub async fn start(client: &Client, config: Config) -> Result<()> {
     );
 
     use_handler::start(
-        utils::parse_version_type(client, &version).await?,
+        version::parse_version_type(client, &version).await?,
         true,
         client,
         config,

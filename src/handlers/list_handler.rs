@@ -1,13 +1,13 @@
-use crate::models::Config;
-
-use super::{rollback_handler, utils};
 use anyhow::{anyhow, Result};
 use regex::Regex;
 use std::fs;
 use yansi::Paint;
 
+use crate::{config::Config, helpers::{directories, self, version::nightly::produce_nightly_vec}};
+
+
 pub async fn start(config: Config) -> Result<()> {
-    let downloads_dir = utils::get_downloads_folder(&config).await?;
+    let downloads_dir = directories::get_downloads_directory(&config).await?;
 
     let paths = fs::read_dir(downloads_dir)?
         .filter_map(|e| e.ok())
@@ -54,7 +54,7 @@ pub async fn start(config: Config) -> Result<()> {
         let version_pr = (version_max_len - path_name.len()) + padding;
         let status_pr = padding + status_max_len;
 
-        if utils::is_version_used(path_name, &config).await {
+        if helpers::version::is_version_used(path_name, &config).await {
             println!(
                 "│{}{path_name}{}│{}{}{}│",
                 " ".repeat(padding),
@@ -85,7 +85,7 @@ pub async fn start(config: Config) -> Result<()> {
 }
 
 async fn has_rollbacks(config: &Config) -> Result<bool> {
-    let list = rollback_handler::produce_nightly_vec(config).await?;
+    let list = produce_nightly_vec(config).await?;
 
     Ok(!list.is_empty())
 }

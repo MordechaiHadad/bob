@@ -1,6 +1,3 @@
-use crate::enums::InstallResult;
-use crate::models::{Config, InputVersion};
-use crate::modules::{install_handler, utils};
 use anyhow::Result;
 use reqwest::Client;
 use std::env;
@@ -8,8 +5,18 @@ use std::path::Path;
 use tokio::fs;
 use tracing::info;
 
-pub async fn start(version: InputVersion, install: bool, client: &Client, config: Config) -> Result<()> {
-    let is_version_used = utils::is_version_used(&version.tag_name, &config).await;
+use crate::config::Config;
+use crate::handlers::{install_handler, InstallResult};
+use crate::helpers;
+use crate::helpers::version::types::{ParsedVersion, VersionType};
+
+pub async fn start(
+    mut version: ParsedVersion,
+    install: bool,
+    client: &Client,
+    config: Config,
+) -> Result<()> {
+    let is_version_used = helpers::version::is_version_used(&version.tag_name, &config).await;
 
     copy_nvim_bob(&config).await?;
     if is_version_used && version.tag_name != "nightly" {
@@ -18,7 +25,7 @@ pub async fn start(version: InputVersion, install: bool, client: &Client, config
     }
 
     if install {
-        match install_handler::start(&version, client, &config).await {
+        match install_handler::start(&mut version, client, &config).await {
             Ok(success) => {
                 if let InstallResult::NightlyIsUpdated = success {
                     if is_version_used {
@@ -33,17 +40,25 @@ pub async fn start(version: InputVersion, install: bool, client: &Client, config
 
     switch(&config, &version).await?;
 
+    if let VersionType::Latest = version.version_type {
+        if fs::metadata("stable").await.is_ok() {
+            fs::remove_dir_all("stable").await?;
+        }
+    }
+
     info!("You can now use {}!", version.tag_name);
 
     Ok(())
 }
 
-pub async fn switch(config: &Config, version: &InputVersion) -> Result<()> {
-    std::env::set_current_dir(utils::get_downloads_folder(config).await?)?;
+pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
+    std::env::set_current_dir(helpers::directories::get_downloads_directory(config).await?)?;
 
     copy_nvim_bob(config).await?;
     fs::write("used", &version.tag_name).await?;
-    if let Some(sync_version_file_path) = utils::get_sync_version_file_path(config).await? {
+    if let Some(sync_version_file_path) =
+        helpers::version::get_sync_version_file_path(config).await?
+    {
         // Write the used version to sync_version_file_path only if it's different
         let stored_version = fs::read_to_string(&sync_version_file_path).await?;
         if stored_version != version.tag_name {
@@ -63,7 +78,7 @@ pub async fn switch(config: &Config, version: &InputVersion) -> Result<()> {
 
 async fn copy_nvim_bob(config: &Config) -> Result<()> {
     let exe_path = env::current_exe().unwrap();
-    let mut installation_dir = utils::get_installation_folder(config).await?;
+    let mut installation_dir = helpers::directories::get_installation_directory(config).await?;
 
     if fs::metadata(&installation_dir).await.is_err() {
         fs::create_dir_all(&installation_dir).await?;
@@ -76,7 +91,6 @@ async fn copy_nvim_bob(config: &Config) -> Result<()> {
     } else {
         installation_dir.push("nvim");
     }
-
 
     if fs::metadata(&installation_dir).await.is_ok() {
         return Ok(());

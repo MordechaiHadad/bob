@@ -5,7 +5,7 @@ use std::fs::File;
 use std::path::Path;
 use std::{fs, io};
 
-use crate::models::LocalVersion;
+use super::version::types::LocalVersion;
 
 pub async fn start(file: LocalVersion) -> Result<()> {
     let temp_file = file.clone();
@@ -90,8 +90,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     use flate2::read::GzDecoder;
     use std::os::unix::fs::PermissionsExt;
     use tar::Archive;
-
-    use crate::modules::utils;
+    use crate::helpers;
 
     if fs::metadata(&downloaded_file.file_name).is_ok() {
         fs::remove_dir_all(&downloaded_file.file_name)?;
@@ -160,7 +159,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
             "nvim-macos",
         )?;
     }
-    let platform = utils::get_platform_name();
+    let platform = helpers::get_platform_name();
     let file = &format!("{}/{platform}/bin/nvim", downloaded_file.file_name);
     let mut perms = fs::metadata(file)?.permissions();
     perms.set_mode(0o551);
