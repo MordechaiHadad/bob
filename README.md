@@ -93,7 +93,7 @@ A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0
 
 ---
 
-- `bob use |nightly|stable|<version-string>|<commit-hash>|`
+- `bob use |nightly|stable|latest|<version-string>|<commit-hash>|`
 
 `--no-install` flag will prevent bob from auto invoking install command when using `use`
 
@@ -101,7 +101,7 @@ Switch to the specified version, by default will auto-invoke install command if 
 
 ---
 
-- `bob install |nightly|stable|<version-string>|<commit-hash>|`
+- `bob install |nightly|stable|latest|<version-string>|<commit-hash>|`
 
 Install the specified version, can also be used to update out-of-date nightly version.
 
@@ -113,7 +113,7 @@ If Config::sync_version_file_path is set, the version in that file will be parse
 
 ---
 
-- `bob uninstall |nightly|stable|<version-string>|<commit-hash>|`
+- `bob uninstall |nightly|stable|latest|<version-string>|<commit-hash>|`
 
 Uninstall the specified version.
 
