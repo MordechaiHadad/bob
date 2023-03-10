@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use anyhow::{anyhow, Result};
+use std::path::PathBuf;
 
 use crate::config::Config;
 
@@ -66,6 +66,7 @@ pub async fn get_downloads_directory(config: &Config) -> Result<PathBuf> {
             let mut data_dir = get_local_data_dir()?;
 
             data_dir.push("bob");
+            println!("{}", data_dir.display());
             let does_folder_exist = tokio::fs::metadata(&data_dir).await.is_ok();
 
             if !does_folder_exist && tokio::fs::create_dir(&data_dir).await.is_err() {
@@ -82,7 +83,6 @@ pub async fn get_installation_directory(config: &Config) -> Result<PathBuf> {
     match &config.installation_location {
         Some(path) => Ok(PathBuf::from(path.clone())),
         None => {
-  
             let mut installation_location = get_downloads_directory(config).await?;
             installation_location.push("nvim-bin");
 
