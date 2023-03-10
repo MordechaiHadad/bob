@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use anyhow::{anyhow, Result};
+use std::path::PathBuf;
 
 use crate::config::Config;
 
@@ -9,7 +9,11 @@ pub fn get_home_dir() -> Result<PathBuf> {
         return Ok(PathBuf::from(home_str));
     }
 
-    let mut home_str = "/home/".to_string();
+    let mut home_str = if cfg!(target_os = "macos") {
+        "/Users/".to_string()
+    } else {
+        "/home/".to_string()
+    };
     if let Ok(value) = std::env::var("SUDO_USER") {
         home_str.push_str(&value);
 
@@ -36,12 +40,12 @@ pub fn get_local_data_dir() -> Result<PathBuf> {
 pub fn get_config_dir() -> Result<PathBuf> {
     let mut home_dir = get_home_dir()?;
 
-    if cfg!(linux) {
-        home_dir.push(".config");
-    } else if cfg!(macos) {
+    if cfg!(windows) {
+        home_dir.push("AppData/Roaming");
+    } else if cfg!(target_os = "macos") {
         home_dir.push("Library/Application Support");
     } else {
-        home_dir.push("AppData/Roaming");
+        home_dir.push(".config");
     }
 
     home_dir.push("bob/config.json");
@@ -62,6 +66,7 @@ pub async fn get_downloads_directory(config: &Config) -> Result<PathBuf> {
             let mut data_dir = get_local_data_dir()?;
 
             data_dir.push("bob");
+            println!("{}", data_dir.display());
             let does_folder_exist = tokio::fs::metadata(&data_dir).await.is_ok();
 
             if !does_folder_exist && tokio::fs::create_dir(&data_dir).await.is_err() {
@@ -78,7 +83,6 @@ pub async fn get_installation_directory(config: &Config) -> Result<PathBuf> {
     match &config.installation_location {
         Some(path) => Ok(PathBuf::from(path.clone())),
         None => {
-  
             let mut installation_location = get_downloads_directory(config).await?;
             installation_location.push("nvim-bin");
 
