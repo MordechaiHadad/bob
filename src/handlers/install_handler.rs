@@ -33,7 +33,6 @@ pub async fn start(
         return Ok(InstallResult::VersionAlreadyInstalled);
     }
 
-
     let mut nightly_version = None;
 
     if is_version_installed && version.version_type == VersionType::Nightly {
