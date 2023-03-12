@@ -33,13 +33,15 @@ pub async fn start(
         return Ok(InstallResult::VersionAlreadyInstalled);
     }
 
-    let mut nightly_version = None;
+    let nightly_version = if version.version_type == VersionType::Nightly {
+        Some(helpers::version::nightly::get_upstream_nightly(client).await?)
+    } else {
+        None
+    };
 
     if is_version_installed && version.version_type == VersionType::Nightly {
-
         info!("Looking for nightly updates");
 
-        nightly_version = Some(helpers::version::nightly::get_upstream_nightly(client).await?);
         let upstream_nightly = nightly_version.as_ref().unwrap();
         let local_nightly = helpers::version::nightly::get_local_nightly(config).await?;
 
