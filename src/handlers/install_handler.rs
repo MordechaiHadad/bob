@@ -36,7 +36,6 @@ pub async fn start(
     let mut nightly_version = None;
 
     if is_version_installed && version.version_type == VersionType::Nightly {
-        handle_rollback(config).await?;
 
         info!("Looking for nightly updates");
 
@@ -47,6 +46,8 @@ pub async fn start(
         if upstream_nightly.published_at == local_nightly.published_at {
             return Ok(InstallResult::NightlyIsUpdated);
         }
+
+        handle_rollback(config).await?;
 
         match config.enable_nightly_info {
             Some(boolean) if boolean => {
