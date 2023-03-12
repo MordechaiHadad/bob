@@ -15,7 +15,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
     match version {
         "nightly" => Ok(ParsedVersion {
             tag_name: version.to_string(),
-            version_type: VersionType::Normal,
+            version_type: VersionType::Nightly,
             non_parsed_string: version.to_string(),
         }),
         "stable" | "latest" => {
