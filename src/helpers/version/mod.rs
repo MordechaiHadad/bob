@@ -66,10 +66,8 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
 pub async fn get_sync_version_file_path(config: &Config) -> Result<Option<PathBuf>> {
     let path = match &config.version_sync_file_location {
         Some(path) => {
-            if let Err(e) = tokio::fs::metadata(path).await {
-                return Err(anyhow!(
-                    "Error when trying to retrieve sync_version_file_path {path}: {e}"
-                ));
+            if tokio::fs::metadata(path).await.is_err() {
+                fs::write(path, b"").await?;
             }
             Some(PathBuf::from(path))
         }
