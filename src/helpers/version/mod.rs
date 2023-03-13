@@ -58,7 +58,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                     non_parsed_string: version.to_string(),
                 });
             }
-            Err(anyhow!("Please provide a proper version string, input was {version}"))
+            Err(anyhow!("Please provide a proper version string"))
         }
     }
 }
