@@ -31,7 +31,7 @@ pub async fn start(client: &Client, config: Config) -> Result<()> {
     );
 
     use_handler::start(
-        version::parse_version_type(client, &trimmed_version).await?,
+        version::parse_version_type(client, trimmed_version).await?,
         true,
         client,
         config,
