@@ -13,7 +13,12 @@ pub async fn start(client: &Client, config: Config) -> Result<()> {
         .ok_or_else(|| anyhow!("sync_version_file_path needs to be set to use bob sync"))?;
 
     let version = fs::read_to_string(&sync_version_file_path).await?;
-    if version.contains("nightly-") {
+    if version.is_empty() {
+        return Err(anyhow!("Sync file is empty"));
+    }
+    let trimmed_version = version.trim();
+
+    if trimmed_version.contains("nightly-") {
         return Err(anyhow!("Cannot sync nightly rollbacks."));
     }
 
@@ -26,7 +31,7 @@ pub async fn start(client: &Client, config: Config) -> Result<()> {
     );
 
     use_handler::start(
-        version::parse_version_type(client, &version).await?,
+        version::parse_version_type(client, trimmed_version).await?,
         true,
         client,
         config,
