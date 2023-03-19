@@ -19,7 +19,7 @@ pub fn get_home_dir() -> Result<PathBuf> {
 
     if let Ok(value) = std::env::var("SUDO_USER") {
         home_str.push(&value);
-        return Ok(PathBuf::from(home_str));
+        return Ok(home_str);
     }
 
     let env_value = std::env::var("USER")?;
