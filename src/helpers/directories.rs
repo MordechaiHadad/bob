@@ -9,21 +9,23 @@ pub fn get_home_dir() -> Result<PathBuf> {
         return Ok(PathBuf::from(home_str));
     }
 
-    let mut home_str = if cfg!(target_os = "macos") {
-        "/Users/".to_string()
-    } else {
-        "/home/".to_string()
-    };
-    if let Ok(value) = std::env::var("SUDO_USER") {
-        home_str.push_str(&value);
+    let mut home_str = PathBuf::new();
 
+    if cfg!(target_os = "macos") {
+        home_str.push("/Users/");
+    } else {
+        home_str.push("/home/")
+    };
+
+    if let Ok(value) = std::env::var("SUDO_USER") {
+        home_str.push(&value);
         return Ok(PathBuf::from(home_str));
     }
 
     let env_value = std::env::var("USER")?;
-    home_str.push_str(&env_value);
+    home_str.push(&env_value);
 
-    Ok(PathBuf::from(home_str))
+    Ok(home_str)
 }
 
 pub fn get_local_data_dir() -> Result<PathBuf> {
