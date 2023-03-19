@@ -4,12 +4,12 @@ use std::path::PathBuf;
 use crate::config::Config;
 
 pub fn get_home_dir() -> Result<PathBuf> {
-    if cfg!(windows) {
-        let home_str = std::env::var("USERPROFILE")?;
-        return Ok(PathBuf::from(home_str));
-    }
-
     let mut home_str = PathBuf::new();
+
+    if cfg!(windows) {
+        home_str.push(std::env::var("USERPROFILE")?);
+        return Ok(home_str);
+    }
 
     if cfg!(target_os = "macos") {
         home_str.push("/Users/");
