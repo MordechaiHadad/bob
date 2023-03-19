@@ -4,26 +4,28 @@ use std::path::PathBuf;
 use crate::config::Config;
 
 pub fn get_home_dir() -> Result<PathBuf> {
+    let mut home_str = PathBuf::new();
+
     if cfg!(windows) {
-        let home_str = std::env::var("USERPROFILE")?;
-        return Ok(PathBuf::from(home_str));
+        home_str.push(std::env::var("USERPROFILE")?);
+        return Ok(home_str);
     }
 
-    let mut home_str = if cfg!(target_os = "macos") {
-        "/Users/".to_string()
+    if cfg!(target_os = "macos") {
+        home_str.push("/Users/");
     } else {
-        "/home/".to_string()
+        home_str.push("/home/")
     };
-    if let Ok(value) = std::env::var("SUDO_USER") {
-        home_str.push_str(&value);
 
-        return Ok(PathBuf::from(home_str));
+    if let Ok(value) = std::env::var("SUDO_USER") {
+        home_str.push(&value);
+        return Ok(home_str);
     }
 
     let env_value = std::env::var("USER")?;
-    home_str.push_str(&env_value);
+    home_str.push(&env_value);
 
-    Ok(PathBuf::from(home_str))
+    Ok(home_str)
 }
 
 pub fn get_local_data_dir() -> Result<PathBuf> {
