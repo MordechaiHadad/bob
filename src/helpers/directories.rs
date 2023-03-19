@@ -67,8 +67,9 @@ pub async fn get_downloads_directory(config: &Config) -> Result<PathBuf> {
 
             data_dir.push("bob");
             let does_folder_exist = tokio::fs::metadata(&data_dir).await.is_ok();
+            let is_folder_created = tokio::fs::create_dir_all(&data_dir).await.is_ok();
 
-            if !does_folder_exist && tokio::fs::create_dir(&data_dir).await.is_err() {
+            if !does_folder_exist && !is_folder_created {
                 return Err(anyhow!("Couldn't create downloads directory"));
             }
             data_dir
