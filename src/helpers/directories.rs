@@ -10,8 +10,7 @@ pub fn get_home_dir() -> Result<PathBuf> {
     }
 
     let mut home_str = if cfg!(target_os = "macos") {
-        let path = format!("{}{}/", "/Users/", std::env::var("USER")?);
-        return Ok(PathBuf::from(path.to_string()));
+        "/Users/".to_string()
     } else {
         "/home/".to_string()
     };
