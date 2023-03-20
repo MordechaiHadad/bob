@@ -96,7 +96,7 @@ async fn copy_nvim_bob(config: &Config) -> Result<()> {
         return Ok(());
     }
 
-    fs::copy(exe_path, &installation_dir).await?;
+    fs::copy(&exe_path, &installation_dir).await?;
 
     if cfg!(windows) {
         installation_dir = installation_dir.parent().unwrap().to_path_buf();
