@@ -105,8 +105,9 @@ async fn copy_nvim_bob(config: &Config) -> Result<()> {
         if fs::metadata(&installation_dir).await.is_ok() {
             return Ok(());
         }
+        println!("{}, {}", &exe_path.display(), &installation_dir.display());
 
-        fs::copy(exe_path, &installation_dir).await?;
+        fs::copy(exe_path, installation_dir).await?;
     }
 
     Ok(())
