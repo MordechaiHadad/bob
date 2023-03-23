@@ -92,11 +92,21 @@ async fn copy_nvim_bob(config: &Config) -> Result<()> {
         installation_dir.push("nvim");
     }
 
-    if fs::metadata(&installation_dir).await.is_ok() {
-        return Ok(());
+    if fs::metadata(&installation_dir).await.is_err() {
+        fs::copy(&exe_path, &installation_dir).await?;
     }
 
-    fs::copy(exe_path, &installation_dir).await?;
+
+    if cfg!(windows) {
+        installation_dir = installation_dir.parent().unwrap().to_path_buf();
+        installation_dir.push("nvim-qt.exe");
+
+        if fs::metadata(&installation_dir).await.is_ok() {
+            return Ok(());
+        }
+
+        fs::copy(exe_path, installation_dir).await?;
+    }
 
     Ok(())
 }
