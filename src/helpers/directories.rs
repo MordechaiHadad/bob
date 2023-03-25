@@ -11,6 +11,11 @@ pub fn get_home_dir() -> Result<PathBuf> {
         return Ok(home_str);
     }
 
+    if let Ok(value) = std::env::var("HOME") {
+        home_str = PathBuf::from(value);
+        return Ok(home_str)
+    }
+    
     if cfg!(target_os = "macos") {
         home_str.push("/Users/");
     } else {
