@@ -10,11 +10,6 @@ pub fn get_home_dir() -> Result<PathBuf> {
         home_str.push(std::env::var("USERPROFILE")?);
         return Ok(home_str);
     }
-
-    if let Ok(value) = std::env::var("HOME") {
-        home_str = PathBuf::from(value);
-        return Ok(home_str)
-    }
     
     if cfg!(target_os = "macos") {
         home_str.push("/Users/");
@@ -25,6 +20,11 @@ pub fn get_home_dir() -> Result<PathBuf> {
     if let Ok(value) = std::env::var("SUDO_USER") {
         home_str.push(&value);
         return Ok(home_str);
+    }
+
+    if let Ok(value) = std::env::var("HOME") {
+        home_str = PathBuf::from(value);
+        return Ok(home_str)
     }
 
     let env_value = std::env::var("USER")?;
