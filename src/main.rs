@@ -1,5 +1,3 @@
-#![windows_subsystem = "windows"]
-
 mod cli;
 mod config;
 mod handlers;
