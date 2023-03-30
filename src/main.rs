@@ -7,15 +7,16 @@ mod helpers;
 
 extern crate core;
 
+use crate::helpers::directories;
 use anyhow::{anyhow, Result};
 use config::{handle_config, Config};
 use helpers::version;
 use std::{
     env,
-    process::{exit, Command}, path::Path,
+    path::Path,
+    process::{exit, Command},
 };
 use tracing::{error, Level};
-use crate::helpers::directories;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -39,7 +40,6 @@ async fn run() -> Result<()> {
     let exe_name_path = Path::new(&args[0]);
     let exe_name = exe_name_path.file_name().unwrap().to_str().unwrap();
 
-
     if exe_name.contains("nvim-qt") {
         let rest_args = &args[1..];
 
@@ -53,10 +53,18 @@ async fn run() -> Result<()> {
             .join("bin")
             .join("nvim-qt");
 
-        let mut child = Command::new(location)
-            .args(rest_args)
-            .spawn()
-            .expect("Failed to spawn child process");
+        let mut child = Command::new(location);
+        child.args(rest_args);
+
+        cfg_if::cfg_if! {
+            if #[cfg(windows)] {
+                use std::os::windows::process::CommandExt;
+                child.creation_flags(0x08000000);
+            }
+        }
+
+
+        let mut child = child.spawn().expect("Failed to spawn child process");
 
         let exit_status = child
             .wait()
@@ -68,8 +76,7 @@ async fn run() -> Result<()> {
             Some(code) => return Err(anyhow!("Process exited with error code {}", code)),
             None => return Err(anyhow!("Process terminated by signal")),
         }
-    }
-    else if exe_name.contains("nvim") {
+    } else if exe_name.contains("nvim") {
         let rest_args = &args[1..];
 
         let downloads_dir = directories::get_downloads_directory(&config).await?;
