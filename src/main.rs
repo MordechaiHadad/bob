@@ -57,7 +57,7 @@ async fn run() -> Result<()> {
         cfg_if::cfg_if! {
             if #[cfg(windows)] {
                 use std::os::windows::process::CommandExt;
-                child.creation_flags(0x08000000);
+                child.creation_flags(0x00000008);
                 println!("Spawned homie with creation flags fr");
             }
         }
