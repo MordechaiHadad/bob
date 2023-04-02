@@ -85,6 +85,7 @@ dependencies = [
  "cfg-if",
  "chrono",
  "clap",
+ "clap_complete",
  "dialoguer",
  "flate2",
  "futures-util",
@@ -183,6 +184,15 @@ dependencies = [
  "once_cell",
  "strsim",
  "termcolor",
+]
+
+[[package]]
+name = "clap_complete"
+version = "4.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01c22dcfb410883764b29953103d9ef7bb8fe21b3fa1158bc99986c2067294bd"
+dependencies = [
+ "clap",
 ]
 
 [[package]]
