@@ -58,23 +58,13 @@ async fn run() -> Result<()> {
             if #[cfg(windows)] {
                 use std::os::windows::process::CommandExt;
                 child.creation_flags(0x00000008);
-                println!("Spawned homie with creation flags fr");
             }
         }
 
+        child.spawn().expect("Failed to spawn child process");
+        return Ok(())
 
-        let mut child = child.spawn().expect("Failed to spawn child process");
 
-        let exit_status = child
-            .wait()
-            .expect("Failed to wait on child process")
-            .code();
-
-        match exit_status {
-            Some(0) => return Ok(()),
-            Some(code) => return Err(anyhow!("Process exited with error code {}", code)),
-            None => return Err(anyhow!("Process terminated by signal")),
-        }
     } else if exe_name.contains("nvim") {
         let rest_args = &args[1..];
 
