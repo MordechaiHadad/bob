@@ -39,6 +39,11 @@ async fn run() -> Result<()> {
     let exe_name = exe_name_path.file_name().unwrap().to_str().unwrap();
 
     if exe_name.contains("nvim-qt") {
+
+        if cfg!(unix) {
+            return Err(anyhow!("This is only usable on windows"));
+        }
+
         let rest_args = &args[1..];
 
         let downloads_dir = directories::get_downloads_directory(&config).await?;
@@ -62,9 +67,7 @@ async fn run() -> Result<()> {
         }
 
         child.spawn().expect("Failed to spawn child process");
-        return Ok(())
-
-
+        return Ok(());
     } else if exe_name.contains("nvim") {
         let rest_args = &args[1..];
 
