@@ -22,8 +22,13 @@ pub fn get_home_dir() -> Result<PathBuf> {
         return Ok(home_str);
     }
 
-    let env_value = std::env::var("USER")?;
-    home_str.push(&env_value);
+    if let Ok(value) = std::env::var("USER") {
+        home_str.push(&value);
+        return Ok(home_str);
+    }
+
+    let home_value = std::env::var("HOME")?;
+    home_str = PathBuf::from(home_value);
 
     Ok(home_str)
 }
