@@ -22,7 +22,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                 info!("Fetching latest version");
 
                 let response = client
-                    .get("https://api.github.com/repos/neovim/neovim/releases?per_page=2")
+                    .get("https://api.github.com/repos/neovim/neovim/releases?per_page=1")
                     .header("user-agent", "bob")
                     .header("Accept", "application/vnd.github.v3+json")
                     .send()
@@ -33,7 +33,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                 let versions: Vec<UpstreamVersion> = serde_json::from_str(&response)?;
 
             Ok(ParsedVersion {
-                tag_name: versions[1].tag_name.clone(),
+                tag_name: versions[0].tag_name.clone(),
                 version_type: VersionType::Latest,
                 non_parsed_string: version.to_string(),
             })
