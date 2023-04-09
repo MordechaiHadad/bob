@@ -137,6 +137,12 @@ List all installed and used versions.
 
 ---
 
+- `bob complete bash|elvish|fish|powershell|zsh`
+
+Generate shell completion.
+
+---
+
 ## ⚙ Configuration
 
 This section is a bit more advanced and thus the user will have to do the work himself since bob doesn't do that.
