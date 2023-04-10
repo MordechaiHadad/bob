@@ -137,6 +137,12 @@ List all installed and used versions.
 
 ---
 
+- `bob complete bash|elvish|fish|powershell|zsh`
+
+Generate shell completion.
+
+---
+
 ## ⚙ Configuration
 
 This section is a bit more advanced and thus the user will have to do the work himself since bob doesn't do that.
@@ -184,6 +190,93 @@ Bob's configuration file will have to be in `config_dir/bob/config.json`, to be 
   "version_sync_file_location": "/home/user/.config/nvim/nvim.version", // The path to a file that will hold the neovim version string, useful for config version tracking, bob will error if the specified file is not a valid file path
   "rollback_limit": 3 // The amount of rollbacks before bob starts to delete older ones, can be up to 225
 }
+```
+
+## 💻 Shell Completion
+
+- Bash
+
+Completion files are commonly stored in `/etc/bash_completion.d/` for system-wide commands, but can be stored in `~/.local/share/bash-completion/completions` for user-specific commands. Run the command:
+
+```bash
+mkdir -p ~/.local/share/bash-completion/completions
+bob complete bash >> ~/.local/share/bash-completion/completions/bob
+```
+
+This installs the completion script. You may have to log out and log back in to your shell session for the changes to take effect.
+
+- Bash (macOS/Homebrew)
+
+Homebrew stores bash completion files within the Homebrew directory. With the `bash-completion` brew formula installed, run the command:
+
+```bash
+mkdir -p $(brew --prefix)/etc/bash_completion.d
+bob complete bash > $(brew --prefix)/etc/bash_completion.d/bob.bash-completion
+```
+
+- Fish
+
+Fish completion files are commonly stored in `$HOME/.config/fish/completions`. Run the command:
+
+```fish
+mkdir -p ~/.config/fish/completions
+bob complete fish > ~/.config/fish/completions/bob.fish
+```
+
+This installs the completion script. You may have to log out and log back in to your shell session for the changes to take effect.
+
+- Zsh
+
+Zsh completions are commonly stored in any directory listed in your `$fpath` variable. To use these completions, you must either add the generated script to one of those directories, or add your own to this list.
+
+Adding a custom directory is often the safest bet if you are unsure of which directory to use. First create the directory; for this example we'll create a hidden directory inside our `$HOME` directory:
+
+```zsh
+mkdir ~/.zfunc
+```
+
+Then add the following lines to your `.zshrc` just before `compinit`:
+
+```zsh
+fpath+=~/.zfunc
+```
+
+Now you can install the completions script using the following command:
+
+```zsh
+bob complete zsh > ~/.zfunc/_bob
+```
+
+You must then either log out and log back in, or simply run
+
+```zsh
+exec zsh
+```
+
+for the new completions to take effect.
+
+- PowerShell
+
+The PowerShell completion scripts require PowerShell v5.0+ (which comes with Windows 10, but can be downloaded separately for windows 7 or 8.1).
+
+First, check if a profile has already been set
+
+```powershell
+Test-Path $profile
+```
+
+If the above command returns `False` run the following
+
+```powershell
+New-Item -path $profile -type file -force
+```
+
+Now open the file provided by `$profile` (if you used the `New-Item` command it will be `${env:USERPROFILE}\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1`
+
+Next, we either save the completions file into our profile, or into a separate file and source it inside our profile. To save the completions into our profile simply use
+
+```powershell
+bob complete powershell >> ${env:USERPROFILE}\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1
 ```
 
 ## 🛠️ Troubleshooting

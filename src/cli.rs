@@ -1,6 +1,13 @@
-use crate::{config::Config, handlers::{self, sync_handler, uninstall_handler, rollback_handler, erase_handler, list_handler, InstallResult}};
+use crate::{
+    config::Config,
+    handlers::{
+        self, erase_handler, list_handler, rollback_handler, sync_handler, uninstall_handler,
+        InstallResult,
+    },
+};
 use anyhow::Result;
-use clap::Parser;
+use clap::{CommandFactory, Parser};
+use clap_complete::Shell;
 use reqwest::Client;
 use tracing::info;
 
@@ -46,6 +53,12 @@ enum Cli {
     /// List all installed and used versions
     #[clap(visible_alias = "ls")]
     List,
+
+    /// Generate shell completion
+    Complete {
+        /// Shell to generate completion for
+        shell: Shell,
+    },
 }
 
 pub async fn start(config: Config) -> Result<()> {
@@ -89,6 +102,9 @@ pub async fn start(config: Config) -> Result<()> {
         Cli::Rollback => rollback_handler::start(config).await?,
         Cli::Erase => erase_handler::start(config).await?,
         Cli::List => list_handler::start(config).await?,
+        Cli::Complete { shell } => {
+            clap_complete::generate(shell, &mut Cli::command(), "bob", &mut std::io::stdout())
+        }
     }
 
     Ok(())
