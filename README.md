@@ -168,7 +168,7 @@ Bob's configuration file will have to be in `config_dir/bob/config.json` but can
 
 </details>
 
-### Custom Location {#config-location}
+### <a name="config-location"></a>Custom Location
 
 Bob's config file location can be configured by using an environment variable called `$BOB_CONFIG`.
 Example: `export BOB_CONFIG=/path/to/config/config.json`
