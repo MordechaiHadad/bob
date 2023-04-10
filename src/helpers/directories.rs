@@ -45,6 +45,10 @@ pub fn get_local_data_dir() -> Result<PathBuf> {
 }
 
 pub fn get_config_dir() -> Result<PathBuf> {
+    if let Ok(value) = std::env::var("BOB_CONFIG") {
+        return Ok(PathBuf::from(value));
+    }
+
     let mut home_dir = get_home_dir()?;
 
     if cfg!(windows) {

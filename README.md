@@ -147,7 +147,7 @@ Generate shell completion.
 
 This section is a bit more advanced and thus the user will have to do the work himself since bob doesn't do that.
 
-Bob's configuration file will have to be in `config_dir/bob/config.json`, to be more specific:
+Bob's configuration file will have to be in `config_dir/bob/config.json` but can be customized as seen [below](#config-location), to be more specific:
 
 <details>
 <summary>On Linux</summary>
@@ -167,6 +167,11 @@ Bob's configuration file will have to be in `config_dir/bob/config.json`, to be 
 `/Users/user/Library/Application Support/bob/config.json`
 
 </details>
+
+### Custom Location {#config-location}
+
+Bob's config file location can be configured by using an environment variable called `$BOB_CONFIG`.
+Example: `export BOB_CONFIG=/path/to/config/config.json`
 
 ### Syntax
 
