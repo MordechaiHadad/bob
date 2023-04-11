@@ -7,9 +7,9 @@ use crate::{config::Config, helpers::version::types::UpstreamVersion};
 use anyhow::{anyhow, Result};
 use regex::Regex;
 use reqwest::Client;
-use tracing::info;
 use std::path::PathBuf;
 use tokio::fs;
+use tracing::info;
 
 pub async fn parse_version_type(client: &Client, version: &str) -> Result<ParsedVersion> {
     match version {
@@ -19,21 +19,10 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
             non_parsed_string: version.to_string(),
         }),
         "stable" | "latest" => {
-                info!("Fetching latest version");
-
-                let response = client
-                    .get("https://api.github.com/repos/neovim/neovim/releases?per_page=1")
-                    .header("user-agent", "bob")
-                    .header("Accept", "application/vnd.github.v3+json")
-                    .send()
-                    .await?
-                    .text()
-                    .await?;
-
-                let versions: Vec<UpstreamVersion> = serde_json::from_str(&response)?;
-
+            info!("Fetching latest version");
+            let stable_version = search_stable_version(client).await?;
             Ok(ParsedVersion {
-                tag_name: versions[0].tag_name.clone(),
+                tag_name: stable_version,
                 version_type: VersionType::Latest,
                 non_parsed_string: version.to_string(),
             })
@@ -104,4 +93,26 @@ pub async fn is_version_used(version: &str, config: &Config) -> bool {
         Ok(value) => value.eq(version),
         Err(_) => false,
     }
+}
+
+async fn search_stable_version(client: &Client) -> Result<String> {
+    let response = client
+        .get("https://api.github.com/repos/neovim/neovim/releases?per_page=10")
+        .header("user-agent", "bob")
+        .header("Accept", "application/vnd.github.v3+json")
+        .send()
+        .await?
+        .text()
+        .await?;
+
+    let versions: Vec<UpstreamVersion> = serde_json::from_str(&response)?;
+    let stable_release = versions
+        .iter()
+        .find(|v| v.tag_name == "stable")
+        .ok_or(anyhow!("Cannot find stable release"))?;
+    let stable_pin_release = versions
+        .iter()
+        .find(|v| v.tag_name != "stable" && v.target_commitish == stable_release.target_commitish)
+        .ok_or(anyhow!("Cannot find version of stable release"))?;
+    Ok(stable_pin_release.tag_name.clone())
 }
