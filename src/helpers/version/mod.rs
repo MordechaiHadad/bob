@@ -52,7 +52,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
     }
 }
 
-pub async fn get_sync_version_file_path(config: &Config) -> Result<Option<PathBuf>> {
+pub async fn get_version_sync_file_location(config: &Config) -> Result<Option<PathBuf>> {
     let path = match &config.version_sync_file_location {
         Some(path) => {
             if tokio::fs::metadata(path).await.is_err() {

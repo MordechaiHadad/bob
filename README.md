@@ -109,7 +109,7 @@ Install the specified version, can also be used to update out-of-date nightly ve
 
 - `bob sync`
 
-If Config::sync_version_file_path is set, the version in that file will be parsed and installed.
+If Config::version_sync_file_location is set, the version in that file will be parsed and installed.
 
 ---
 

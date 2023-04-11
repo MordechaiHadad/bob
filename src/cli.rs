@@ -32,7 +32,7 @@ enum Cli {
         version: String,
     },
 
-    /// If Config::sync_version_file_path is set, the version in that file
+    /// If Config::version_sync_file_location is set, the version in that file
     /// will be parsed and installed
     Sync,
 
