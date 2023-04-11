@@ -20,6 +20,7 @@ pub enum VersionType {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UpstreamVersion {
     pub tag_name: String,
+    pub target_commitish: String,
     pub published_at: DateTime<Utc>,
 }
 
