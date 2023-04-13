@@ -8,11 +8,11 @@ use crate::{config::Config, helpers::version};
 use super::use_handler;
 
 pub async fn start(client: &Client, config: Config) -> Result<()> {
-    let sync_version_file_path = version::get_sync_version_file_path(&config)
+    let version_sync_file_location = version::get_version_sync_file_location(&config)
         .await?
-        .ok_or_else(|| anyhow!("sync_version_file_path needs to be set to use bob sync"))?;
+        .ok_or_else(|| anyhow!("version_sync_file_location needs to be set to use bob sync"))?;
 
-    let version = fs::read_to_string(&sync_version_file_path).await?;
+    let version = fs::read_to_string(&version_sync_file_location).await?;
     if version.is_empty() {
         return Err(anyhow!("Sync file is empty"));
     }
@@ -24,7 +24,7 @@ pub async fn start(client: &Client, config: Config) -> Result<()> {
 
     info!(
         "Using version {version} set in {}",
-        sync_version_file_path
+        version_sync_file_location
             .into_os_string()
             .into_string()
             .unwrap()

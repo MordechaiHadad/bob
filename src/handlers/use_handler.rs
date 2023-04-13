@@ -56,16 +56,16 @@ pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
 
     copy_nvim_bob(config).await?;
     fs::write("used", &version.tag_name).await?;
-    if let Some(sync_version_file_path) =
-        helpers::version::get_sync_version_file_path(config).await?
+    if let Some(version_sync_file_location) =
+        helpers::version::get_version_sync_file_location(config).await?
     {
-        // Write the used version to sync_version_file_path only if it's different
-        let stored_version = fs::read_to_string(&sync_version_file_path).await?;
+        // Write the used version to version_sync_file_location only if it's different
+        let stored_version = fs::read_to_string(&version_sync_file_location).await?;
         if stored_version != version.tag_name {
-            fs::write(&sync_version_file_path, &version.tag_name).await?;
+            fs::write(&version_sync_file_location, &version.tag_name).await?;
             info!(
                 "Written version to {}",
-                sync_version_file_path
+                version_sync_file_location
                     .into_os_string()
                     .into_string()
                     .unwrap()
