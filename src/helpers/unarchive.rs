@@ -30,6 +30,7 @@ pub async fn start(file: LocalVersion) -> Result<()> {
 #[cfg(target_family = "windows")]
 fn expand(downloaded_file: LocalVersion) -> Result<()> {
     use zip::ZipArchive;
+    use std::path::Path;
 
     if fs::metadata(&downloaded_file.file_name).is_ok() {
         fs::remove_dir_all(&downloaded_file.file_name)?;
