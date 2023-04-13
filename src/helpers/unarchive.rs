@@ -2,7 +2,6 @@ use anyhow::{anyhow, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::cmp::min;
 use std::fs::File;
-use std::path::Path;
 use std::{fs, io};
 
 use super::version::types::LocalVersion;
@@ -88,7 +87,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
 #[cfg(target_family = "unix")] // I don't know if its worth making both expand functions into one function, but the API difference will cause so much if statements
 fn expand(downloaded_file: LocalVersion) -> Result<()> {
     use flate2::read::GzDecoder;
-    use std::os::unix::fs::PermissionsExt;
+    use std::{os::unix::fs::PermissionsExt, path::PathBuf};
     use tar::Archive;
     use crate::helpers;
 
@@ -127,8 +126,10 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     for file in archive.entries()? {
         match file {
             Ok(mut file) => {
-                let temp = &format!("{}/{}", downloaded_file.file_name, file.path()?.display());
-                let outpath = Path::new(temp);
+                
+                let mut outpath = PathBuf::new();
+                outpath.push(&downloaded_file.file_name);
+                outpath.push(file.path()?.to_str().unwrap());
 
                 let file_name = format!("{}", file.path()?.display()); // file.path()?.is_dir() always returns false... weird
                 if file_name.ends_with('/') {
