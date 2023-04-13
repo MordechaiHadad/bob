@@ -160,7 +160,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     if fs::metadata(format!("{}/nvim-osx64", downloaded_file.file_name)).is_ok() {
         fs::rename(
             format!("{}/nvim-osx64", downloaded_file.file_name),
-            "nvim-macos",
+            format!("{}/nvim-macos", downloaded_file.file_name),
         )?;
     }
     let platform = helpers::get_platform_name();
