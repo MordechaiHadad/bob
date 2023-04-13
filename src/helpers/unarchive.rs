@@ -109,19 +109,20 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
             ))
         }
     };
+    println!("opened file {:?}", file);
     let decompress_stream = GzDecoder::new(file);
     let mut archive = Archive::new(decompress_stream);
 
     let totalsize = 1692; // hard coding this is pretty unwise, but you cant get the length of an archive in tar-rs unlike zip-rs
-    let pb = ProgressBar::new(totalsize);
-    pb.set_style(
-        ProgressStyle::default_bar()
-            .template(
-                "{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len}",
-            )
-            .progress_chars("█  "),
-    );
-    pb.set_message("Expanding archive");
+    // let pb = ProgressBar::new(totalsize);
+    // pb.set_style(
+    //     ProgressStyle::default_bar()
+    //         .template(
+    //             "{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len}",
+    //         )
+    //         .progress_chars("█  "),
+    // );
+    // pb.set_message("Expanding archive");
 
     let mut downloaded: u64 = 0;
     for file in archive.entries()? {
@@ -143,18 +144,19 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
                     }
                     let mut outfile = fs::File::create(outpath)?;
                     io::copy(&mut file, &mut outfile)?;
+                    println!("copied to {:?}",outfile);
                 }
                 let new = min(downloaded + 1, totalsize);
                 downloaded = new;
-                pb.set_position(new);
+                // pb.set_position(new);
             }
             Err(error) => println!("{error}"),
         }
     }
-    pb.finish_with_message(format!(
-        "Finished expanding to {}/{}",
-        downloaded_file.path, downloaded_file.file_name
-    ));
+    // pb.finish_with_message(format!(
+    //     "Finished expanding to {}/{}",
+    //     downloaded_file.path, downloaded_file.file_name
+    // ));
     if fs::metadata(format!("{}/nvim-osx64", downloaded_file.file_name)).is_ok() {
         fs::rename(
             format!("{}/nvim-osx64", downloaded_file.file_name),
