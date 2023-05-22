@@ -20,14 +20,14 @@ pub fn get_home_dir() -> Result<PathBuf> {
 
     if let Ok(value) = std::env::var("SUDO_USER") {
         home_str.push(&value);
-        if fs::metadata(home_str).is_ok() {
+        if fs::metadata(&home_str).is_ok() {
             return Ok(home_str);
         }
     }
 
     if let Ok(value) = std::env::var("USER") {
         home_str.push(&value);
-        if fs::metadata(home_str).is_ok() {
+        if fs::metadata(&home_str).is_ok() {
             return Ok(home_str);
         }
     }
