@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use std::path::PathBuf;
+use std::fs;
 
 use crate::config::Config;
 
@@ -19,12 +20,16 @@ pub fn get_home_dir() -> Result<PathBuf> {
 
     if let Ok(value) = std::env::var("SUDO_USER") {
         home_str.push(&value);
-        return Ok(home_str);
+        if fs::metadata(home_str).is_ok() {
+            return Ok(home_str);
+        }
     }
 
     if let Ok(value) = std::env::var("USER") {
         home_str.push(&value);
-        return Ok(home_str);
+        if fs::metadata(home_str).is_ok() {
+            return Ok(home_str);
+        }
     }
 
     let home_value = std::env::var("HOME")?;
