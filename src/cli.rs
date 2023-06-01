@@ -2,14 +2,14 @@ use crate::{
     config::Config,
     handlers::{
         self, erase_handler, list_handler, rollback_handler, sync_handler, uninstall_handler,
-        InstallResult,
+        update_handler, InstallResult,
     },
 };
 use anyhow::Result;
-use clap::{CommandFactory, Parser};
+use clap::{Args, CommandFactory, Parser};
 use clap_complete::Shell;
 use reqwest::Client;
-use tracing::info;
+use tracing::{error, info};
 
 #[derive(Debug, Parser)]
 #[command(version)]
@@ -59,13 +59,29 @@ enum Cli {
         /// Shell to generate completion for
         shell: Shell,
     },
+
+    Update(Update),
+}
+
+#[derive(Args, Debug)]
+pub struct Update {
+    /// Update specified version
+    #[arg(conflicts_with = "all")]
+    pub version: Option<String>,
+
+    /// Apply the update to all versions
+    #[arg(short, long)]
+    pub all: bool,
 }
 
 pub async fn start(config: Config) -> Result<()> {
     let cli = Cli::parse();
 
     match cli {
-        Cli::Use { version, no_install } => {
+        Cli::Use {
+            version,
+            no_install,
+        } => {
             let client = Client::new();
             let version = super::version::parse_version_type(&client, &version).await?;
 
@@ -104,6 +120,14 @@ pub async fn start(config: Config) -> Result<()> {
         Cli::List => list_handler::start(config).await?,
         Cli::Complete { shell } => {
             clap_complete::generate(shell, &mut Cli::command(), "bob", &mut std::io::stdout())
+        }
+        Cli::Update(data) => {
+            if data.version.is_some() || data.all {
+                let client = Client::new();
+                update_handler::start(data, &client, config).await?;
+            } else {
+                error!("Please provide a version or use the --all flag");
+            }
         }
     }
 

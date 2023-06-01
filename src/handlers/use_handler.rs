@@ -137,7 +137,9 @@ fn add_to_path(installation_dir: &Path) -> Result<()> {
             };
             env.set_value("Path", &new_path)?;
         } else {
-            info!("Make sure to have {installation_dir} in PATH");
+            if !std::env::var("PATH")?.contains("nvim-bin") {
+                info!("Make sure to have {installation_dir} in PATH");
+            }
         }
     }
 
