@@ -143,6 +143,12 @@ Generate shell completion.
 
 ---
 
+- `bob update |nightly|stable|--all|`
+
+Update existing version, can specify either a version or the flag `--all`
+
+---
+
 ## ⚙ Configuration
 
 This section is a bit more advanced and thus the user will have to do the work himself since bob doesn't do that.
