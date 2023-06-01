@@ -60,12 +60,13 @@ enum Cli {
         shell: Shell,
     },
 
+    /// Update existing version
     Update(Update),
 }
 
 #[derive(Args, Debug)]
 pub struct Update {
-    /// Update specified version
+    /// Update specified version |nightly|stable|
     #[arg(conflicts_with = "all")]
     pub version: Option<String>,
 
