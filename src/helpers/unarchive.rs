@@ -17,20 +17,32 @@ pub async fn start(file: LocalVersion) -> Result<()> {
         Ok(_) => (),
         Err(error) => return Err(anyhow!(error)),
     }
-    tokio::fs::remove_file(format!(
-        "{}/{}.{}",
-        file.path, file.file_name, file.file_format
-    ))
-    .await?;
+    // tokio::fs::remove_file(format!(
+    //     "{}/{}.{}",
+    //     file.path, file.file_name, file.file_format
+    // ))
+    // .await?;
     Ok(())
 }
 
-// TODO: Refactor
+#[cfg(target_os = "linux")]
+fn expand(downloaded_file: LocalVersion) -> Result<()> {
+    use std::process::Command;
+    use super::sync;
+
+    if fs::metadata(&downloaded_file.file_name).is_ok() {
+        fs::remove_dir_all(&downloaded_file.file_name)?;
+    }
+
+    print!("hello sexy");
+    sync::handle_subprocess(&mut Command::new(format!("{}.{}", downloaded_file.file_name, downloaded_file.file_format)).arg("--appimage-extract"))?;
+    Ok(())
+}
 
 #[cfg(target_family = "windows")]
 fn expand(downloaded_file: LocalVersion) -> Result<()> {
-    use zip::ZipArchive;
     use std::path::Path;
+    use zip::ZipArchive;
 
     if fs::metadata(&downloaded_file.file_name).is_ok() {
         fs::remove_dir_all(&downloaded_file.file_name)?;
@@ -85,12 +97,12 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     Ok(())
 }
 
-#[cfg(target_family = "unix")] // I don't know if its worth making both expand functions into one function, but the API difference will cause so much if statements
+#[cfg(target_os = "macos")] // I don't know if its worth making both expand functions into one function, but the API difference will cause so much if statements
 fn expand(downloaded_file: LocalVersion) -> Result<()> {
+    use crate::helpers;
     use flate2::read::GzDecoder;
     use std::{os::unix::fs::PermissionsExt, path::PathBuf};
     use tar::Archive;
-    use crate::helpers;
 
     if fs::metadata(&downloaded_file.file_name).is_ok() {
         fs::remove_dir_all(&downloaded_file.file_name)?;
@@ -127,7 +139,6 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     for file in archive.entries()? {
         match file {
             Ok(mut file) => {
-                
                 let mut outpath = PathBuf::new();
                 outpath.push(&downloaded_file.file_name);
                 outpath.push(file.path()?.to_str().unwrap());
