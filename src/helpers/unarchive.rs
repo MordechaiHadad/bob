@@ -31,7 +31,6 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
         fs::remove_dir_all(&downloaded_file.file_name)?;
     }
 
-    print!("hello sexy");
     sync::handle_subprocess(
         &mut Command::new(format!(
             "{}.{}",
