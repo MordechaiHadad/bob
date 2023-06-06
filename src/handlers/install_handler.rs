@@ -340,7 +340,7 @@ async fn handle_building_from_source(
 }
 
 async fn send_request(client: &Client, version: &str) -> Result<reqwest::Response, reqwest::Error> {
-    let platform = helpers::get_platform_name();
+    let platform = helpers::get_platform_name_download();
     let file_type = helpers::get_file_type();
     let request_url = format!(
         "https://github.com/neovim/neovim/releases/download/{version}/{platform}.{file_type}",

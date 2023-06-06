@@ -24,6 +24,16 @@ pub fn get_platform_name() -> &'static str {
     } else if cfg!(target_os = "macos") {
         "nvim-macos"
     } else {
+        "nvim-linux64"
+    }
+}
+
+pub fn get_platform_name_download() -> &'static str {
+    if cfg!(target_os = "windows") {
+        "nvim-win64"
+    } else if cfg!(target_os = "macos") {
+        "nvim-macos"
+    } else {
         "nvim"
     }
 }

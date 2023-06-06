@@ -14,30 +14,45 @@ pub async fn start(file: LocalVersion) -> Result<()> {
         Ok(_) => (),
         Err(error) => return Err(anyhow!(error)),
     }
-    // tokio::fs::remove_file(format!(
-    //     "{}/{}.{}",
-    //     file.path, file.file_name, file.file_format
-    // ))
-    // .await?;
+    tokio::fs::remove_file(format!(
+        "{}/{}.{}",
+        file.path, file.file_name, file.file_format
+    ))
+    .await?;
     Ok(())
 }
 
 #[cfg(target_os = "linux")]
 fn expand(downloaded_file: LocalVersion) -> Result<()> {
     use super::sync;
+    use std::env::set_current_dir;
+    use std::fs::{rename, remove_file};
+    use std::os::unix::fs::PermissionsExt;
     use std::process::Command;
 
     if fs::metadata(&downloaded_file.file_name).is_ok() {
         fs::remove_dir_all(&downloaded_file.file_name)?;
     }
 
-    sync::handle_subprocess(
-        &mut Command::new(format!(
-            "{}.{}",
-            downloaded_file.file_name, downloaded_file.file_format
-        ))
-        .arg("--appimage-extract"),
-    )?;
+    let file = &format!(
+        "./{}.{}",
+        downloaded_file.file_name, downloaded_file.file_format
+    );
+    let mut perms = fs::metadata(file)?.permissions();
+    perms.set_mode(0o551);
+    fs::set_permissions(file, perms)?;
+
+    sync::handle_subprocess(&mut Command::new(file).arg("--appimage-extract"))?;
+
+    rename("squashfs-root", &downloaded_file.file_name)?;
+
+    set_current_dir(downloaded_file.file_name)?;
+
+    for x in ["AppRun", "nvim.desktop", "nvim.png"] {
+        remove_file(x)?;
+    }
+
+    rename("usr", "nvim-linux64")?;
     Ok(())
 }
 
