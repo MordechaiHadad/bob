@@ -63,7 +63,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     use std::fs::File;
     use std::path::Path;
     use zip::ZipArchive;
-    std::io::copy;
+    std::io;
 
     if fs::metadata(&downloaded_file.file_name).is_ok() {
         fs::remove_dir_all(&downloaded_file.file_name)?;
@@ -127,7 +127,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     use std::fs::File;
     use std::{os::unix::fs::PermissionsExt, path::PathBuf};
     use tar::Archive;
-    std::io::copy;
+    std::io;
 
     if fs::metadata(&downloaded_file.file_name).is_ok() {
         fs::remove_dir_all(&downloaded_file.file_name)?;
