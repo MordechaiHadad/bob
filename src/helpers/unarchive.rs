@@ -42,7 +42,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     perms.set_mode(0o551);
     fs::set_permissions(file, perms)?;
 
-    sync::handle_subprocess(&mut Command::new(file).arg("--appimage-extract"))?;
+    sync::handle_subprocess(Command::new(file).arg("--appimage-extract"))?;
 
     rename("squashfs-root", &downloaded_file.file_name)?;
 
@@ -63,6 +63,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     use std::fs::File;
     use std::path::Path;
     use zip::ZipArchive;
+    std::io::copy;
 
     if fs::metadata(&downloaded_file.file_name).is_ok() {
         fs::remove_dir_all(&downloaded_file.file_name)?;
@@ -126,6 +127,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     use std::fs::File;
     use std::{os::unix::fs::PermissionsExt, path::PathBuf};
     use tar::Archive;
+    std::io::copy;
 
     if fs::metadata(&downloaded_file.file_name).is_ok() {
         fs::remove_dir_all(&downloaded_file.file_name)?;
