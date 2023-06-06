@@ -1,8 +1,5 @@
 use anyhow::{anyhow, Result};
-use indicatif::{ProgressBar, ProgressStyle};
-use std::cmp::min;
-use std::fs::File;
-use std::{fs, io};
+use std::fs;
 
 use super::version::types::LocalVersion;
 
@@ -27,20 +24,29 @@ pub async fn start(file: LocalVersion) -> Result<()> {
 
 #[cfg(target_os = "linux")]
 fn expand(downloaded_file: LocalVersion) -> Result<()> {
-    use std::process::Command;
     use super::sync;
+    use std::process::Command;
 
     if fs::metadata(&downloaded_file.file_name).is_ok() {
         fs::remove_dir_all(&downloaded_file.file_name)?;
     }
 
     print!("hello sexy");
-    sync::handle_subprocess(&mut Command::new(format!("{}.{}", downloaded_file.file_name, downloaded_file.file_format)).arg("--appimage-extract"))?;
+    sync::handle_subprocess(
+        &mut Command::new(format!(
+            "{}.{}",
+            downloaded_file.file_name, downloaded_file.file_format
+        ))
+        .arg("--appimage-extract"),
+    )?;
     Ok(())
 }
 
 #[cfg(target_family = "windows")]
 fn expand(downloaded_file: LocalVersion) -> Result<()> {
+    use indicatif::{ProgressBar, ProgressStyle};
+    use std::cmp::min;
+    use std::fs::File;
     use std::path::Path;
     use zip::ZipArchive;
 
@@ -101,6 +107,9 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
 fn expand(downloaded_file: LocalVersion) -> Result<()> {
     use crate::helpers;
     use flate2::read::GzDecoder;
+    use indicatif::{ProgressBar, ProgressStyle};
+    use std::cmp::min;
+    use std::fs::File;
     use std::{os::unix::fs::PermissionsExt, path::PathBuf};
     use tar::Archive;
 
