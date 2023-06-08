@@ -26,7 +26,7 @@ pub async fn start(file: LocalVersion) -> Result<()> {
 fn expand(downloaded_file: LocalVersion) -> Result<()> {
     use super::sync;
     use std::env::set_current_dir;
-    use std::fs::{rename, remove_file};
+    use std::fs::{remove_file, rename};
     use std::os::unix::fs::PermissionsExt;
     use std::process::Command;
 
@@ -48,11 +48,15 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
 
     set_current_dir(downloaded_file.file_name)?;
 
-    for x in ["AppRun", "nvim.desktop", "nvim.png"] {
+    for x in ["AppRun", "nvim.desktop", "nvim.png", ".DirIcon"] {
         remove_file(x)?;
     }
 
     rename("usr", "nvim-linux64")?;
+
+    let parent_dir = std::env::current_dir()?.parent().unwrap().to_path_buf();
+    std::env::set_current_dir(parent_dir)?;
+
     Ok(())
 }
 
@@ -61,9 +65,9 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     use indicatif::{ProgressBar, ProgressStyle};
     use std::cmp::min;
     use std::fs::File;
+    use std::io;
     use std::path::Path;
     use zip::ZipArchive;
-    use std::io;
 
     if fs::metadata(&downloaded_file.file_name).is_ok() {
         fs::remove_dir_all(&downloaded_file.file_name)?;
@@ -125,9 +129,9 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     use indicatif::{ProgressBar, ProgressStyle};
     use std::cmp::min;
     use std::fs::File;
+    use std::io;
     use std::{os::unix::fs::PermissionsExt, path::PathBuf};
     use tar::Archive;
-    use std::io;
 
     if fs::metadata(&downloaded_file.file_name).is_ok() {
         fs::remove_dir_all(&downloaded_file.file_name)?;
