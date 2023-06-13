@@ -1,7 +1,7 @@
 [package]
 name = "bob-nvim"
 edition = "2021"
-version = "2.3.3"
+version = "2.4.0"
 description = "A version manager for neovim"
 readme = "README.md"
 keywords = ["neovim", "version-manager"]
@@ -71,7 +71,7 @@ optional = false
 version = "0.2"
 optional = false
 
-[target."cfg(unix)".dependencies]
+[target.'cfg(target_os = "macos")'.dependencies]
 flate2 = "1.0"
 tar = "0.4"
 
