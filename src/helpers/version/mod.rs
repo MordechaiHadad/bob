@@ -4,11 +4,14 @@ pub mod types;
 use self::types::{ParsedVersion, VersionType};
 use super::directories;
 use crate::{config::Config, helpers::version::types::UpstreamVersion};
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use regex::Regex;
 use reqwest::Client;
-use std::path::PathBuf;
-use tokio::fs;
+use std::path::{Path, PathBuf};
+use tokio::{
+    fs::{self, File},
+    io::AsyncWriteExt,
+};
 use tracing::info;
 
 pub async fn parse_version_type(client: &Client, version: &str) -> Result<ParsedVersion> {
@@ -55,8 +58,10 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
 pub async fn get_version_sync_file_location(config: &Config) -> Result<Option<PathBuf>> {
     let path = match &config.version_sync_file_location {
         Some(path) => {
+            let path = Path::new(path);
             if tokio::fs::metadata(path).await.is_err() {
-                fs::write(path, b"").await?;
+                let mut file = File::create(path).await.context(format!("The path provided, \"{}\", does not exist. Please check the path and try again.", path.parent().unwrap().display()))?;
+                file.write_all(b"").await?;
             }
             Some(PathBuf::from(path))
         }
