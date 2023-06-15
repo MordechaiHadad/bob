@@ -1,8 +1,5 @@
 use anyhow::{anyhow, Result};
-use indicatif::{ProgressBar, ProgressStyle};
-use std::cmp::min;
-use std::fs::File;
-use std::{fs, io};
+use std::fs;
 
 use super::version::types::LocalVersion;
 
@@ -25,12 +22,52 @@ pub async fn start(file: LocalVersion) -> Result<()> {
     Ok(())
 }
 
-// TODO: Refactor
+#[cfg(target_os = "linux")]
+fn expand(downloaded_file: LocalVersion) -> Result<()> {
+    use super::sync;
+    use std::env::set_current_dir;
+    use std::fs::{remove_file, rename};
+    use std::os::unix::fs::PermissionsExt;
+    use std::process::Command;
+
+    if fs::metadata(&downloaded_file.file_name).is_ok() {
+        fs::remove_dir_all(&downloaded_file.file_name)?;
+    }
+
+    let file = &format!(
+        "./{}.{}",
+        downloaded_file.file_name, downloaded_file.file_format
+    );
+    let mut perms = fs::metadata(file)?.permissions();
+    perms.set_mode(0o551);
+    fs::set_permissions(file, perms)?;
+
+    sync::handle_subprocess(Command::new(file).arg("--appimage-extract"))?;
+
+    rename("squashfs-root", &downloaded_file.file_name)?;
+
+    set_current_dir(downloaded_file.file_name)?;
+
+    for x in ["AppRun", "nvim.desktop", "nvim.png", ".DirIcon"] {
+        remove_file(x)?;
+    }
+
+    rename("usr", "nvim-linux64")?;
+
+    let parent_dir = std::env::current_dir()?.parent().unwrap().to_path_buf();
+    std::env::set_current_dir(parent_dir)?;
+
+    Ok(())
+}
 
 #[cfg(target_family = "windows")]
 fn expand(downloaded_file: LocalVersion) -> Result<()> {
-    use zip::ZipArchive;
+    use indicatif::{ProgressBar, ProgressStyle};
+    use std::cmp::min;
+    use std::fs::File;
+    use std::io;
     use std::path::Path;
+    use zip::ZipArchive;
 
     if fs::metadata(&downloaded_file.file_name).is_ok() {
         fs::remove_dir_all(&downloaded_file.file_name)?;
@@ -85,12 +122,16 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     Ok(())
 }
 
-#[cfg(target_family = "unix")] // I don't know if its worth making both expand functions into one function, but the API difference will cause so much if statements
+#[cfg(target_os = "macos")] // I don't know if its worth making both expand functions into one function, but the API difference will cause so much if statements
 fn expand(downloaded_file: LocalVersion) -> Result<()> {
+    use crate::helpers;
     use flate2::read::GzDecoder;
+    use indicatif::{ProgressBar, ProgressStyle};
+    use std::cmp::min;
+    use std::fs::File;
+    use std::io;
     use std::{os::unix::fs::PermissionsExt, path::PathBuf};
     use tar::Archive;
-    use crate::helpers;
 
     if fs::metadata(&downloaded_file.file_name).is_ok() {
         fs::remove_dir_all(&downloaded_file.file_name)?;
@@ -127,7 +168,6 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     for file in archive.entries()? {
         match file {
             Ok(mut file) => {
-                
                 let mut outpath = PathBuf::new();
                 outpath.push(&downloaded_file.file_name);
                 outpath.push(file.path()?.to_str().unwrap());

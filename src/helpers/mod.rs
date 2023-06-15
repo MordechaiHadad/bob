@@ -2,6 +2,7 @@ pub mod filesystem;
 pub mod directories;
 pub mod version;
 pub mod unarchive;
+pub mod sync;
 
 use anyhow::{anyhow, Result};
 use tokio::process::Command;
@@ -10,8 +11,10 @@ use tokio::process::Command;
 pub fn get_file_type() -> &'static str {
     if cfg!(target_family = "windows") {
         "zip"
-    } else {
+    } else if cfg!(target_os = "macos") {
         "tar.gz"
+    } else {
+        "appimage"
     }
 }
 
@@ -22,6 +25,16 @@ pub fn get_platform_name() -> &'static str {
         "nvim-macos"
     } else {
         "nvim-linux64"
+    }
+}
+
+pub fn get_platform_name_download() -> &'static str {
+    if cfg!(target_os = "windows") {
+        "nvim-win64"
+    } else if cfg!(target_os = "macos") {
+        "nvim-macos"
+    } else {
+        "nvim"
     }
 }
 

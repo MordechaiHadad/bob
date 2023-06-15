@@ -9,6 +9,7 @@ use reqwest::Client;
 use std::cmp::min;
 use std::env;
 use std::path::Path;
+use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::{fs, process::Command};
 use tracing::info;
@@ -69,7 +70,9 @@ pub async fn start(
     if let VersionType::Nightly = version.version_type {
         if let Some(nightly_version) = nightly_version {
             let nightly_string = serde_json::to_string(&nightly_version)?;
-            match fs::write("nightly/bob.json", nightly_string).await {
+
+            let mut json_file = File::create("./nightly/bob.json").await?;
+            match json_file.write_all(nightly_string.as_bytes()).await {
                 Ok(_) => (),
                 Err(error) => {
                     return Err(anyhow!(
@@ -340,7 +343,7 @@ async fn handle_building_from_source(
 }
 
 async fn send_request(client: &Client, version: &str) -> Result<reqwest::Response, reqwest::Error> {
-    let platform = helpers::get_platform_name();
+    let platform = helpers::get_platform_name_download();
     let file_type = helpers::get_file_type();
     let request_url = format!(
         "https://github.com/neovim/neovim/releases/download/{version}/{platform}.{file_type}",
