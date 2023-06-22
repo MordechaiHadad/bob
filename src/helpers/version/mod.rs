@@ -44,8 +44,9 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                     non_parsed_string: version.to_string(),
                 });
             } else if hash_regex.is_match(version) {
+
                 return Ok(ParsedVersion {
-                    tag_name: version.to_string(),
+                    tag_name: version.to_string().chars().take(7).collect(),
                     version_type: VersionType::Hash,
                     non_parsed_string: version.to_string(),
                 });
