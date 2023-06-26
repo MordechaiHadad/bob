@@ -32,9 +32,14 @@ Make sure you don't have Neovim already installed via other ways e.g. a package 
 
 ### Build prerequisites
 
+- `openssl` if built with `native-tls` flag (Linux only at the moment)
+
 #### Building bob
 
 Make sure [rustup](https://www.rust-lang.org/tools/install) is installed.
+
+> `bob` can be built with either `rustls-tls` (default) or `native-tls`.
+> This can be configured using feature flags at build/install time.
 
 #### Building Neovim
 
@@ -68,7 +73,7 @@ For further information refer to the [Neovim wiki](https://github.com/neovim/neo
 
 ### Install from releases
 
-1. Download `bob-{platform}-x86_64.zip`
+1. Download `bob-{platform}-x86_64[-native_tls].zip`
 2. Unzip it
 3. Run it with `bob`
 
