@@ -82,7 +82,7 @@ For further information refer to the [Neovim wiki](https://github.com/neovim/neo
 For the standard version:
 
 1. `cargo install --git https://github.com/MordechaiHadad/bob.git`
-2. Run bob with `bob`
+2. Run Bob with `bob`
 
 For the OpenSSL version:
 
