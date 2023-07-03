@@ -1,0 +1,98 @@
+name: Build with `native-tls`
+on: [push, pull_request]
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install OpenSSL libraries
+        run: sudo apt update && sudo apt install libssl-dev
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - name: Build Bob
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --locked --profile optimized --no-default-features --features native-tls
+      - name: Check lints
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --verbose -- -D warnings
+      - name: Upload Bob Linux binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: "bob-linux-x86_64-openssl"
+          path: "target/optimized/bob"
+          if-no-files-found: error
+          retention-days: 7
+  
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - name: Build Bob
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --locked --profile optimized --no-default-features --features native-tls
+      - name: Check lints
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --verbose -- -D warnings
+      - name: Upload Bob MacOS binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: "bob-macos-x86_64-openssl"
+          path: "target/optimized/bob"
+          if-no-files-found: error
+          retention-days: 7
+
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - name: Build Bob
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --locked --profile optimized --no-default-features --features native-tls
+      - name: Check lints
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --verbose -- -D warnings
+      - name: Setup Bob build directory
+        run: |
+          mkdir build
+          copy .\\bin\\vcruntime140.dll .\\build
+          copy .\\target\\optimized\\bob.exe .\\build
+      - name: Upload Bob Windows build
+        uses: actions/upload-artifact@v2
+        with:
+          name: "bob-windows-x86_64-openssl"
+          path: "build"
+          if-no-files-found: error
+          retention-days: 7

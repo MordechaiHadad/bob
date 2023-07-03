@@ -9,6 +9,11 @@ categories = ["command-line-utilities"]
 license = "MIT"
 repository = "https://github.com/MordechaiHadad/bob"
 
+[features]
+default = ["rustls-tls"]
+native-tls = ["reqwest/default-tls"]
+rustls-tls = ["reqwest/rustls-tls"]
+
 [dependencies]
 anyhow = "1.0.52"
 cfg-if = "1.0"
