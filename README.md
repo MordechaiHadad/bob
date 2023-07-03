@@ -30,16 +30,11 @@ Bob is a cross-platform and easy-to-use Neovim version manager, allowing for eas
 
 Make sure you don't have Neovim already installed via other ways e.g. a package manager.
 
-### Build prerequisites
-
-- `openssl` if built with `native-tls` flag (Linux only at the moment)
-
 #### Building bob
 
 Make sure [rustup](https://www.rust-lang.org/tools/install) is installed.
 
-> `bob` can be built with either `rustls-tls` (default) or `native-tls`.
-> This can be configured using feature flags at build/install time.
+(Optional) `openssl` if built with `native-tls` flag
 
 #### Building Neovim
 
@@ -73,7 +68,7 @@ For further information refer to the [Neovim wiki](https://github.com/neovim/neo
 
 ### Install from releases
 
-1. Download `bob-{platform}-x86_64[-native_tls].zip`
+1. Download the bob release suitable for your platform: either `bob-{platform}-x86_64.zip` for the standard version or `bob-{platform}-x86_64-openssl.zip` for the OpenSSL version.
 2. Unzip it
 3. Run it with `bob`
 
@@ -84,8 +79,15 @@ For further information refer to the [Neovim wiki](https://github.com/neovim/neo
 
 ### Install from source
 
+For the standard version:
+
 1. `cargo install --git https://github.com/MordechaiHadad/bob.git`
 2. Run bob with `bob`
+
+For the OpenSSL version:
+
+1. To install, include the `--no-default-features --features native-tls` flags with your command:  `cargo install --git https://github.com/MordechaiHadad/bob.git --no-default-features --features native-tls`
+2. Run Bob with `bob`
 
 ### Install from crates.io
 
