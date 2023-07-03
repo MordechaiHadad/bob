@@ -34,7 +34,7 @@ Make sure you don't have Neovim already installed via other ways e.g. a package 
 
 Make sure [rustup](https://www.rust-lang.org/tools/install) is installed.
 
-(Optional) `openssl` if built with `native-tls` flag
+(Optional) `openssl` if built with `native-tls` feature.
 
 #### Building Neovim
 
