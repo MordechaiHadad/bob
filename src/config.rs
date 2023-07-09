@@ -18,7 +18,7 @@ pub async fn handle_config() -> Result<Config> {
     let config = match fs::read_to_string(config_file).await {
         Ok(config) => {
             let mut config: Config = serde_json::from_str(&config)?;
-            handle_envars(&mut config)?;
+            handle_envars(&mut config);
             config
         }
         Err(_) => Config {
@@ -33,32 +33,24 @@ pub async fn handle_config() -> Result<Config> {
     Ok(config)
 }
 
-fn handle_envars(config: &mut Config) -> Result<()> {
+fn handle_envars(config: &mut Config) {
     let re = Regex::new(r"\$([A-Z_]+)").unwrap();
 
-    handle_envar(&mut config.downloads_location, &re)?;
+    handle_envar(&mut config.downloads_location, &re);
 
-    handle_envar(&mut config.installation_location, &re)?;
+    handle_envar(&mut config.installation_location, &re);
 
-    handle_envar(&mut config.version_sync_file_location, &re)?;
-
-    Ok(())
+    handle_envar(&mut config.version_sync_file_location, &re);
 }
 
-fn handle_envar(item: &mut Option<String>, re: &Regex) -> Result<()> {
-    let value = if let Some(value) = item.as_ref() {
-        value
-    } else {
-        return Ok(());
-    };
+fn handle_envar(item: &mut Option<String>, re: &Regex) {
+    let Some(value) = item.as_ref() else { return };
 
     if re.is_match(value) {
         let extract = re.captures(value).unwrap().get(1).unwrap().as_str();
         let var =
             env::var(extract).unwrap_or(format!("Couldn't find {extract} environment variable"));
 
-        *item = Some(value.replace(&format!("${extract}"), &var))
+        *item = Some(value.replace(&format!("${extract}"), &var));
     }
-
-    Ok(())
 }

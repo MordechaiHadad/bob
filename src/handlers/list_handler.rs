@@ -3,8 +3,10 @@ use regex::Regex;
 use std::fs;
 use yansi::Paint;
 
-use crate::{config::Config, helpers::{directories, self, version::nightly::produce_nightly_vec}};
-
+use crate::{
+    config::Config,
+    helpers::{self, directories, version::nightly::produce_nightly_vec},
+};
 
 pub async fn start(config: Config) -> Result<()> {
     let downloads_dir = directories::get_downloads_directory(&config).await?;

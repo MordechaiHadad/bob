@@ -47,7 +47,7 @@ pub async fn start(config: Config) -> Result<()> {
                 &ParsedVersion {
                     tag_name: name_list[i].clone(),
                     version_type: crate::helpers::version::types::VersionType::Normal,
-                    non_parsed_string: "".to_string()
+                    non_parsed_string: String::new(),
                 },
             )
             .await?;
@@ -67,7 +67,7 @@ pub async fn start(config: Config) -> Result<()> {
 
             let now = Utc::now();
             let since = now.signed_duration_since(find.data.published_at);
-            let humanized = humanize_duration(since)?;
+            let humanized = humanize_duration(since);
             info!(
                 "Successfully rolled back to version '{}' from {} ago",
                 name_list[i], humanized
@@ -79,7 +79,7 @@ pub async fn start(config: Config) -> Result<()> {
     Ok(())
 }
 
-fn humanize_duration(duration: Duration) -> Result<String> {
+fn humanize_duration(duration: Duration) -> String {
     let mut humanized_duration = String::new();
 
     let total_hours = duration.num_hours();
@@ -117,5 +117,5 @@ fn humanize_duration(duration: Duration) -> Result<String> {
         humanized_duration += &format!("{} hour{}", hours, if hours > 1 { "s" } else { "" });
     }
 
-    Ok(humanized_duration)
+    humanized_duration
 }

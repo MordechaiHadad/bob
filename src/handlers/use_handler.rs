@@ -27,11 +27,9 @@ pub async fn start(
     if install {
         match install_handler::start(&mut version, client, &config).await {
             Ok(success) => {
-                if let InstallResult::NightlyIsUpdated = success {
-                    if is_version_used {
-                        info!("Nightly is already updated and used!");
-                        return Ok(());
-                    }
+                if is_version_used && success == InstallResult::NightlyIsUpdated {
+                    info!("Nightly is already updated and used!");
+                    return Ok(());
                 }
             }
             Err(error) => return Err(error),
@@ -40,10 +38,8 @@ pub async fn start(
 
     switch(&config, &version).await?;
 
-    if let VersionType::Latest = version.version_type {
-        if fs::metadata("stable").await.is_ok() {
-            fs::remove_dir_all("stable").await?;
-        }
+    if version.version_type == VersionType::Latest && fs::metadata("stable").await.is_ok() {
+        fs::remove_dir_all("stable").await?;
     }
 
     info!("You can now use {}!", version.tag_name);

@@ -120,7 +120,7 @@ pub async fn start(config: Config) -> Result<()> {
         Cli::Erase => erase_handler::start(config).await?,
         Cli::List => list_handler::start(config).await?,
         Cli::Complete { shell } => {
-            clap_complete::generate(shell, &mut Cli::command(), "bob", &mut std::io::stdout())
+            clap_complete::generate(shell, &mut Cli::command(), "bob", &mut std::io::stdout());
         }
         Cli::Update(data) => {
             if data.version.is_some() || data.all {

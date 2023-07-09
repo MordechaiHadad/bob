@@ -54,20 +54,20 @@ pub async fn start(
 
         match config.enable_nightly_info {
             Some(boolean) if boolean => {
-                print_commits(client, &local_nightly, upstream_nightly).await?
+                print_commits(client, &local_nightly, upstream_nightly).await?;
             }
             None => print_commits(client, &local_nightly, upstream_nightly).await?,
-            _ => (),
+            _ => {}
         }
     }
 
     let downloaded_file = download_version(client, version, root, config).await?;
 
     if let PostDownloadVersionType::Standard(downloaded_file) = downloaded_file {
-        unarchive::start(downloaded_file).await?
+        unarchive::start(downloaded_file).await?;
     }
 
-    if let VersionType::Nightly = version.version_type {
+    if version.version_type == VersionType::Nightly {
         if let Some(nightly_version) = nightly_version {
             let nightly_string = serde_json::to_string(&nightly_version)?;
 
@@ -210,7 +210,7 @@ async fn download_version(
                         ));
 
                         Ok(PostDownloadVersionType::Standard(LocalVersion {
-                            file_name: version.tag_name.to_owned(),
+                            file_name: version.tag_name.clone(),
                             file_format: file_type.to_string(),
                             path: root.display().to_string(),
                         }))
@@ -287,9 +287,8 @@ async fn handle_building_from_source(
         (child, false)
     } else {
         env::set_current_dir("neovim-git")?; // cd into neovim-git
-        let child = match Command::new("git").arg("pull").spawn() {
-            Ok(value) => value,
-            Err(_) => return Err(anyhow!("Failed to pull upstream updates")),
+        let Ok(child) = Command::new("git").arg("pull").spawn() else {
+            return Err(anyhow!("Failed to pull upstream updates"));
         };
         (child, true)
     };

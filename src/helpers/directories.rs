@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
-use std::path::PathBuf;
 use std::fs;
+use std::path::PathBuf;
 
 use crate::config::Config;
 
@@ -15,7 +15,7 @@ pub fn get_home_dir() -> Result<PathBuf> {
     if cfg!(target_os = "macos") {
         home_str.push("/Users/");
     } else {
-        home_str.push("/home/")
+        home_str.push("/home/");
     };
 
     if let Ok(value) = std::env::var("SUDO_USER") {

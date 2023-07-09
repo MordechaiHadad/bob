@@ -44,7 +44,6 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                     non_parsed_string: version.to_string(),
                 });
             } else if hash_regex.is_match(version) {
-
                 return Ok(ParsedVersion {
                     tag_name: version.to_string().chars().take(7).collect(),
                     version_type: VersionType::Hash,
@@ -78,9 +77,7 @@ pub async fn is_version_installed(version: &str, config: &Config) -> Result<bool
 
     while let Some(directory) = dir.next_entry().await? {
         let name = directory.file_name().to_str().unwrap().to_owned();
-        if !version.contains(&name) {
-            continue;
-        } else {
+        if version.contains(&name) {
             return Ok(true);
         }
     }
