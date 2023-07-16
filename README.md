@@ -191,6 +191,7 @@ Example: `export BOB_CONFIG=/path/to/config/config.json`
 | Property                       | Description                                                                                                                                                    | Default Value                                                                                                 |
 | -------------------------------| ---------------------------------------------------------------------------------------------------------------------------------------------------------------| --------------------------------------------------------------------------------------------------------------|
 | **enable_nightly_info**        | Will show new commits associated with new nightly release if enabled                                                                                           | `true`                                                                                                        |
+| **enable_release_build**       | Compile neovim nightly or a certain hash version as a release build (slightly improved performance, no debug info)                                        | `false`                                                                                                       |
 | **downloads_location**         | The folder in which neovim versions will be downloaded to, bob will error if this option is specified but the folder doesn't exist                             | unix: `/home/<username>/.local/share/bob`, windows: `C:\Users\<username>\AppData\Local\bob`                   |
 | **installation_location**      | The path in which the proxied neovim installation will be located in                                                                                           | unix: `/home/<username>/.local/share/bob/nvim-bin`, windows: `C:\Users\<username>\AppData\Local\bob\nvim-bin` |
 | **version_sync_file_location** | The path to a file that will hold the neovim version string, useful for config version tracking, bob will error if the specified file is not a valid file path | `Disabled by default`                                                                                         |
@@ -203,6 +204,7 @@ Example: `export BOB_CONFIG=/path/to/config/config.json`
 // /home/user/.config/bob/config.json
 {
   "enable_nightly_info": true, // Will show new commits associated with new nightly release if enabled
+  "enable_release_build": false, // Compile neovim nightly or a certain hash version as a release build (slightly improved performance, no debug info)
   "downloads_location": "$HOME/.local/share/bob", // The folder in which neovim versions will be installed too, bob will error if this option is specified but the folder doesn't exist
   "installation_location": "/home/user/.local/share/bob/nvim-bin", // The path in which the used neovim version will be located in
   "version_sync_file_location": "/home/user/.config/nvim/nvim.version", // The path to a file that will hold the neovim version string, useful for config version tracking, bob will error if the specified file is not a valid file path

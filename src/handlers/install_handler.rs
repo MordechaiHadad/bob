@@ -61,7 +61,17 @@ pub async fn start(
         }
     }
 
-    let downloaded_file = download_version(client, version, root, config).await?;
+    let downloaded_file = match version.version_type {
+        VersionType::Normal | VersionType::Latest => download_version(client, version, root, config).await,
+        VersionType::Nightly => {
+            if config.enable_release_build == Some(true) {
+                handle_building_from_source(version, config).await
+            } else {
+                download_version(client, version, root, config).await
+            }
+        }
+        VersionType::Hash => handle_building_from_source(version, config).await,
+    }?;
 
     if let PostDownloadVersionType::Standard(downloaded_file) = downloaded_file {
         unarchive::start(downloaded_file).await?
@@ -335,7 +345,15 @@ async fn handle_building_from_source(
                 "CMAKE_INSTALL_PREFIX={}",
                 downloads_location.to_string_lossy()
             );
-            handle_subprocess(Command::new("make").arg(&location_arg).arg("CMAKE_BUILD_TYPE=RelWithDebInfo")).await?;
+
+            let build_type = match config.enable_release_build {
+                Some(true) => "Release",
+                _ => "RelWithDebInfo",
+            };
+
+            let build_arg = format!("CMAKE_BUILD_TYPE={}", build_type);
+
+            handle_subprocess(Command::new("make").arg(&location_arg).arg(&build_arg)).await?;
             handle_subprocess(Command::new("make").arg("install")).await?;
         }
     }
