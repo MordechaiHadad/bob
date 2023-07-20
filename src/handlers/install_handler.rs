@@ -172,7 +172,7 @@ async fn download_version(
 ) -> Result<PostDownloadVersionType> {
     match version.version_type {
         VersionType::Normal | VersionType::Nightly | VersionType::Latest => {
-            let response = send_request(client, &version.tag_name).await;
+            let response = send_request(client, config, &version.tag_name).await;
 
             match response {
                 Ok(response) => {
@@ -342,12 +342,19 @@ async fn handle_building_from_source(
     Ok(PostDownloadVersionType::Hash)
 }
 
-async fn send_request(client: &Client, version: &str) -> Result<reqwest::Response, reqwest::Error> {
+async fn send_request(
+    client: &Client,
+    config: &Config,
+    version: &str,
+) -> Result<reqwest::Response, reqwest::Error> {
     let platform = helpers::get_platform_name_download();
     let file_type = helpers::get_file_type();
-    let request_url = format!(
-        "https://github.com/neovim/neovim/releases/download/{version}/{platform}.{file_type}",
-    );
+    let url = match &config.github_mirror {
+        Some(val) => val.to_string(),
+        None => "https://github.com".to_string(),
+    };
+    let request_url =
+        format!("{url}/neovim/neovim/releases/download/{version}/{platform}.{file_type}",);
 
     client
         .get(request_url)
