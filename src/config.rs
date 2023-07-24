@@ -10,6 +10,7 @@ pub struct Config {
     pub downloads_location: Option<String>,
     pub installation_location: Option<String>,
     pub version_sync_file_location: Option<String>,
+    pub github_mirror: Option<String>,
     pub rollback_limit: Option<u8>,
 }
 
@@ -26,6 +27,7 @@ pub async fn handle_config() -> Result<Config> {
             downloads_location: None,
             installation_location: None,
             version_sync_file_location: None,
+            github_mirror: None,
             rollback_limit: None,
         },
     };
@@ -37,6 +39,8 @@ fn handle_envars(config: &mut Config) -> Result<()> {
     let re = Regex::new(r"\$([A-Z_]+)").unwrap();
 
     handle_envar(&mut config.downloads_location, &re)?;
+
+    handle_envar(&mut config.github_mirror, &re)?;
 
     handle_envar(&mut config.installation_location, &re)?;
 
