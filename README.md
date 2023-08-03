@@ -195,7 +195,7 @@ Example: `export BOB_CONFIG=/path/to/config/config.json`
 | **installation_location**      | The path in which the proxied neovim installation will be located in                                                                                           | unix: `/home/<username>/.local/share/bob/nvim-bin`, windows: `C:\Users\<username>\AppData\Local\bob\nvim-bin` |
 | **version_sync_file_location** | The path to a file that will hold the neovim version string, useful for config version tracking, bob will error if the specified file is not a valid file path | `Disabled by default`                                                                                         |
 | **rollback_limit**             | The amount of rollbacks before bob starts to delete older ones, can be up to 255                                                                               | `3`                                                                                                           |
-| **github_mirror**              | Specify the github mirror to use instead of github.com, example: `ghproxy.com`                                                                                 | `Disabled by default`                                                                                         |
+| **github_mirror**              | Specify the github mirror to use instead of `https://github.com`, example: `https://ghproxy.com`                                                                                 | `Disabled by default`                                                                                         |
 
 ### Example 
 
@@ -206,7 +206,8 @@ Example: `export BOB_CONFIG=/path/to/config/config.json`
   "downloads_location": "$HOME/.local/share/bob", // The folder in which neovim versions will be installed too, bob will error if this option is specified but the folder doesn't exist
   "installation_location": "/home/user/.local/share/bob/nvim-bin", // The path in which the used neovim version will be located in
   "version_sync_file_location": "/home/user/.config/nvim/nvim.version", // The path to a file that will hold the neovim version string, useful for config version tracking, bob will error if the specified file is not a valid file path
-  "rollback_limit": 3 // The amount of rollbacks before bob starts to delete older ones, can be up to 225
+  "rollback_limit": 3, // The amount of rollbacks before bob starts to delete older ones, can be up to 225
+  "github_mirror": "https://github.com" // github or github mirror
 }
 ```
 
@@ -307,7 +308,6 @@ This error can be caused when `secure_path` is enabled in `/etc/sudoers` like in
 3. set `$SUDO_USER` to location of bob nvim binary: `SUDO_EDITOR='/home/user/.local/share/bob/nvim-bin/nvim`
 
 These workarounds were devised by @nfejzic, thanks to him.
-
 
 ## :heart: Credits And Inspiration
 
