@@ -76,13 +76,11 @@ pub async fn start(
             downloads_dir.push("nightly");
             downloads_dir.push("bob.json");
             let mut json_file = File::create(downloads_dir).await?;
-            match json_file.write_all(nightly_string.as_bytes()).await {
-                Ok(_) => (),
-                Err(error) => {
-                    return Err(anyhow!(
-                        "Failed to create file nightly/bob.json, reason: {error}"
-                    ))
-                }
+
+            if let Err(error) = json_file.write_all(nightly_string.as_bytes()).await {
+                return Err(anyhow!(
+                    "Failed to create file nightly/bob.json, reason: {error}"
+                ));
             }
         }
     }
