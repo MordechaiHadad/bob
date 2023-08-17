@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::helpers::directories::get_downloads_directory;
 use crate::helpers::version::nightly::{get_commits_for_nightly, produce_nightly_vec};
 use crate::helpers::version::types::{LocalVersion, ParsedVersion, UpstreamVersion, VersionType};
 use crate::helpers::{self, directories, filesystem, handle_subprocess, unarchive};
@@ -71,14 +72,15 @@ pub async fn start(
         if let Some(nightly_version) = nightly_version {
             let nightly_string = serde_json::to_string(&nightly_version)?;
 
-            let mut json_file = File::create("./nightly/bob.json").await?;
-            match json_file.write_all(nightly_string.as_bytes()).await {
-                Ok(_) => (),
-                Err(error) => {
-                    return Err(anyhow!(
-                        "Failed to create file nightly/bob.json, reason: {error}"
-                    ))
-                }
+            let mut downloads_dir = get_downloads_directory(config).await?;
+            downloads_dir.push("nightly");
+            downloads_dir.push("bob.json");
+            let mut json_file = File::create(downloads_dir).await?;
+
+            if let Err(error) = json_file.write_all(nightly_string.as_bytes()).await {
+                return Err(anyhow!(
+                    "Failed to create file nightly/bob.json, reason: {error}"
+                ));
             }
         }
     }
