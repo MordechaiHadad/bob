@@ -7,6 +7,7 @@ use tokio::fs;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     pub enable_nightly_info: Option<bool>,
+    pub enable_release_build: Option<bool>,
     pub downloads_location: Option<String>,
     pub installation_location: Option<String>,
     pub version_sync_file_location: Option<String>,
@@ -24,6 +25,7 @@ pub async fn handle_config() -> Result<Config> {
         }
         Err(_) => Config {
             enable_nightly_info: None,
+            enable_release_build: None,
             downloads_location: None,
             installation_location: None,
             version_sync_file_location: None,
