@@ -72,9 +72,9 @@ For further information refer to the [Neovim wiki](https://github.com/neovim/neo
 2. Unzip it
 3. Run it with `bob`
 
-### Install from AUR
+### Install with pacman
 
-1. Install the [`bob`](https://aur.archlinux.org/packages/bob) or [`bob-bin`](https://aur.archlinux.org/packages/bob-bin) package with an AUR helper e.g. [paru](https://github.com/Morganamilo/paru): `paru -S bob`
+1. On Arch Linux, you can install `bob` from the [extra repository](https://archlinux.org/packages/extra/x86_64/bob/) using pacman: `pacman -S bob`
 2. Run it with `bob`
 
 ### Install from source
