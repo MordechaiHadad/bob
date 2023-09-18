@@ -288,6 +288,8 @@ async fn handle_building_from_source(
             }
         }
     }
+
+    // create neovim-git if it does not exist
     let dirname = "neovim-git";
     if let Err(error) = fs::metadata(dirname).await {
         match error.kind() {
@@ -298,8 +300,9 @@ async fn handle_building_from_source(
         }
     }
 
-    env::set_current_dir(dirname)?;
+    env::set_current_dir(dirname)?; // cd into neovim-git
 
+    // check if repo is initialized
     if let Err(error) = fs::metadata(".git").await {
         match error.kind() {
             std::io::ErrorKind::NotFound => {
@@ -309,6 +312,8 @@ async fn handle_building_from_source(
             _ => return Err(anyhow!("unknown error: {}", error)),
         }
     };
+
+    // check if repo has a remote
     let remote = Command::new("git")
         .arg("remote")
         .arg("get-url")
@@ -317,6 +322,7 @@ async fn handle_building_from_source(
         .wait()
         .await?;
     if !remote.success() {
+        // add neovim's remote
         Command::new("git")
             .arg("remote")
             .arg("add")
@@ -326,6 +332,7 @@ async fn handle_building_from_source(
             .wait()
             .await?;
     } else {
+        // set neovim's remote otherwise
         Command::new("git")
             .arg("remote")
             .arg("set-url")
@@ -335,6 +342,7 @@ async fn handle_building_from_source(
             .wait()
             .await?;
     };
+    // fetch version from origin
     Command::new("git")
         .arg("fetch")
         .arg("--depth")
@@ -344,6 +352,7 @@ async fn handle_building_from_source(
         .spawn()?
         .wait()
         .await?;
+    // checkout fetched files
     Command::new("git")
         .arg("checkout")
         .arg("FETCH_HEAD")
