@@ -63,7 +63,9 @@ pub async fn start(
     }
 
     let downloaded_file = match version.version_type {
-        VersionType::Normal | VersionType::Latest => download_version(client, version, root, config).await,
+        VersionType::Normal | VersionType::Latest => {
+            download_version(client, version, root, config).await
+        }
         VersionType::Nightly => {
             if config.enable_release_build == Some(true) {
                 handle_building_from_source(version, config).await
@@ -275,43 +277,76 @@ async fn handle_building_from_source(
             }
         }
     }
-    let (mut child, is_installed) = if fs::metadata("neovim-git").await.is_err() {
-        // check if neovim-git
-        // directory exists
-        // to clone repo, else
-        // git pull changes
-        let child = match Command::new("git")
-            .arg("clone")
-            .arg("https://github.com/neovim/neovim")
-            .arg("neovim-git")
-            .spawn()
-        {
-            Ok(value) => value,
-            Err(error) => match error.kind() {
-                std::io::ErrorKind::NotFound => {
-                    return Err(anyhow!(
-                        "Git has to be installed in order to build neovim from source"
-                    ))
-                }
-                _ => return Err(anyhow!("Failed to clone neovim's repository")),
-            },
-        };
-        (child, false)
-    } else {
-        env::set_current_dir("neovim-git")?; // cd into neovim-git
-        let child = match Command::new("git").arg("pull").spawn() {
-            Ok(value) => value,
-            Err(_) => return Err(anyhow!("Failed to pull upstream updates")),
-        };
-        (child, true)
-    };
-    child.wait().await?;
-    if !is_installed {
-        env::set_current_dir("neovim-git")?; // cd into neovim-git
+
+    match Command::new("git").output().await {
+        Ok(_) => (),
+        Err(error) => {
+            if error.kind() == std::io::ErrorKind::NotFound {
+                return Err(anyhow!(
+                    "Git has to be installed in order to build neovim from source"
+                ));
+            }
+        }
     }
+    let dirname = "neovim-git";
+    if let Err(error) = fs::metadata(dirname).await {
+        match error.kind() {
+            std::io::ErrorKind::NotFound => {
+                fs::create_dir(dirname).await?;
+            }
+            _ => return Err(anyhow!("unknown error: {}", error)),
+        }
+    }
+
+    env::set_current_dir(dirname)?;
+
+    if let Err(error) = fs::metadata(".git").await {
+        match error.kind() {
+            std::io::ErrorKind::NotFound => {
+                Command::new("git").arg("init").spawn()?.wait().await?;
+            }
+
+            _ => return Err(anyhow!("unknown error: {}", error)),
+        }
+    };
+    let remote = Command::new("git")
+        .arg("remote")
+        .arg("get-url")
+        .arg("origin")
+        .spawn()?
+        .wait()
+        .await?;
+    if !remote.success() {
+        Command::new("git")
+            .arg("remote")
+            .arg("add")
+            .arg("origin")
+            .arg("https://github.com/neovim/neovim.git")
+            .spawn()?
+            .wait()
+            .await?;
+    } else {
+        Command::new("git")
+            .arg("remote")
+            .arg("set-url")
+            .arg("origin")
+            .arg("https://github.com/neovim/neovim.git")
+            .spawn()?
+            .wait()
+            .await?;
+    };
+    Command::new("git")
+        .arg("fetch")
+        .arg("--depth")
+        .arg("1")
+        .arg("origin")
+        .arg(&version.tag_name)
+        .spawn()?
+        .wait()
+        .await?;
     Command::new("git")
         .arg("checkout")
-        .arg(&version.tag_name)
+        .arg("FETCH_HEAD")
         .spawn()?
         .wait()
         .await?;
