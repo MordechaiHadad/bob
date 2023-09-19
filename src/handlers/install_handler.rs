@@ -13,6 +13,7 @@ use std::path::Path;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::{fs, process::Command};
+use std::process::Stdio;
 use tracing::info;
 use yansi::Paint;
 
@@ -301,7 +302,12 @@ async fn handle_building_from_source(
     if let Err(error) = fs::metadata(".git").await {
         match error.kind() {
             std::io::ErrorKind::NotFound => {
-                Command::new("git").arg("init").spawn()?.wait().await?;
+                Command::new("git")
+                    .arg("init")
+                    .stdout(Stdio::null())
+                    .spawn()?
+                    .wait()
+                    .await?;
             }
 
             _ => return Err(anyhow!("unknown error: {}", error)),
@@ -313,10 +319,11 @@ async fn handle_building_from_source(
         .arg("remote")
         .arg("get-url")
         .arg("origin")
+        .stdout(Stdio::null())
         .spawn()?
         .wait()
         .await?;
-    
+
     if !remote.success() {
         // add neovim's remote
         Command::new("git")
@@ -348,15 +355,16 @@ async fn handle_building_from_source(
         .spawn()?
         .wait()
         .await?.success();
-    
+
     if !fetch_successful {
         return Err(anyhow!("Git fetch did not succeed"));
     }
-    
+
     // checkout fetched files
     Command::new("git")
         .arg("checkout")
         .arg("FETCH_HEAD")
+        .stdout(Stdio::null())
         .spawn()?
         .wait()
         .await?;
