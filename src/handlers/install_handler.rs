@@ -348,7 +348,7 @@ async fn handle_building_from_source(
         .arg("--depth")
         .arg("1")
         .arg("origin")
-        .arg(&version.tag_name)
+        .arg(&version.non_parsed_string)
         .spawn()?
         .wait()
         .await?;

@@ -16,11 +16,7 @@ pub async fn start(
     client: &Client,
     config: Config,
 ) -> Result<()> {
-    let tag_name = match version.version_type {
-        VersionType::Hash => &version.tag_name[0..7],
-        _ => &version.tag_name,
-    };
-    let is_version_used = helpers::version::is_version_used(tag_name, &config).await;
+    let is_version_used = helpers::version::is_version_used(&version.tag_name, &config).await;
 
     copy_nvim_bob(&config).await?;
     if is_version_used && version.tag_name != "nightly" {
@@ -59,13 +55,7 @@ pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
     std::env::set_current_dir(helpers::directories::get_downloads_directory(config).await?)?;
 
     copy_nvim_bob(config).await?;
-
-    let tag_name = match version.version_type {
-        VersionType::Hash => &version.tag_name[0..7],
-        _ => &version.tag_name,
-    };
-    fs::write("used", tag_name).await?;
-
+    fs::write("used", &version.tag_name).await?;
     if let Some(version_sync_file_location) =
         helpers::version::get_version_sync_file_location(config).await?
     {
