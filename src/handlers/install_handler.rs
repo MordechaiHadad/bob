@@ -343,7 +343,7 @@ async fn handle_building_from_source(
             .await?;
     };
     // fetch version from origin
-    Command::new("git")
+    let fetch_successful = Command::new("git")
         .arg("fetch")
         .arg("--depth")
         .arg("1")
@@ -351,7 +351,10 @@ async fn handle_building_from_source(
         .arg(&version.non_parsed_string)
         .spawn()?
         .wait()
-        .await?;
+        .await?.success();
+    if !fetch_successful {
+        return Err(anyhow!("Git fetch did not succeed"));
+    }
     // checkout fetched files
     Command::new("git")
         .arg("checkout")
