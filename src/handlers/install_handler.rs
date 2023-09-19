@@ -357,7 +357,7 @@ async fn handle_building_from_source(
         .await?.success();
 
     if !fetch_successful {
-        return Err(anyhow!("Git fetch did not succeed"));
+        return Err(anyhow!("fetching remote failed, try providing the full commit hash"));
     }
 
     // checkout fetched files
