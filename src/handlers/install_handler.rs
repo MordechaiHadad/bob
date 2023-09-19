@@ -63,9 +63,7 @@ pub async fn start(
     }
 
     let downloaded_file = match version.version_type {
-        VersionType::Normal | VersionType::Latest => {
-            download_version(client, version, root, config).await
-        }
+        VersionType::Normal | VersionType::Latest => download_version(client, version, root, config).await,
         VersionType::Nightly => {
             if config.enable_release_build == Some(true) {
                 handle_building_from_source(version, config).await
@@ -278,14 +276,11 @@ async fn handle_building_from_source(
         }
     }
 
-    match Command::new("git").output().await {
-        Ok(_) => (),
-        Err(error) => {
-            if error.kind() == std::io::ErrorKind::NotFound {
-                return Err(anyhow!(
-                    "Git has to be installed in order to build neovim from source"
-                ));
-            }
+    if let Err(error) = Command::new("git").output().await {
+        if error.kind() == std::io::ErrorKind::NotFound {
+            return Err(anyhow!(
+                "Git has to be installed in order to build neovim from source"
+            ));
         }
     }
 
@@ -321,6 +316,7 @@ async fn handle_building_from_source(
         .spawn()?
         .wait()
         .await?;
+    
     if !remote.success() {
         // add neovim's remote
         Command::new("git")
@@ -352,9 +348,11 @@ async fn handle_building_from_source(
         .spawn()?
         .wait()
         .await?.success();
+    
     if !fetch_successful {
         return Err(anyhow!("Git fetch did not succeed"));
     }
+    
     // checkout fetched files
     Command::new("git")
         .arg("checkout")
