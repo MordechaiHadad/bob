@@ -24,6 +24,10 @@ pub async fn start(
     client: &Client,
     config: &Config,
 ) -> Result<InstallResult> {
+    if version.version_type == VersionType::NightlyRollback {
+        return Ok(InstallResult::GivenNightlyRollback)
+    }
+
     let root = directories::get_downloads_directory(config).await?;
 
     env::set_current_dir(&root)?;
@@ -76,10 +80,6 @@ pub async fn start(
         VersionType::Hash => handle_building_from_source(version, config).await,
         VersionType::NightlyRollback => Ok(PostDownloadVersionType::None),
     }?;
-
-    if downloaded_file == PostDownloadVersionType::None {
-        return Ok(InstallResult::GivenNightlyRollback)
-    }
 
     if let PostDownloadVersionType::Standard(downloaded_file) = downloaded_file {
         unarchive::start(downloaded_file).await?
