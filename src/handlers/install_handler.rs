@@ -31,6 +31,7 @@ pub async fn start(
 
     let is_version_installed =
         helpers::version::is_version_installed(&version.tag_name, config).await?;
+    
 
     if is_version_installed && version.version_type != VersionType::Nightly {
         return Ok(InstallResult::VersionAlreadyInstalled);
@@ -73,7 +74,12 @@ pub async fn start(
             }
         }
         VersionType::Hash => handle_building_from_source(version, config).await,
+        VersionType::NightlyRollback => Ok(PostDownloadVersionType::None),
     }?;
+
+    if downloaded_file == PostDownloadVersionType::None {
+        return Ok(InstallResult::GivenNightlyRollback)
+    }
 
     if let PostDownloadVersionType::Standard(downloaded_file) = downloaded_file {
         unarchive::start(downloaded_file).await?
@@ -235,6 +241,7 @@ async fn download_version(
             }
         }
         VersionType::Hash => handle_building_from_source(version, config).await,
+        VersionType::NightlyRollback => Ok(PostDownloadVersionType::None),
     }
 }
 

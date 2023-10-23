@@ -15,6 +15,7 @@ pub enum VersionType {
     Latest,
     Nightly,
     Hash,
+    NightlyRollback
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -30,7 +31,7 @@ pub struct LocalNightly {
     pub path: PathBuf,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct LocalVersion {
     pub file_name: String,
     pub file_format: String,

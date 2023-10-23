@@ -14,9 +14,12 @@ pub enum InstallResult {
     InstallationSuccess(String),
     VersionAlreadyInstalled,
     NightlyIsUpdated,
+    GivenNightlyRollback
 }
 
+#[derive(PartialEq)]
 pub enum PostDownloadVersionType {
+    None,
     Standard(LocalVersion),
     Hash,
 }

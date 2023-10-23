@@ -1,9 +1,11 @@
+use std::path::Path;
+
 use anyhow::{anyhow, Result};
 use reqwest::Client;
 use tokio::fs;
 use tracing::{info, warn};
 
-use crate::{config::Config, helpers::{self, directories}};
+use crate::{config::Config, helpers::{self, directories, version::types::VersionType}};
 
 pub async fn start(version: &str, config: Config) -> Result<()> {
     let client = Client::new();
@@ -19,7 +21,9 @@ pub async fn start(version: &str, config: Config) -> Result<()> {
         Err(error) => return Err(anyhow!(error)),
     };
 
-    fs::remove_dir_all(&format!("{}/{}", downloads_dir.display(), version.tag_name)).await?;
+    let path = downloads_dir.join(&version.tag_name);
+
+    fs::remove_dir_all(path).await?;
     info!("Successfully uninstalled version: {}", version.tag_name);
     Ok(())
 }
