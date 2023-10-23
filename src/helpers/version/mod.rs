@@ -7,7 +7,7 @@ use crate::{config::Config, helpers::version::types::UpstreamVersion};
 use anyhow::{anyhow, Context, Result};
 use regex::Regex;
 use reqwest::Client;
-use std::{path::{Path, PathBuf}, fs::set_permissions};
+use std::{path::{Path, PathBuf}};
 use tokio::{
     fs::{self, File},
     io::AsyncWriteExt,
