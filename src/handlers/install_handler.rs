@@ -13,6 +13,7 @@ use std::path::Path;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::{fs, process::Command};
+use std::process::Stdio;
 use tracing::info;
 use yansi::Paint;
 
@@ -275,43 +276,95 @@ async fn handle_building_from_source(
             }
         }
     }
-    let (mut child, is_installed) = if fs::metadata("neovim-git").await.is_err() {
-        // check if neovim-git
-        // directory exists
-        // to clone repo, else
-        // git pull changes
-        let child = match Command::new("git")
-            .arg("clone")
-            .arg("https://github.com/neovim/neovim")
-            .arg("neovim-git")
-            .spawn()
-        {
-            Ok(value) => value,
-            Err(error) => match error.kind() {
-                std::io::ErrorKind::NotFound => {
-                    return Err(anyhow!(
-                        "Git has to be installed in order to build neovim from source"
-                    ))
-                }
-                _ => return Err(anyhow!("Failed to clone neovim's repository")),
-            },
-        };
-        (child, false)
-    } else {
-        env::set_current_dir("neovim-git")?; // cd into neovim-git
-        let child = match Command::new("git").arg("pull").spawn() {
-            Ok(value) => value,
-            Err(_) => return Err(anyhow!("Failed to pull upstream updates")),
-        };
-        (child, true)
-    };
-    child.wait().await?;
-    if !is_installed {
-        env::set_current_dir("neovim-git")?; // cd into neovim-git
+
+    if let Err(error) = Command::new("git").output().await {
+        if error.kind() == std::io::ErrorKind::NotFound {
+            return Err(anyhow!(
+                "Git has to be installed in order to build neovim from source"
+            ));
+        }
     }
+
+    // create neovim-git if it does not exist
+    let dirname = "neovim-git";
+    if let Err(error) = fs::metadata(dirname).await {
+        match error.kind() {
+            std::io::ErrorKind::NotFound => {
+                fs::create_dir(dirname).await?;
+            }
+            _ => return Err(anyhow!("unknown error: {}", error)),
+        }
+    }
+
+    env::set_current_dir(dirname)?; // cd into neovim-git
+
+    // check if repo is initialized
+    if let Err(error) = fs::metadata(".git").await {
+        match error.kind() {
+            std::io::ErrorKind::NotFound => {
+                Command::new("git")
+                    .arg("init")
+                    .stdout(Stdio::null())
+                    .spawn()?
+                    .wait()
+                    .await?;
+            }
+
+            _ => return Err(anyhow!("unknown error: {}", error)),
+        }
+    };
+
+    // check if repo has a remote
+    let remote = Command::new("git")
+        .arg("remote")
+        .arg("get-url")
+        .arg("origin")
+        .stdout(Stdio::null())
+        .spawn()?
+        .wait()
+        .await?;
+
+    if !remote.success() {
+        // add neovim's remote
+        Command::new("git")
+            .arg("remote")
+            .arg("add")
+            .arg("origin")
+            .arg("https://github.com/neovim/neovim.git")
+            .spawn()?
+            .wait()
+            .await?;
+    } else {
+        // set neovim's remote otherwise
+        Command::new("git")
+            .arg("remote")
+            .arg("set-url")
+            .arg("origin")
+            .arg("https://github.com/neovim/neovim.git")
+            .spawn()?
+            .wait()
+            .await?;
+    };
+    // fetch version from origin
+    let fetch_successful = Command::new("git")
+        .arg("fetch")
+        .arg("--depth")
+        .arg("1")
+        .arg("origin")
+        .arg(&version.non_parsed_string)
+        .spawn()?
+        .wait()
+        .await?.success();
+
+    if !fetch_successful {
+        return Err(anyhow!("fetching remote failed, try providing the full commit hash"));
+    }
+
+    // checkout fetched files
     Command::new("git")
         .arg("checkout")
-        .arg(&version.tag_name)
+        .arg("FETCH_HEAD")
+        .stdout(Stdio::null())
         .spawn()?
         .wait()
         .await?;
