@@ -98,6 +98,8 @@ For the OpenSSL version:
 
 A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
 
+It is also possible to use `GITHUB_TOKEN` to prevent rate-limit. You can prepend below commands with `GITHUB_TOKEN=<your token>` or perform `exprot GITHUB_TOKEN=<your token>` and then run below commands.
+
 ---
 
 - `bob use |nightly|stable|latest|<version-string>|<commit-hash>|`
