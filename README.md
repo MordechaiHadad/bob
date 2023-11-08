@@ -98,8 +98,6 @@ For the OpenSSL version:
 
 A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
 
-It is also possible to use `GITHUB_TOKEN` to prevent rate-limit. You can prepend below commands with `GITHUB_TOKEN=<your token>` or perform `exprot GITHUB_TOKEN=<your token>` and then run below commands.
-
 ---
 
 - `bob use |nightly|stable|latest|<version-string>|<commit-hash>|`
@@ -213,6 +211,21 @@ Example: `export BOB_CONFIG=/path/to/config/config.json`
   "rollback_limit": 3, // The amount of rollbacks before bob starts to delete older ones, can be up to 225
   "github_mirror": "https://github.com" // github or github mirror
 }
+
+```
+
+### Work with Github rate-limit
+
+It is possible to use `GITHUB_TOKEN` to prevent rate-limit for api calls. There are two ways to do it:
+
+- You can prepend any of the `bob` commands with `GITHUB_TOKEN=<your token>`
+```console
+GITHUB_TOKEN=<some token> bob update -a
+```
+- perform `exprot GITHUB_TOKEN=<your token>` and then run `bob` commands.
+```console
+export GITHUB_TOKEN=<some token>
+bob update -a
 ```
 
 ## 💻 Shell Completion
