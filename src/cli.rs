@@ -8,22 +8,21 @@ use crate::{
 use anyhow::Result;
 use clap::{Args, CommandFactory, Parser};
 use clap_complete::Shell;
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use reqwest::{Client, Error};
 use tracing::{error, info};
 
 fn create_reqwest_client() -> Result<Client, Error> {
     // fetch env variable
-    let github_token = match std::env::var("GITHUB_TOKEN") {
-        Ok(token) => token,
-        Err(_) => String::new(),
-    };
+    let github_token = std::env::var("GITHUB_TOKEN");
 
-    let mut headers = reqwest::header::HeaderMap::new();
-    if !github_token.is_empty() {
-        let auth_header_value =
-            reqwest::header::HeaderValue::from_str(&format!("Bearer {}", github_token))
-                .expect("Invalid header value");
-        headers.insert(reqwest::header::AUTHORIZATION, auth_header_value);
+    let mut headers = HeaderMap::new();
+
+    if let Ok(github_token) = github_token {
+        headers.insert(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", github_token)).unwrap(),
+        );
     }
 
     let client = reqwest::Client::builder()
