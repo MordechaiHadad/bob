@@ -60,7 +60,7 @@ enum Cli {
         shell: Shell,
     },
 
-    /// Update existing version
+    /// Update existing version |nightly|stable|--all|
     Update(Update),
 }
 
