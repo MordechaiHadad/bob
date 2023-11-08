@@ -181,6 +181,20 @@ Bob's configuration file will have to be in `config_dir/bob/config.json` but can
 
 </details>
 
+### Increasing Github rate-limit
+
+It is possible to use `GITHUB_TOKEN` to prevent rate-limit for API calls. There are two ways to do it:
+
+- You can prepend any of the `bob` commands with `GITHUB_TOKEN=<your token>`
+```console
+GITHUB_TOKEN=<some token> bob update -a
+```
+- perform `export GITHUB_TOKEN=<your token>` and then run `bob` commands.
+```console
+export GITHUB_TOKEN=<some token>
+bob update -a
+```
+
 ### <a name="config-location"></a>Custom Location
 
 Bob's config file location can be configured by using an environment variable called `$BOB_CONFIG`.
@@ -212,20 +226,6 @@ Example: `export BOB_CONFIG=/path/to/config/config.json`
   "github_mirror": "https://github.com" // github or github mirror
 }
 
-```
-
-### Work with Github rate-limit
-
-It is possible to use `GITHUB_TOKEN` to prevent rate-limit for api calls. There are two ways to do it:
-
-- You can prepend any of the `bob` commands with `GITHUB_TOKEN=<your token>`
-```console
-GITHUB_TOKEN=<some token> bob update -a
-```
-- perform `exprot GITHUB_TOKEN=<your token>` and then run `bob` commands.
-```console
-export GITHUB_TOKEN=<some token>
-bob update -a
 ```
 
 ## 💻 Shell Completion
