@@ -8,8 +8,29 @@ use crate::{
 use anyhow::Result;
 use clap::{Args, CommandFactory, Parser};
 use clap_complete::Shell;
-use reqwest::Client;
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
+use reqwest::{Client, Error};
 use tracing::{error, info};
+
+fn create_reqwest_client() -> Result<Client, Error> {
+    // fetch env variable
+    let github_token = std::env::var("GITHUB_TOKEN");
+
+    let mut headers = HeaderMap::new();
+
+    if let Ok(github_token) = github_token {
+        headers.insert(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", github_token)).unwrap(),
+        );
+    }
+
+    let client = reqwest::Client::builder()
+        .default_headers(headers)
+        .build()?;
+
+    Ok(client)
+}
 
 #[derive(Debug, Parser)]
 #[command(version)]
@@ -76,6 +97,7 @@ pub struct Update {
 }
 
 pub async fn start(config: Config) -> Result<()> {
+    let client = create_reqwest_client()?;
     let cli = Cli::parse();
 
     match cli {
@@ -83,13 +105,11 @@ pub async fn start(config: Config) -> Result<()> {
             version,
             no_install,
         } => {
-            let client = Client::new();
             let version = super::version::parse_version_type(&client, &version).await?;
 
             handlers::use_handler::start(version, !no_install, &client, config).await?;
         }
         Cli::Install { version } => {
-            let client = Client::new();
             let mut version = super::version::parse_version_type(&client, &version).await?;
 
             match handlers::install_handler::start(&mut version, &client, &config).await? {
@@ -108,7 +128,6 @@ pub async fn start(config: Config) -> Result<()> {
             }
         }
         Cli::Sync => {
-            let client = Client::new();
             info!("Starting sync process");
             sync_handler::start(&client, config).await?;
         }
@@ -124,7 +143,6 @@ pub async fn start(config: Config) -> Result<()> {
         }
         Cli::Update(data) => {
             if data.version.is_some() || data.all {
-                let client = Client::new();
                 update_handler::start(data, &client, config).await?;
             } else {
                 error!("Please provide a version or use the --all flag");
