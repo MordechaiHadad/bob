@@ -125,8 +125,6 @@ async fn handle_rollback(config: &Config) -> Result<()> {
         fs::remove_dir_all(oldest_path).await?;
     }
 
-    let id = generate_random_nightly_id();
-
     // handle this for older installations of nightly instead of introducing breaking changes
     cfg_if::cfg_if! {
         if #[cfg(unix)] {
@@ -145,23 +143,19 @@ async fn handle_rollback(config: &Config) -> Result<()> {
         }
     }
 
+    let nightly_file = fs::read_to_string("nightly/bob.json").await?;
+    let mut json_struct: UpstreamVersion = serde_json::from_str(&nightly_file)?;
+    let id: String = json_struct.target_commitish.as_ref().unwrap().chars().take(7).collect();
+
     info!("Creating rollback: nightly-{id}");
     filesystem::copy_dir("nightly", format!("nightly-{id}")).await?;
 
-    let nightly_file = fs::read_to_string("nightly/bob.json").await?;
-    let mut json_struct: UpstreamVersion = serde_json::from_str(&nightly_file)?;
     json_struct.tag_name += &format!("-{id}");
 
     let json_file = serde_json::to_string(&json_struct)?;
     fs::write(format!("nightly-{id}/bob.json"), json_file).await?;
 
     Ok(())
-}
-
-fn generate_random_nightly_id() -> String {
-    use rand::distributions::{Alphanumeric, DistString};
-
-    Alphanumeric.sample_string(&mut rand::thread_rng(), 8)
 }
 
 async fn print_commits(

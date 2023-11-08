@@ -7,7 +7,7 @@ use crate::{config::Config, helpers::version::types::UpstreamVersion};
 use anyhow::{anyhow, Context, Result};
 use regex::Regex;
 use reqwest::Client;
-use std::{path::{Path, PathBuf}};
+use std::path::{Path, PathBuf};
 use tokio::{
     fs::{self, File},
     io::AsyncWriteExt,
@@ -44,7 +44,6 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                     non_parsed_string: version.to_string(),
                 });
             } else if hash_regex.is_match(version) {
-
                 return Ok(ParsedVersion {
                     tag_name: version.to_string().chars().take(7).collect(),
                     version_type: VersionType::Hash,
@@ -53,13 +52,16 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
             }
 
             let alphanumeric_regex = Regex::new(r"^[a-zA-Z0-9]{8}$")?;
-            let separated_version: Vec<&str>  = version.split('-').collect();
+            let separated_version: Vec<&str> = version.split('-').collect();
 
-            if separated_version[0] == "nightly" && alphanumeric_regex.is_match(separated_version[1]) {
+            if separated_version[0] == "nightly"
+                && (hash_regex.is_match(separated_version[1])
+                    || alphanumeric_regex.is_match(separated_version[1]))
+            {
                 return Ok(ParsedVersion {
                     tag_name: version.to_string(),
                     version_type: VersionType::NightlyRollback,
-                    non_parsed_string: version.to_string()
+                    non_parsed_string: version.to_string(),
                 });
             }
 
