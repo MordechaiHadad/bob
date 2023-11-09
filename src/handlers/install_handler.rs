@@ -24,6 +24,10 @@ pub async fn start(
     client: &Client,
     config: &Config,
 ) -> Result<InstallResult> {
+    if version.version_type == VersionType::NightlyRollback {
+        return Ok(InstallResult::GivenNightlyRollback)
+    }
+
     let root = directories::get_downloads_directory(config).await?;
 
     env::set_current_dir(&root)?;
@@ -31,6 +35,7 @@ pub async fn start(
 
     let is_version_installed =
         helpers::version::is_version_installed(&version.tag_name, config).await?;
+    
 
     if is_version_installed && version.version_type != VersionType::Nightly {
         return Ok(InstallResult::VersionAlreadyInstalled);
@@ -73,6 +78,7 @@ pub async fn start(
             }
         }
         VersionType::Hash => handle_building_from_source(version, config).await,
+        VersionType::NightlyRollback => Ok(PostDownloadVersionType::None),
     }?;
 
     if let PostDownloadVersionType::Standard(downloaded_file) = downloaded_file {
@@ -119,8 +125,6 @@ async fn handle_rollback(config: &Config) -> Result<()> {
         fs::remove_dir_all(oldest_path).await?;
     }
 
-    let id = generate_random_nightly_id();
-
     // handle this for older installations of nightly instead of introducing breaking changes
     cfg_if::cfg_if! {
         if #[cfg(unix)] {
@@ -139,23 +143,19 @@ async fn handle_rollback(config: &Config) -> Result<()> {
         }
     }
 
+    let nightly_file = fs::read_to_string("nightly/bob.json").await?;
+    let mut json_struct: UpstreamVersion = serde_json::from_str(&nightly_file)?;
+    let id: String = json_struct.target_commitish.as_ref().unwrap().chars().take(7).collect();
+
     info!("Creating rollback: nightly-{id}");
     filesystem::copy_dir("nightly", format!("nightly-{id}")).await?;
 
-    let nightly_file = fs::read_to_string("nightly/bob.json").await?;
-    let mut json_struct: UpstreamVersion = serde_json::from_str(&nightly_file)?;
     json_struct.tag_name += &format!("-{id}");
 
     let json_file = serde_json::to_string(&json_struct)?;
     fs::write(format!("nightly-{id}/bob.json"), json_file).await?;
 
     Ok(())
-}
-
-fn generate_random_nightly_id() -> String {
-    use rand::distributions::{Alphanumeric, DistString};
-
-    Alphanumeric.sample_string(&mut rand::thread_rng(), 8)
 }
 
 async fn print_commits(
@@ -235,6 +235,7 @@ async fn download_version(
             }
         }
         VersionType::Hash => handle_building_from_source(version, config).await,
+        VersionType::NightlyRollback => Ok(PostDownloadVersionType::None),
     }
 }
 

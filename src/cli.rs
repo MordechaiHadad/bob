@@ -81,7 +81,7 @@ enum Cli {
         shell: Shell,
     },
 
-    /// Update existing version
+    /// Update existing version |nightly|stable|--all|
     Update(Update),
 }
 
@@ -125,6 +125,7 @@ pub async fn start(config: Config) -> Result<()> {
                 InstallResult::NightlyIsUpdated => {
                     info!("Nightly up to date!");
                 }
+                InstallResult::GivenNightlyRollback => ()
             }
         }
         Cli::Sync => {

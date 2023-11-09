@@ -14,7 +14,7 @@ pub async fn start(data: Update, client: &Client, config: Config) -> Result<()> 
         if is_version_installed(&stable.tag_name, &config).await? {
             match install_handler::start(&mut stable, client, &config).await? {
                 InstallResult::VersionAlreadyInstalled => info!("Stable is already updated!"),
-                InstallResult::InstallationSuccess(_) | InstallResult::NightlyIsUpdated => (),
+                InstallResult::InstallationSuccess(_) | InstallResult::NightlyIsUpdated | InstallResult::GivenNightlyRollback => (),
             }
             did_update = true;
         }
@@ -23,7 +23,7 @@ pub async fn start(data: Update, client: &Client, config: Config) -> Result<()> 
             let mut nightly = crate::version::parse_version_type(client, "nightly").await?;
             match install_handler::start(&mut nightly, client, &config).await? {
                 InstallResult::NightlyIsUpdated => info!("Nightly is already updated!"),
-                InstallResult::InstallationSuccess(_) | InstallResult::VersionAlreadyInstalled => ()
+                InstallResult::InstallationSuccess(_) | InstallResult::VersionAlreadyInstalled | InstallResult::GivenNightlyRollback => ()
             }
 
             did_update = true;
@@ -45,7 +45,7 @@ pub async fn start(data: Update, client: &Client, config: Config) -> Result<()> 
     match install_handler::start(&mut version, client, &config).await? {
         InstallResult::NightlyIsUpdated => info!("Nightly is already updated!"),
         InstallResult::VersionAlreadyInstalled => info!("Stable is already updated!"),
-        InstallResult::InstallationSuccess(_) => (),
+        InstallResult::InstallationSuccess(_) | InstallResult::GivenNightlyRollback => (),
     }
     Ok(())
 }

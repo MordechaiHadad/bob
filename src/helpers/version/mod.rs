@@ -44,13 +44,27 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                     non_parsed_string: version.to_string(),
                 });
             } else if hash_regex.is_match(version) {
-
                 return Ok(ParsedVersion {
                     tag_name: version.to_string().chars().take(7).collect(),
                     version_type: VersionType::Hash,
                     non_parsed_string: version.to_string(),
                 });
             }
+
+            let alphanumeric_regex = Regex::new(r"^[a-zA-Z0-9]{8}$")?;
+            let separated_version: Vec<&str> = version.split('-').collect();
+
+            if separated_version[0] == "nightly"
+                && (hash_regex.is_match(separated_version[1])
+                    || alphanumeric_regex.is_match(separated_version[1]))
+            {
+                return Ok(ParsedVersion {
+                    tag_name: version.to_string(),
+                    version_type: VersionType::NightlyRollback,
+                    non_parsed_string: version.to_string(),
+                });
+            }
+
             Err(anyhow!("Please provide a proper version string"))
         }
     }
@@ -78,7 +92,7 @@ pub async fn is_version_installed(version: &str, config: &Config) -> Result<bool
 
     while let Some(directory) = dir.next_entry().await? {
         let name = directory.file_name().to_str().unwrap().to_owned();
-        if !version.contains(&name) {
+        if !version.eq(&name) {
             continue;
         } else {
             return Ok(true);
