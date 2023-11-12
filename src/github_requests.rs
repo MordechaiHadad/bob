@@ -66,7 +66,7 @@ pub async fn get_commits_for_nightly(
 pub fn deserialize_response<T: DeserializeOwned>(response: String) -> Result<T> {
     let value: serde_json::Value = serde_json::from_str(&response)?;
 
-    if let Some(_) = value.get("message") {
+    if value.get("message").is_some() {
         let result: ErrorResponse = serde_json::from_value(value)?;
 
         if result.documentation_url.contains("rate-limiting") {
