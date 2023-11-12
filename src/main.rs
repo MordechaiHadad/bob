@@ -2,6 +2,7 @@ mod cli;
 mod config;
 mod handlers;
 mod helpers;
+pub mod github_requests;
 
 extern crate core;
 

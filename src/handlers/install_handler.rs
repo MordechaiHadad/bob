@@ -1,7 +1,8 @@
 use crate::config::Config;
+use crate::github_requests::{get_upstream_nightly, UpstreamVersion, get_commits_for_nightly};
 use crate::helpers::directories::get_downloads_directory;
-use crate::helpers::version::nightly::{get_commits_for_nightly, produce_nightly_vec};
-use crate::helpers::version::types::{LocalVersion, ParsedVersion, UpstreamVersion, VersionType};
+use crate::helpers::version::nightly::produce_nightly_vec;
+use crate::helpers::version::types::{LocalVersion, ParsedVersion, VersionType};
 use crate::helpers::{self, directories, filesystem, handle_subprocess, unarchive};
 use anyhow::{anyhow, Result};
 use futures_util::stream::StreamExt;
@@ -42,7 +43,7 @@ pub async fn start(
     }
 
     let nightly_version = if version.version_type == VersionType::Nightly {
-        Some(helpers::version::nightly::get_upstream_nightly(client).await?)
+        Some(get_upstream_nightly(client).await?)
     } else {
         None
     };

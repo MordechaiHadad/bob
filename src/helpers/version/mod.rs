@@ -3,7 +3,7 @@ pub mod types;
 
 use self::types::{ParsedVersion, VersionType};
 use super::directories;
-use crate::{config::Config, helpers::version::types::UpstreamVersion};
+use crate::{config::Config, github_requests::{UpstreamVersion, deserialize_response}};
 use anyhow::{anyhow, Context, Result};
 use regex::Regex;
 use reqwest::Client;
@@ -125,7 +125,7 @@ async fn search_stable_version(client: &Client) -> Result<String> {
         .text()
         .await?;
 
-    let versions: Vec<UpstreamVersion> = serde_json::from_str(&response)?;
+    let versions: Vec<UpstreamVersion> = deserialize_response(response, )?;
     let stable_release = versions
         .iter()
         .find(|v| v.tag_name == "stable")

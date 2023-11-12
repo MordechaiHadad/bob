@@ -1,7 +1,5 @@
-use chrono::{DateTime, Utc};
-
 use std::path::PathBuf;
-use serde::{Deserialize, Serialize};
+use crate::github_requests::UpstreamVersion;
 
 pub struct ParsedVersion {
     pub tag_name: String,
@@ -16,13 +14,6 @@ pub enum VersionType {
     Nightly,
     Hash,
     NightlyRollback
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct UpstreamVersion {
-    pub tag_name: String,
-    pub target_commitish: Option<String>,
-    pub published_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone)]
