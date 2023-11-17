@@ -62,9 +62,21 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        os: 
+          - { 
+            NAME: linux,
+            OS: ubuntu-latest
+          }
+          - {
+            NAME: macos,
+            OS: macos-latest
+          }
+          - {
+            NAME: windows,
+            OS: windows-latest
+          }
         tls: ['', '--no-default-features --features native-tls']
-    runs-on: ${{matrix.os}}
+    runs-on: ${{matrix.os.OS}}
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
@@ -88,8 +100,8 @@ jobs:
       - name: Upload Bob Linux binary
         uses: actions/upload-artifact@v2
         with:
-          name: "bob-${{ matrix.os == 'windows-latest' && 'windows' || matrix.os == 'macos-latest' && 'macos' || 'linux' }}-x86_64${{ matrix.tls == '--no-default-features --features native-tls' && '-openssl' || '' }}"
-          path: ${{ matrix.os == 'windows-latest' && 'build' || 'target/optimized/bob' }}
+          name: "bob-${{ matrix.os.NAME }}-x86_64${{ matrix.tls == '--no-default-features --features native-tls' && '-openssl' || '' }}"
+          path: ${{ matrix.os.NAME == 'windows' && 'build' || 'target/optimized/bob' }}
           if-no-files-found: error
           retention-days: 7
 
