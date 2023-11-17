@@ -66,7 +66,7 @@ jobs:
         tls: ['', '--no-default-features --features native-tls']
     runs-on: ${{matrix.os}}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -92,3 +92,73 @@ jobs:
           path: ${{ matrix.os == 'windows-latest' && 'build' || 'target/optimized/bob' }}
           if-no-files-found: error
           retention-days: 7
+
+  linux-arm:
+    runs-on: ubuntu-latest
+    strategy:
+        matrix: 
+          tls: ['', '--no-default-features --features native-tls']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-unknown-linux-gnu
+          profile: minimal
+          override: true
+      - name: Install aarch64 compiler
+        run:  sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Change linker
+        run: |
+          mkdir .cargo
+          cat > .cargo/config << EOF
+          [target.aarch64-unknown-linux-gnu]
+          linker = "aarch64-linux-gnu-gcc"
+          EOF
+      - uses: Swatinem/rust-cache@v1
+      - name: Build Bob
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --locked --profile optimized --target aarch64-unknown-linux-gnu
+      - name: Upload Bob Linux-aarch64 binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: "bob-linux-aarch64${{ matrix.tls == '--no-default-features --features native-tls' && '-openssl' || '' }}"
+          path: "target/aarch64-unknown-linux-gnu/optimized/bob"
+          if-no-files-found: error
+          retention-days: 7
+
+  macos-arm:
+      runs-on: macos-latest
+      strategy:
+        matrix: 
+          tls: ['', '--no-default-features --features native-tls']
+      steps:
+        - uses: actions/checkout@v2
+        - name: Install Rust
+          uses: actions-rs/toolchain@v1
+          with:
+            toolchain: stable
+            target: aarch64-apple-darwin
+            profile: minimal
+            override: true
+        - uses: Swatinem/rust-cache@v1
+        - name: Build Bob
+          uses: actions-rs/cargo@v1
+          with:
+            command: build
+            args: --locked --profile optimized --target aarch64-apple-darwin
+        - name: Check lints
+          uses: actions-rs/cargo@v1
+          with:
+            command: clippy
+            args: --verbose -- -D warnings
+        - name: Upload Bob M1 MacOS binary
+          uses: actions/upload-artifact@v2
+          with:
+            name: "bob-macos-arm${{ matrix.tls == '--no-default-features --features native-tls' && '-openssl' || '' }}"
+            path: "target/aarch64-apple-darwin/optimized/bob"
+            if-no-files-found: error
+            retention-days: 7
