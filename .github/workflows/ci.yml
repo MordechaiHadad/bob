@@ -123,19 +123,6 @@ jobs:
 
   linux-arm:
     runs-on: ubuntu-latest
-    strategy:
-        matrix: 
-          tls: 
-          - {
-            NAME: Rustls,
-            SUFFIX: '',
-            ARGS: ''
-          }
-          - {
-            NAME: OpenSSL,
-            SUFFI: '-openssl',
-            ARGS: '--no-default-features --features native-tls'
-          }
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
@@ -145,13 +132,6 @@ jobs:
           target: aarch64-unknown-linux-gnu
           profile: minimal
           override: true
-      - name: Install OpenSSL libraries
-        run: |
-            sudo apt update
-            sudo apt install libssl-dev
-            echo "PKG_CONFIG_SYSROOT_DIR=$(rustc --print sysroot)" >> $GITHUB_ENV
-            echo "PKG_CONFIG_PATH=$(rustc --print sysroot)/lib/pkgconfig" >> $GITHUB_ENV
-        if: matrix.tls.NAME == 'OpenSSL'
       - name: Install aarch64 compiler
         run:  sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
       - name: Change linker
@@ -166,11 +146,11 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --locked --profile optimized --target aarch64-unknown-linux-gnu ${{ matrix.tls.ARGS }}
+          args: --locked --profile optimized --target aarch64-unknown-linux-gnu
       - name: Upload Bob Linux-aarch64 binary
         uses: actions/upload-artifact@v2
         with:
-          name: "bob-linux-aarch64${{ matrix.tls.SUFFIX }}"
+          name: bob-linux-aarch64
           path: "target/aarch64-unknown-linux-gnu/optimized/bob"
           if-no-files-found: error
           retention-days: 7
