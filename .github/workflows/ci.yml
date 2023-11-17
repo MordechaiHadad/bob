@@ -74,6 +74,12 @@ jobs:
           profile: minimal
           override: true
       - uses: Swatinem/rust-cache@v1
+      - name: Setup Bob build directory
+        run: |
+          mkdir build
+          copy .\\bin\\vcruntime140.dll .\\build
+          copy .\\target\\optimized\\bob.exe .\\build
+        if: matrix.os == 'windows-latest'
       - name: Build Bob
         uses: actions-rs/cargo@v1
         with:
