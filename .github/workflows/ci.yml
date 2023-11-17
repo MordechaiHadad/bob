@@ -74,17 +74,17 @@ jobs:
           profile: minimal
           override: true
       - uses: Swatinem/rust-cache@v1
+      - name: Build Bob
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --locked --profile optimized ${{matrix.tls}}
       - name: Setup Bob build directory
         run: |
           mkdir build
           copy .\\bin\\vcruntime140.dll .\\build
           copy .\\target\\optimized\\bob.exe .\\build
         if: matrix.os == 'windows-latest'
-      - name: Build Bob
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --locked --profile optimized ${{matrix.tls}}
       - name: Upload Bob Linux binary
         uses: actions/upload-artifact@v2
         with:
