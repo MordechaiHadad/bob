@@ -113,7 +113,7 @@ jobs:
           copy .\\bin\\vcruntime140.dll .\\build
           copy .\\target\\optimized\\bob.exe .\\build
         if: matrix.os.OS == 'windows-latest'
-      - name: Upload Bob Linux binary
+      - name: Upload Bob binary
         uses: actions/upload-artifact@v2
         with:
           name: "bob-${{ matrix.os.NAME }}-x86_64${{ matrix.tls.SUFFIX }}"
