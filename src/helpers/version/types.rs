@@ -1,10 +1,10 @@
-use std::path::PathBuf;
 use crate::github_requests::UpstreamVersion;
+use std::path::PathBuf;
 
 pub struct ParsedVersion {
     pub tag_name: String,
     pub version_type: VersionType,
-    pub non_parsed_string: String
+    pub non_parsed_string: String,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -13,7 +13,7 @@ pub enum VersionType {
     Latest,
     Nightly,
     Hash,
-    NightlyRollback
+    NightlyRollback,
 }
 
 #[derive(Debug, Clone)]

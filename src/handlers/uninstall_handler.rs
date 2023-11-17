@@ -1,10 +1,12 @@
-
 use anyhow::{anyhow, Result};
 use reqwest::Client;
 use tokio::fs;
 use tracing::{info, warn};
 
-use crate::{config::Config, helpers::{self, directories}};
+use crate::{
+    config::Config,
+    helpers::{self, directories},
+};
 
 pub async fn start(version: &str, config: Config) -> Result<()> {
     let client = Client::new();

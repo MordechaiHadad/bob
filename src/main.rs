@@ -1,8 +1,8 @@
 mod cli;
 mod config;
+pub mod github_requests;
 mod handlers;
 mod helpers;
-pub mod github_requests;
 
 extern crate core;
 

@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::github_requests::{get_upstream_nightly, UpstreamVersion, get_commits_for_nightly};
+use crate::github_requests::{get_commits_for_nightly, get_upstream_nightly, UpstreamVersion};
 use crate::helpers::directories::get_downloads_directory;
 use crate::helpers::version::nightly::produce_nightly_vec;
 use crate::helpers::version::types::{LocalVersion, ParsedVersion, VersionType};
@@ -11,10 +11,10 @@ use reqwest::Client;
 use std::cmp::min;
 use std::env;
 use std::path::Path;
+use std::process::Stdio;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::{fs, process::Command};
-use std::process::Stdio;
 use tracing::info;
 use yansi::Paint;
 
@@ -26,7 +26,7 @@ pub async fn start(
     config: &Config,
 ) -> Result<InstallResult> {
     if version.version_type == VersionType::NightlyRollback {
-        return Ok(InstallResult::GivenNightlyRollback)
+        return Ok(InstallResult::GivenNightlyRollback);
     }
 
     let root = directories::get_downloads_directory(config).await?;
@@ -36,7 +36,6 @@ pub async fn start(
 
     let is_version_installed =
         helpers::version::is_version_installed(&version.tag_name, config).await?;
-    
 
     if is_version_installed && version.version_type != VersionType::Nightly {
         return Ok(InstallResult::VersionAlreadyInstalled);
@@ -70,7 +69,9 @@ pub async fn start(
     }
 
     let downloaded_file = match version.version_type {
-        VersionType::Normal | VersionType::Latest => download_version(client, version, root, config).await,
+        VersionType::Normal | VersionType::Latest => {
+            download_version(client, version, root, config).await
+        }
         VersionType::Nightly => {
             if config.enable_release_build == Some(true) {
                 handle_building_from_source(version, config).await
@@ -146,7 +147,13 @@ async fn handle_rollback(config: &Config) -> Result<()> {
 
     let nightly_file = fs::read_to_string("nightly/bob.json").await?;
     let mut json_struct: UpstreamVersion = serde_json::from_str(&nightly_file)?;
-    let id: String = json_struct.target_commitish.as_ref().unwrap().chars().take(7).collect();
+    let id: String = json_struct
+        .target_commitish
+        .as_ref()
+        .unwrap()
+        .chars()
+        .take(7)
+        .collect();
 
     info!("Creating rollback: nightly-{id}");
     filesystem::copy_dir("nightly", format!("nightly-{id}")).await?;
@@ -356,10 +363,13 @@ async fn handle_building_from_source(
         .arg(&version.non_parsed_string)
         .spawn()?
         .wait()
-        .await?.success();
+        .await?
+        .success();
 
     if !fetch_successful {
-        return Err(anyhow!("fetching remote failed, try providing the full commit hash"));
+        return Err(anyhow!(
+            "fetching remote failed, try providing the full commit hash"
+        ));
     }
 
     // checkout fetched files

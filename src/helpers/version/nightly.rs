@@ -3,8 +3,7 @@ use regex::Regex;
 use tokio::fs;
 
 use super::types::LocalNightly;
-use crate::{config::Config, helpers::directories, github_requests::UpstreamVersion};
-
+use crate::{config::Config, github_requests::UpstreamVersion, helpers::directories};
 
 pub async fn get_local_nightly(config: &Config) -> Result<UpstreamVersion> {
     let downloads_dir = directories::get_downloads_directory(config).await?;
