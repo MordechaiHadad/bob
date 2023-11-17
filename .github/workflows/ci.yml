@@ -86,7 +86,7 @@ jobs:
           }
           - {
             NAME: OpenSSL,
-            SUFFI: '-openssl',
+            SUFFIX: '-openssl',
             ARGS: '--no-default-features --features native-tls'
           }
     runs-on: ${{matrix.os.OS}}
@@ -165,7 +165,7 @@ jobs:
             ARGS: ''
           }
           - {
-            SUFFI: '-openssl',
+            SUFFIX: '-openssl',
             ARGS: '--no-default-features --features native-tls'
           }
       steps:
