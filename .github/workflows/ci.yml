@@ -80,10 +80,12 @@ jobs:
           }
         tls: 
           - {
+            NAME: Rustls,
             SUFFIX: '',
             ARGS: ''
           }
           - {
+            NAME: OpenSSL,
             SUFFI: '-openssl',
             ARGS: '--no-default-features --features native-tls'
           }
@@ -96,6 +98,9 @@ jobs:
           toolchain: stable
           profile: minimal
           override: true
+      - name: Install OpenSSL libraries
+        run: sudo apt update && sudo apt install libssl-dev
+        if: matrix.os.OS == 'ubuntu-latest' && matrix.tls.NAME == 'OpenSSL'
       - uses: Swatinem/rust-cache@v1
       - name: Build Bob
         uses: actions-rs/cargo@v1
@@ -122,10 +127,12 @@ jobs:
         matrix: 
           tls: 
           - {
+            NAME: Rustls,
             SUFFIX: '',
             ARGS: ''
           }
           - {
+            NAME: OpenSSL,
             SUFFI: '-openssl',
             ARGS: '--no-default-features --features native-tls'
           }
@@ -138,6 +145,9 @@ jobs:
           target: aarch64-unknown-linux-gnu
           profile: minimal
           override: true
+      - name: Install OpenSSL libraries
+        run: sudo apt update && sudo apt install libssl-dev
+        if: matrix.tls.NAME == 'OpenSSL'
       - name: Install aarch64 compiler
         run:  sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
       - name: Change linker
