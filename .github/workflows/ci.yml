@@ -146,7 +146,11 @@ jobs:
           profile: minimal
           override: true
       - name: Install OpenSSL libraries
-        run: sudo apt update && sudo apt install libssl-dev
+        run: |
+            sudo apt update
+            sudo apt install libssl-dev
+            echo "PKG_CONFIG_SYSROOT_DIR=$(rustc --print sysroot)" >> $GITHUB_ENV
+            echo "PKG_CONFIG_PATH=$(rustc --print sysroot)/lib/pkgconfig" >> $GITHUB_ENV
         if: matrix.tls.NAME == 'OpenSSL'
       - name: Install aarch64 compiler
         run:  sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
