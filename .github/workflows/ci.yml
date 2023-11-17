@@ -120,7 +120,15 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
         matrix: 
-          tls: ['', '--no-default-features --features native-tls']
+          tls: 
+          - {
+            SUFFIX: '',
+            ARGS: ''
+          }
+          - {
+            SUFFI: '-openssl',
+            ARGS: '--no-default-features --features native-tls'
+          }
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
@@ -144,11 +152,11 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --locked --profile optimized --target aarch64-unknown-linux-gnu
+          args: --locked --profile optimized --target aarch64-unknown-linux-gnu ${{ matrix.tls.ARGS }}
       - name: Upload Bob Linux-aarch64 binary
         uses: actions/upload-artifact@v2
         with:
-          name: "bob-linux-aarch64${{ matrix.tls == '--no-default-features --features native-tls' && '-openssl' || '' }}"
+          name: "bob-linux-aarch64${{ matrix.tls.SUFFIX }}"
           path: "target/aarch64-unknown-linux-gnu/optimized/bob"
           if-no-files-found: error
           retention-days: 7
@@ -157,7 +165,15 @@ jobs:
       runs-on: macos-latest
       strategy:
         matrix: 
-          tls: ['', '--no-default-features --features native-tls']
+         tls: 
+          - {
+            SUFFIX: '',
+            ARGS: ''
+          }
+          - {
+            SUFFI: '-openssl',
+            ARGS: '--no-default-features --features native-tls'
+          }
       steps:
         - uses: actions/checkout@v2
         - name: Install Rust
@@ -172,7 +188,7 @@ jobs:
           uses: actions-rs/cargo@v1
           with:
             command: build
-            args: --locked --profile optimized --target aarch64-apple-darwin
+            args: --locked --profile optimized --target aarch64-apple-darwin ${{ matrix.tls.ARGS }}
         - name: Check lints
           uses: actions-rs/cargo@v1
           with:
@@ -181,7 +197,7 @@ jobs:
         - name: Upload Bob M1 MacOS binary
           uses: actions/upload-artifact@v2
           with:
-            name: "bob-macos-arm${{ matrix.tls == '--no-default-features --features native-tls' && '-openssl' || '' }}"
+            name: "bob-macos-arm${{ matrix.tls.SUFFIX }}"
             path: "target/aarch64-apple-darwin/optimized/bob"
             if-no-files-found: error
             retention-days: 7
