@@ -89,6 +89,6 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: "bob-${{ matrix.os == 'windows-latest' && 'windows' || matrix.os == 'macos-latest' && 'macos' || 'linux' }}-x86_64${{ matrix.tls == '--no-default-features --features native-tls' && '-openssl' || '' }}"
-          path: target/optimized/bob
+          path: ${{ matrix.os == 'windows-latest' && 'build' || 'target/optimized/bob' }}
           if-no-files-found: error
           retention-days: 7
