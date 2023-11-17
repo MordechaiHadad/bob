@@ -58,3 +58,31 @@ jobs:
         with:
           command: fmt
           args: --all -- --check --verbose
+  
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        tls: ['', '--no-default-features --features native-tls']
+    runs-on: ${{matrix.os}}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - name: Build Bob
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --locked --profile optimized ${{matrix.tls}}
+      - name: Upload Bob Linux binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: "bob-${{ matrix.os }}-x86_64${{ matrix.tls == '--no-default-features --features native-tls' && '-openssl' || '' }}"
+          path: target/optimized/bob
+          if-no-files-found: error
+          retention-days: 7
