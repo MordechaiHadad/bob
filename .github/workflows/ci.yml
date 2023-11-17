@@ -65,17 +65,28 @@ jobs:
         os: 
           - { 
             NAME: linux,
-            OS: ubuntu-latest
+            OS: ubuntu-latest,
+            PATH: target/optimized/bob
           }
           - {
             NAME: macos,
-            OS: macos-latest
+            OS: macos-latest,
+            PATH: target/optimized/bob
           }
           - {
             NAME: windows,
-            OS: windows-latest
+            OS: windows-latest,
+            PATH: build
           }
-        tls: ['', '--no-default-features --features native-tls']
+        tls: 
+          - {
+            SUFFIX: '',
+            ARGS: ''
+          }
+          - {
+            SUFFI: '-openssl',
+            ARGS: '--no-default-features --features native-tls'
+          }
     runs-on: ${{matrix.os.OS}}
     steps:
       - uses: actions/checkout@v4
@@ -90,7 +101,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --locked --profile optimized ${{matrix.tls}}
+          args: --locked --profile optimized ${{matrix.tls.ARGS}}
       - name: Setup Bob build directory
         run: |
           mkdir build
@@ -100,8 +111,8 @@ jobs:
       - name: Upload Bob Linux binary
         uses: actions/upload-artifact@v2
         with:
-          name: "bob-${{ matrix.os.NAME }}-x86_64${{ matrix.tls == '--no-default-features --features native-tls' && '-openssl' || '' }}"
-          path: ${{ matrix.os.NAME == 'windows' && 'build' || 'target/optimized/bob' }}
+          name: "bob-${{ matrix.os.NAME }}-x86_64${{ matrix.tls.SUFFIX }}"
+          path: ${{ matrix.os.PATH }}
           if-no-files-found: error
           retention-days: 7
 
