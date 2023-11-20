@@ -144,12 +144,21 @@ jobs:
     needs: [build, build-macos-arm, build-linux-arm]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Download artifacts
         uses: actions/download-artifact@v2
         with:
           path: artifacts
-      - name: List files
-        run: ls -la artifacts/
+      - name: Generate a changelog
+        uses: orhun/git-cliff-action@v2
+        with:
+          config: cliff.toml
+          args: --verbose --current
+        env:
+          OUTPUT: CHANGELOG.md
       - name: Zip artifacts
         run: |
           cd artifacts
@@ -161,5 +170,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
+          body_path: CHANGELOG.md
           files: |
             ./artifacts/*.zip
