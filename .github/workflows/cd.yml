@@ -1,64 +1,11 @@
-name: Continuous Integration
-on: [push, pull_request]
+name: Continuous Deployment
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
 
 jobs:
-  check:
-    strategy:
-      matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
-    runs-on: ${{matrix.os}}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-      - name: Check
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --locked --verbose
-
-  clippy:
-    strategy:
-      matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
-    runs-on: ${{matrix.os}}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-      - name: Check the lints
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --verbose -- -D warnings
-
-  formatting:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-      - name: Check the formatting
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check --verbose
-  
   build:
     strategy:
       matrix:
@@ -119,7 +66,6 @@ jobs:
           name: "bob-${{ matrix.os.NAME }}-x86_64${{ matrix.tls.SUFFIX }}"
           path: ${{ matrix.os.PATH }}
           if-no-files-found: error
-          retention-days: 7
 
   build-linux-arm:
     runs-on: ubuntu-latest
@@ -153,7 +99,6 @@ jobs:
           name: bob-linux-aarch64
           path: "target/aarch64-unknown-linux-gnu/optimized/bob"
           if-no-files-found: error
-          retention-days: 7
 
   build-macos-arm:
       runs-on: macos-latest
@@ -194,4 +139,27 @@ jobs:
             name: "bob-macos-arm${{ matrix.tls.SUFFIX }}"
             path: "target/aarch64-apple-darwin/optimized/bob"
             if-no-files-found: error
-            retention-days: 7
+
+  github-release:
+    needs: [build, build-macos-arm, build-linux-arm]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: artifacts
+      - name: List files
+        run: ls -la artifacts/
+      - name: Zip artifacts
+        run: |
+          cd artifacts
+          for dir in */; do
+            base=$(basename "$dir")
+            zip -r "${base}.zip" "$dir"
+          done
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            ./artifacts/*.zip
