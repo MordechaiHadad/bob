@@ -125,7 +125,7 @@ pub async fn start(config: Config) -> Result<()> {
                 InstallResult::NightlyIsUpdated => {
                     info!("Nightly up to date!");
                 }
-                InstallResult::GivenNightlyRollback => ()
+                InstallResult::GivenNightlyRollback => (),
             }
         }
         Cli::Sync => {

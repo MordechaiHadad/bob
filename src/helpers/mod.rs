@@ -1,12 +1,11 @@
-pub mod filesystem;
 pub mod directories;
-pub mod version;
-pub mod unarchive;
+pub mod filesystem;
 pub mod sync;
+pub mod unarchive;
+pub mod version;
 
 use anyhow::{anyhow, Result};
 use tokio::process::Command;
-
 
 pub fn get_file_type() -> &'static str {
     if cfg!(target_family = "windows") {

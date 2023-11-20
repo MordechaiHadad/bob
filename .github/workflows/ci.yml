@@ -1,0 +1,197 @@
+name: Continuous Integration
+on: [push, pull_request]
+
+jobs:
+  check:
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{matrix.os}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - name: Check
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --locked --verbose
+
+  clippy:
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{matrix.os}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - name: Check the lints
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --verbose -- -D warnings
+
+  formatting:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - name: Check the formatting
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check --verbose
+  
+  build:
+    strategy:
+      matrix:
+        os: 
+          - { 
+            NAME: linux,
+            OS: ubuntu-latest,
+            PATH: target/optimized/bob
+          }
+          - {
+            NAME: macos,
+            OS: macos-latest,
+            PATH: target/optimized/bob
+          }
+          - {
+            NAME: windows,
+            OS: windows-latest,
+            PATH: build
+          }
+        tls: 
+          - {
+            NAME: Rustls,
+            SUFFIX: '',
+            ARGS: ''
+          }
+          - {
+            NAME: OpenSSL,
+            SUFFIX: '-openssl',
+            ARGS: '--no-default-features --features native-tls'
+          }
+    runs-on: ${{matrix.os.OS}}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - name: Install OpenSSL libraries
+        run: sudo apt update && sudo apt install libssl-dev
+        if: matrix.os.OS == 'ubuntu-latest' && matrix.tls.NAME == 'OpenSSL'
+      - uses: Swatinem/rust-cache@v1
+      - name: Build Bob
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --locked --profile optimized ${{matrix.tls.ARGS}}
+      - name: Setup Bob build directory
+        run: |
+          mkdir build
+          copy .\\bin\\vcruntime140.dll .\\build
+          copy .\\target\\optimized\\bob.exe .\\build
+        if: matrix.os.OS == 'windows-latest'
+      - name: Upload Bob binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: "bob-${{ matrix.os.NAME }}-x86_64${{ matrix.tls.SUFFIX }}"
+          path: ${{ matrix.os.PATH }}
+          if-no-files-found: error
+          retention-days: 7
+
+  linux-arm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-unknown-linux-gnu
+          profile: minimal
+          override: true
+      - name: Install aarch64 compiler
+        run:  sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Change linker
+        run: |
+          mkdir .cargo
+          cat > .cargo/config << EOF
+          [target.aarch64-unknown-linux-gnu]
+          linker = "aarch64-linux-gnu-gcc"
+          EOF
+      - uses: Swatinem/rust-cache@v1
+      - name: Build Bob
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --locked --profile optimized --target aarch64-unknown-linux-gnu
+      - name: Upload Bob Linux-aarch64 binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: bob-linux-aarch64
+          path: "target/aarch64-unknown-linux-gnu/optimized/bob"
+          if-no-files-found: error
+          retention-days: 7
+
+  macos-arm:
+      runs-on: macos-latest
+      strategy:
+        matrix: 
+         tls: 
+          - {
+            SUFFIX: '',
+            ARGS: ''
+          }
+          - {
+            SUFFIX: '-openssl',
+            ARGS: '--no-default-features --features native-tls'
+          }
+      steps:
+        - uses: actions/checkout@v2
+        - name: Install Rust
+          uses: actions-rs/toolchain@v1
+          with:
+            toolchain: stable
+            target: aarch64-apple-darwin
+            profile: minimal
+            override: true
+        - uses: Swatinem/rust-cache@v1
+        - name: Build Bob
+          uses: actions-rs/cargo@v1
+          with:
+            command: build
+            args: --locked --profile optimized --target aarch64-apple-darwin ${{ matrix.tls.ARGS }}
+        - name: Check lints
+          uses: actions-rs/cargo@v1
+          with:
+            command: clippy
+            args: --verbose -- -D warnings
+        - name: Upload Bob M1 MacOS binary
+          uses: actions/upload-artifact@v2
+          with:
+            name: "bob-macos-arm${{ matrix.tls.SUFFIX }}"
+            path: "target/aarch64-apple-darwin/optimized/bob"
+            if-no-files-found: error
+            retention-days: 7
