@@ -60,6 +60,7 @@ jobs:
           args: --all -- --check --verbose
   
   build:
+    needs: [clippy, formatting, check]
     strategy:
       matrix:
         os: 
@@ -122,6 +123,7 @@ jobs:
           retention-days: 7
 
   build-linux-arm:
+    needs: [clippy, formatting, check]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -156,6 +158,7 @@ jobs:
           retention-days: 7
 
   build-macos-arm:
+    needs: [clippy, formatting, check]
       runs-on: macos-latest
       strategy:
         matrix: 
