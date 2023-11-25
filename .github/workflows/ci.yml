@@ -159,42 +159,42 @@ jobs:
 
   build-macos-arm:
     needs: [clippy, formatting, check]
-      runs-on: macos-latest
-      strategy:
-        matrix: 
-         tls: 
-          - {
+    runs-on: macos-latest
+    strategy:
+      matrix: 
+        tls: 
+        - {
             SUFFIX: '',
             ARGS: ''
           }
-          - {
+        - {
             SUFFIX: '-openssl',
             ARGS: '--no-default-features --features native-tls'
           }
-      steps:
-        - uses: actions/checkout@v2
-        - name: Install Rust
-          uses: actions-rs/toolchain@v1
-          with:
-            toolchain: stable
-            target: aarch64-apple-darwin
-            profile: minimal
-            override: true
-        - uses: Swatinem/rust-cache@v1
-        - name: Build Bob
-          uses: actions-rs/cargo@v1
-          with:
-            command: build
-            args: --locked --profile optimized --target aarch64-apple-darwin ${{ matrix.tls.ARGS }}
-        - name: Check lints
-          uses: actions-rs/cargo@v1
-          with:
-            command: clippy
-            args: --verbose -- -D warnings
-        - name: Upload Bob M1 MacOS binary
-          uses: actions/upload-artifact@v2
-          with:
-            name: "bob-macos-arm${{ matrix.tls.SUFFIX }}"
-            path: "target/aarch64-apple-darwin/optimized/bob"
-            if-no-files-found: error
-            retention-days: 7
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-apple-darwin
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - name: Build Bob
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --locked --profile optimized --target aarch64-apple-darwin ${{ matrix.tls.ARGS }}
+      - name: Check lints
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --verbose -- -D warnings
+      - name: Upload Bob M1 MacOS binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: "bob-macos-arm${{ matrix.tls.SUFFIX }}"
+          path: "target/aarch64-apple-darwin/optimized/bob"
+          if-no-files-found: error
+          retention-days: 7

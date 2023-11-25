@@ -6,7 +6,22 @@ on:
       - "v*.*.*"
 
 jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Check version
+        id: check_version
+        run: |
+          VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f 2)
+          if [[ "$VERSION" != "${{ github.ref }}" ]]; then
+            echo "Version in Cargo.toml ($VERSION) does not match pushed tag (${{ github.ref }})"
+            exit 1
+          fi
+          
   build:
+    needs: [check-version]
     strategy:
       matrix:
         os: 
@@ -68,6 +83,7 @@ jobs:
           if-no-files-found: error
 
   build-linux-arm:
+    needs: [check-version]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -101,6 +117,7 @@ jobs:
           if-no-files-found: error
 
   build-macos-arm:
+      needs: [check-version]
       runs-on: macos-latest
       strategy:
         matrix: 
@@ -173,3 +190,29 @@ jobs:
           body_path: CHANGELOG.md
           files: |
             ./artifacts/*.zip
+
+  bump-formulae:
+    needs: github-release
+    runs-on: macos-latest
+    steps:
+      - name: Bump formulae
+        uses: Homebrew/actions/bump-formulae@master
+        with:
+        # Custom GitHub access token with only the 'public_repo' scope enabled
+          token: ${{secrets.PUBLIC_TOKEN}}
+        # Bump only these formulae if outdated
+          formulae: |
+            Bob
+  
+  publish-cargo:
+    needs: github-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: katyo/publish-crates@v2
+        with:
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
