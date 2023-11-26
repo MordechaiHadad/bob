@@ -14,7 +14,7 @@ jobs:
       - name: Check version
         id: check_version
         run: |
-          VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f 2 | head -n 1)
+          VERSION=v$(grep '^version =' Cargo.toml | cut -d '"' -f 2 | head -n 1)
           GIT_TAG_VERSION=${{ github.ref }} 
           GIT_TAG_VERSION=${GIT_TAG_VERSION#refs/tags/}
           if [[ "$VERSION" != "$GIT_TAG_VERSION" ]]; then
