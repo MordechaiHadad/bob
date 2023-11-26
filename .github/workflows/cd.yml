@@ -14,11 +14,13 @@ jobs:
       - name: Check version
         id: check_version
         run: |
-          VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f 2)
-          if [[ "$VERSION" != "${{ github.ref }}" ]]; then
-            echo "Version in Cargo.toml ($VERSION) does not match pushed tag (${{ github.ref }})"
+          VERSION=v$(grep '^version =' Cargo.toml | cut -d '"' -f 2)
+          GIT_TAG_VERSION=${{ github.ref }} 
+          GIT_TAG_VERSION=${GIT_TAG_VERSION#refs/tags/}
+          if [[ "$VERSION" != "$GIT_TAG_VERSION" ]]; then
+            echo "Version in Cargo.toml ($VERSION) does not match pushed tag ($GIT_TAG_VERSION)"
             exit 1
-          fi
+          fi 
           
   build:
     needs: [check-version]
