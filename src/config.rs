@@ -2,7 +2,7 @@ use anyhow::Result;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::env;
-use tokio::fs;
+use tokio::fs::{self};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
@@ -16,12 +16,18 @@ pub struct Config {
 }
 
 pub async fn handle_config() -> Result<Config> {
-    let config_file = crate::helpers::directories::get_config_dir()?;
-    let config = match fs::read_to_string(config_file).await {
+    let config_file = crate::helpers::directories::get_config_file()?;
+    let config = match fs::read_to_string(&config_file).await {
         Ok(config) => {
-            let mut config: Config = serde_json::from_str(&config)?;
-            handle_envars(&mut config)?;
-            config
+            if config_file.extension().unwrap() == "toml" {
+                let mut config: Config = toml::from_str(&config)?;
+                handle_envars(&mut config)?;
+                config
+            } else {
+                let mut config: Config = serde_json::from_str(&config)?;
+                handle_envars(&mut config)?;
+                config
+            }
         }
         Err(_) => Config {
             enable_nightly_info: None,

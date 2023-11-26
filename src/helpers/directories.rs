@@ -49,7 +49,7 @@ pub fn get_local_data_dir() -> Result<PathBuf> {
     Ok(home_dir)
 }
 
-pub fn get_config_dir() -> Result<PathBuf> {
+pub fn get_config_file() -> Result<PathBuf> {
     if let Ok(value) = std::env::var("BOB_CONFIG") {
         return Ok(PathBuf::from(value));
     }
@@ -65,6 +65,11 @@ pub fn get_config_dir() -> Result<PathBuf> {
     }
 
     home_dir.push("bob/config.json");
+
+    if fs::metadata(&home_dir).is_err() {
+        home_dir.pop();
+        home_dir.push("config.toml");
+    }
 
     Ok(home_dir)
 }
