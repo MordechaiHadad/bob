@@ -160,24 +160,24 @@ Update existing version, can specify either a version or the flag `--all`
 
 This section is a bit more advanced and thus the user will have to do the work himself since bob doesn't do that.
 
-Bob's configuration file will have to be in `config_dir/bob/config.json` but can be customized as seen [below](#config-location), to be more specific:
+Bob's configuration file can be written in either JSON or TOML format. The file should be located at `config_dir/bob/config.json` or `config_dir/bob/config.toml` respectively. However, the location of the configuration file can be customized as explained [below](#config-location), to be more specific:
 
 <details>
 <summary>On Linux</summary>
 
-`/home/user/.config/bob/config.json`
+`/home/user/.config/bob/config.json|toml`
 
 </details>
 <details>
 <summary>On Windows</summary>
 
-`C:\Users\user\AppData\Roaming\bob\config.json`
+`C:\Users\user\AppData\Roaming\bob\config.json|toml`
 
 </details>
 <details>
 <summary>On MacOS</summary>
 
-`/Users/user/Library/Application Support/bob/config.json`
+`/Users/user/Library/Application Support/bob/config.json|toml`
 
 </details>
 
@@ -198,7 +198,7 @@ bob update -a
 ### <a name="config-location"></a>Custom Location
 
 Bob's config file location can be configured by using an environment variable called `$BOB_CONFIG`.
-Example: `export BOB_CONFIG=/path/to/config/config.json`
+Example: `export BOB_CONFIG=/path/to/config/config.json|toml`
 
 ### Syntax
 
