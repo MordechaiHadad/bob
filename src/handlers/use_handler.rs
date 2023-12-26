@@ -1,14 +1,15 @@
 use anyhow::Result;
 use reqwest::Client;
 use std::env;
-use std::path::Path;
-use tokio::fs;
+use std::path::{Path, PathBuf};
+use tokio::fs::{self, remove_dir_all};
 use tracing::info;
 
 use crate::config::Config;
 use crate::handlers::{install_handler, InstallResult};
-use crate::helpers;
+use crate::helpers::filesystem::copy_dir;
 use crate::helpers::version::types::{ParsedVersion, VersionType};
+use crate::helpers::{self, directories, get_platform_name};
 
 pub async fn start(
     mut version: ParsedVersion,
@@ -72,6 +73,8 @@ pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
             );
         }
     }
+
+    copy_manpage(config, version).await;
 
     Ok(())
 }
@@ -143,4 +146,35 @@ fn add_to_path(installation_dir: &Path) -> Result<()> {
     }
 
     Ok(())
+}
+
+async fn copy_manpage(config: &Config, version: &ParsedVersion) {
+    if !cfg!(unix) {
+        return;
+    }
+
+    if config.enable_manpage_mirror.is_none() || !config.enable_manpage_mirror.unwrap() {
+        return;
+    }
+
+    let downloads_location = directories::get_downloads_directory(config).await.unwrap();
+
+    let mut man1_location = downloads_location.join(&version.tag_name);
+
+    let platform_name = get_platform_name();
+    man1_location.push(platform_name);
+
+    let mut man_path = PathBuf::from("man/man1");
+
+    if !man1_location.join(&man_path).exists() {
+        man_path = Path::new("share").join(man_path);
+    }
+
+    man1_location.push(man_path);
+
+    let new_location = downloads_location.join("man1");
+
+    remove_dir_all(&new_location).await.unwrap();
+    copy_dir(man1_location, new_location).await.unwrap();
+    info!("Successfully copied man1 folder to mirror");
 }

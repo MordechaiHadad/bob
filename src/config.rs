@@ -13,6 +13,7 @@ pub struct Config {
     pub version_sync_file_location: Option<String>,
     pub github_mirror: Option<String>,
     pub rollback_limit: Option<u8>,
+    pub enable_manpage_mirror: Option<bool>,
 }
 
 pub async fn handle_config() -> Result<Config> {
@@ -37,6 +38,7 @@ pub async fn handle_config() -> Result<Config> {
             version_sync_file_location: None,
             github_mirror: None,
             rollback_limit: None,
+            enable_manpage_mirror: None,
         },
     };
 
