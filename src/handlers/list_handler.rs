@@ -11,10 +11,12 @@ use crate::{
 pub async fn start(config: Config) -> Result<()> {
     let downloads_dir = directories::get_downloads_directory(&config).await?;
 
-    let paths = fs::read_dir(downloads_dir)?
-        .filter_map(|e| e.ok())
-        .map(|entry| entry.path())
-        .collect::<Vec<_>>();
+    let mut paths = Vec::new();
+    for entry in fs::read_dir(downloads_dir)? {
+        if let Ok(v) = entry {
+            paths.push(v.path());
+        }
+    }
 
     if paths.is_empty() {
         return Err(anyhow!("There are no versions installed"));
