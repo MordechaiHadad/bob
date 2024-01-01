@@ -21,7 +21,7 @@ pub async fn produce_nightly_vec(config: &Config) -> Result<Vec<LocalNightly>> {
     let downloads_dir = directories::get_downloads_directory(config).await?;
     let mut paths = fs::read_dir(&downloads_dir).await?;
 
-    let regex = Regex::new(r"nightly-[a-zA-Z0-9]{7}")?;
+    let regex = Regex::new(r"nightly-[a-zA-Z0-9]{7,8}")?;
 
     let mut nightly_vec: Vec<LocalNightly> = Vec::new();
 

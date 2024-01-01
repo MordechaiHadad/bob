@@ -54,7 +54,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                 });
             }
 
-            let rollback_regex = Regex::new(r"nightly-[a-zA-Z0-9]{7}")?;
+            let rollback_regex = Regex::new(r"nightly-[a-zA-Z0-9]{7,8}")?;
 
             if rollback_regex.is_match(version) {
                 return Ok(ParsedVersion {
