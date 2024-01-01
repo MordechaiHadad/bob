@@ -104,21 +104,7 @@ fn is_version(name: &str) -> bool {
                 return true;
             }
 
-            if hash_regex.is_match(name) {
-                return true;
-            }
-
-            let alphanumeric_regex = Regex::new(r"^[a-zA-Z0-9]{8}$").unwrap();
-            let separated_version: Vec<&str> = name.split('-').collect();
-
-            if separated_version[0] == "nightly"
-                && (hash_regex.is_match(separated_version[1])
-                    || alphanumeric_regex.is_match(separated_version[1]))
-            {
-                return true;
-            }
-
-            false
+            hash_regex.is_match(name)
         }
     }
 }
