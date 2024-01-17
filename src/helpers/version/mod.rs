@@ -54,13 +54,9 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                 });
             }
 
-            let alphanumeric_regex = Regex::new(r"^[a-zA-Z0-9]{8}$")?;
-            let separated_version: Vec<&str> = version.split('-').collect();
+            let rollback_regex = Regex::new(r"nightly-[a-zA-Z0-9]{7,8}")?;
 
-            if separated_version[0] == "nightly"
-                && (hash_regex.is_match(separated_version[1])
-                    || alphanumeric_regex.is_match(separated_version[1]))
-            {
+            if rollback_regex.is_match(version) {
                 return Ok(ParsedVersion {
                     tag_name: version.to_string(),
                     version_type: VersionType::NightlyRollback,
