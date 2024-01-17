@@ -120,9 +120,10 @@ If Config::version_sync_file_location is set, the version in that file will be p
 
 ---
 
-- `bob uninstall |nightly|stable|latest|<version-string>|<commit-hash>|`
+- `bob uninstall [|nightly|stable|latest|<version-string>|<commit-hash>|]`
 
-Uninstall the specified version.
+Uninstall the specified version. If no version is specified a prompt is used to select all the versions
+to be uninstalled.
 
 ---
 

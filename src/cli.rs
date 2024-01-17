@@ -60,8 +60,9 @@ enum Cli {
     /// Uninstall the specified version
     #[clap(visible_alias = "rm")]
     Uninstall {
-        /// Version to be uninstalled |nightly|stable|<version-string>|<commit-hash>|
-        version: String,
+        /// Optional Version to be uninstalled |nightly|stable|<version-string>|<commit-hash>|
+        /// If no Version is provided a prompt is used to select the versions to be uninstalled
+        version: Option<String>,
     },
 
     /// Rollback to an existing nightly rollback
@@ -134,7 +135,7 @@ pub async fn start(config: Config) -> Result<()> {
         }
         Cli::Uninstall { version } => {
             info!("Starting uninstallation process");
-            uninstall_handler::start(&version, config).await?;
+            uninstall_handler::start(version.as_deref(), config).await?;
         }
         Cli::Rollback => rollback_handler::start(config).await?,
         Cli::Erase => erase_handler::start(config).await?,
