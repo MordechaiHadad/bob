@@ -58,7 +58,7 @@ enum Cli {
     Sync,
 
     /// Uninstall the specified version
-    #[clap(visible_alias = "rm")]
+    #[clap(alias = "remove", visible_alias = "rm")]
     Uninstall {
         /// Optional Version to be uninstalled |nightly|stable|<version-string>|<commit-hash>|
         /// If no Version is provided a prompt is used to select the versions to be uninstalled
