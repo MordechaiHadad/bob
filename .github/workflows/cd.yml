@@ -178,6 +178,8 @@ jobs:
           args: --verbose --current
         env:
           OUTPUT: CHANGELOG.md
+      - name: Test changelog
+        run: echo CHANGELOG.md
       - name: Zip artifacts
         run: |
           cd artifacts
