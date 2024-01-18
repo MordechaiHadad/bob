@@ -192,19 +192,6 @@ jobs:
           body_path: CHANGELOG.md
           files: |
             ./artifacts/*.zip
-
-  bump-formulae:
-    needs: github-release
-    runs-on: macos-latest
-    steps:
-      - name: Bump formulae
-        uses: Homebrew/actions/bump-formulae@master
-        with:
-        # Custom GitHub access token with only the 'public_repo' scope enabled
-          token: ${{secrets.PUBLIC_TOKEN}}
-        # Bump only these formulae if outdated
-          formulae: |
-            Bob
   
   publish-cargo:
     needs: github-release
