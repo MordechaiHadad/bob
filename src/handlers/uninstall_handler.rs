@@ -22,7 +22,7 @@ pub async fn start(version: Option<&str>, config: Config) -> Result<()> {
     };
 
     let version = helpers::version::parse_version_type(&client, version).await?;
-    if helpers::version::is_version_used(&version.tag_name, &config).await {
+    if helpers::version::is_version_used(&version.non_parsed_string, &config).await {
         warn!("Switch to a different version before proceeding");
         return Ok(());
     }
@@ -32,10 +32,13 @@ pub async fn start(version: Option<&str>, config: Config) -> Result<()> {
         Err(error) => return Err(anyhow!(error)),
     };
 
-    let path = downloads_dir.join(&version.tag_name);
+    let path = downloads_dir.join(&version.non_parsed_string);
 
     fs::remove_dir_all(path).await?;
-    info!("Successfully uninstalled version: {}", version.tag_name);
+    info!(
+        "Successfully uninstalled version: {}",
+        version.non_parsed_string
+    );
     Ok(())
 }
 
@@ -53,10 +56,10 @@ async fn uninstall_selections(client: &Client, config: &Config) -> Result<()> {
             Err(_) => continue,
         };
 
-        if helpers::version::is_version_used(&version.tag_name, config).await {
+        if helpers::version::is_version_used(&version.non_parsed_string, config).await {
             continue;
         }
-        installed_versions.push(version.tag_name);
+        installed_versions.push(version.non_parsed_string);
     }
 
     if installed_versions.is_empty() {
