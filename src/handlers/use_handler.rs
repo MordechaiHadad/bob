@@ -111,16 +111,8 @@ async fn copy_nvim_bob(config: &Config) -> Result<()> {
 }
 
 fn add_to_path(installation_dir: &Path) -> Result<()> {
-    let path_env = std::env::var_os("PATH")
-        .unwrap()
-        .to_string_lossy()
-        .to_string();
     let installation_dir = installation_dir.to_str().unwrap();
-
-    if path_env.contains(installation_dir) {
-        return Ok(());
-    }
-
+    
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
             use winreg::enums::*;
@@ -129,6 +121,11 @@ fn add_to_path(installation_dir: &Path) -> Result<()> {
             let current_usr = RegKey::predef(HKEY_CURRENT_USER);
             let env = current_usr.open_subkey_with_flags("Environment", KEY_READ | KEY_WRITE)?;
             let usr_path: String = env.get_value("Path")?;
+
+            if usr_path.contains(installation_dir) {
+                return Ok(());
+            }
+
             let new_path = if usr_path.ends_with(';') {
                 format!("{usr_path}{}", installation_dir)
             } else {
