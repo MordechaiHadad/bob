@@ -112,7 +112,7 @@ async fn copy_nvim_bob(config: &Config) -> Result<()> {
 
 fn add_to_path(installation_dir: &Path) -> Result<()> {
     let installation_dir = installation_dir.to_str().unwrap();
-    
+
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
             use winreg::enums::*;
