@@ -211,7 +211,7 @@ Example: `export BOB_CONFIG=/path/to/config/config.json|toml`
 | **installation_location**      | The path in which the proxied neovim installation will be located in                                                                                           | unix: `/home/<username>/.local/share/bob/nvim-bin`, windows: `C:\Users\<username>\AppData\Local\bob\nvim-bin` |
 | **version_sync_file_location** | The path to a file that will hold the neovim version string, useful for config version tracking, bob will error if the specified file is not a valid file path | `Disabled by default`                                                                                         |
 | **rollback_limit**             | The amount of rollbacks before bob starts to delete older ones, can be up to 255                                                                               | `3`                                                                                                           |
-| **github_mirror**              | Specify the github mirror to use instead of `https://github.com`, example: `https://ghproxy.com`                                                                                 | `Disabled by default`                                                                                         |
+| **github_mirror**              | Specify the github mirror to use instead of `https://github.com`, example: `https://mirror.ghproxy.com`                                                                                 | `Disabled by default`                                                                                         |
 
 ### Example 
 
