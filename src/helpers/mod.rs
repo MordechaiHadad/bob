@@ -20,8 +20,10 @@ pub fn get_file_type() -> &'static str {
 pub fn get_platform_name() -> &'static str {
     if cfg!(target_os = "windows") {
         "nvim-win64"
-    } else if cfg!(target_os = "macos") {
-        "nvim-macos"
+    } else if cfg!(target_os = "macos") && cfg!(target_arch = "arm64") {
+        "nvim-macos-arm64"
+    } else if cfg!(target_os = "macos") && cfg!(target_arch = "x86_64") {
+        "nvim-macos-x86_64"
     } else {
         "nvim-linux64"
     }
@@ -30,8 +32,10 @@ pub fn get_platform_name() -> &'static str {
 pub fn get_platform_name_download() -> &'static str {
     if cfg!(target_os = "windows") {
         "nvim-win64"
-    } else if cfg!(target_os = "macos") {
-        "nvim-macos"
+    } else if cfg!(target_os = "macos") && cfg!(target_arch = "aarch64") {
+        "nvim-macos-arm64"
+    } else if cfg!(target_os = "macos") && cfg!(target_arch = "x86_64") {
+        "nvim-macos-x86_64"
     } else {
         "nvim"
     }
