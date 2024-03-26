@@ -48,8 +48,8 @@ async fn run() -> Result<()> {
 
         let downloads_dir = directories::get_downloads_directory(&config).await?;
         let used_version = version::get_current_version(&config).await?;
-        let version = semver::Version::parse(&used_version)?;
-        let platform = helpers::get_platform_name(&Some(version));
+        let version = semver::Version::parse(&used_version).ok();
+        let platform = helpers::get_platform_name(&version);
 
         let location = downloads_dir
             .join(used_version)
@@ -72,8 +72,8 @@ async fn run() -> Result<()> {
     } else if exe_name.contains("nvim") {
         let downloads_dir = directories::get_downloads_directory(&config).await?;
         let used_version = version::get_current_version(&config).await?;
-        let version = semver::Version::parse(&used_version)?;
-        let platform = helpers::get_platform_name(&Some(version));
+        let version = semver::Version::parse(&used_version).ok();
+        let platform = helpers::get_platform_name(&version);
 
         let location = downloads_dir
             .join(used_version)

@@ -452,7 +452,6 @@ async fn send_request(
     let version = &version.tag_name;
     let request_url =
         format!("{url}/neovim/neovim/releases/download/{version}/{platform}.{file_type}",);
-    info!("Request URL: {}", request_url);
 
     client
         .get(request_url)
