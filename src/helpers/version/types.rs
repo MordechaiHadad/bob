@@ -30,5 +30,5 @@ pub struct LocalVersion {
     pub file_name: String,
     pub file_format: String,
     pub path: String,
-    pub semver: Version,
+    pub semver: Option<Version>,
 }

@@ -241,7 +241,7 @@ async fn download_version(
                             file_name: version.tag_name.to_owned(),
                             file_format: file_type.to_string(),
                             path: root.display().to_string(),
-                            semver: version.semver.as_ref().unwrap().clone(),
+                            semver: version.semver.clone(),
                         }))
                     } else {
                         Err(anyhow!(
