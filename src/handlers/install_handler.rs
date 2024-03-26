@@ -193,7 +193,7 @@ async fn download_version(
 ) -> Result<PostDownloadVersionType> {
     match version.version_type {
         VersionType::Normal | VersionType::Nightly | VersionType::Latest => {
-            let response = send_request(client, config, &version.tag_name).await;
+            let response = send_request(client, config, version).await;
 
             match response {
                 Ok(response) => {
@@ -388,7 +388,7 @@ async fn handle_building_from_source(
 
     let mut downloads_location = directories::get_downloads_directory(config).await?;
     downloads_location.push(&version.tag_name[0..7]);
-    downloads_location.push(helpers::get_platform_name());
+    downloads_location.push(helpers::get_platform_name(&version.semver));
 
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
@@ -430,14 +430,15 @@ async fn handle_building_from_source(
 async fn send_request(
     client: &Client,
     config: &Config,
-    version: &str,
+    version: &ParsedVersion,
 ) -> Result<reqwest::Response, reqwest::Error> {
-    let platform = helpers::get_platform_name_download();
+    let platform = helpers::get_platform_name_download(&version.semver);
     let file_type = helpers::get_file_type();
     let url = match &config.github_mirror {
         Some(val) => val.to_string(),
         None => "https://github.com".to_string(),
     };
+    let version = &version.tag_name;
     let request_url =
         format!("{url}/neovim/neovim/releases/download/{version}/{platform}.{file_type}",);
 
