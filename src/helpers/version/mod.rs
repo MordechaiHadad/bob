@@ -10,6 +10,7 @@ use crate::{
 use anyhow::{anyhow, Context, Result};
 use regex::Regex;
 use reqwest::Client;
+use semver::Version;
 use std::path::{Path, PathBuf};
 use tokio::{
     fs::{self, File},
@@ -23,14 +24,17 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
             tag_name: version.to_string(),
             version_type: VersionType::Nightly,
             non_parsed_string: version.to_string(),
+            semver: None,
         }),
         "stable" | "latest" => {
             info!("Fetching latest version");
             let stable_version = search_stable_version(client).await?;
+            let cloned_version = stable_version.clone();
             Ok(ParsedVersion {
                 tag_name: stable_version,
                 version_type: VersionType::Latest,
                 non_parsed_string: version.to_string(),
+                semver: Some(Version::parse(&cloned_version.replace('v', ""))?),
             })
         }
         _ => {
@@ -41,16 +45,19 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                 if !version.contains('v') {
                     returned_version.insert(0, 'v');
                 }
+                let cloned_version = returned_version.clone();
                 return Ok(ParsedVersion {
                     tag_name: returned_version,
                     version_type: VersionType::Normal,
                     non_parsed_string: version.to_string(),
+                    semver: Some(Version::parse(&cloned_version.replace('v', ""))?),
                 });
             } else if hash_regex.is_match(version) {
                 return Ok(ParsedVersion {
                     tag_name: version.to_string().chars().take(7).collect(),
                     version_type: VersionType::Hash,
                     non_parsed_string: version.to_string(),
+                    semver: None,
                 });
             }
 
@@ -61,6 +68,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                     tag_name: version.to_string(),
                     version_type: VersionType::NightlyRollback,
                     non_parsed_string: version.to_string(),
+                    semver: None,
                 });
             }
 

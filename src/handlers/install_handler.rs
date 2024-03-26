@@ -8,6 +8,7 @@ use anyhow::{anyhow, Result};
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
+use semver::Version;
 use std::cmp::min;
 use std::env;
 use std::path::Path;
@@ -27,6 +28,12 @@ pub async fn start(
 ) -> Result<InstallResult> {
     if version.version_type == VersionType::NightlyRollback {
         return Ok(InstallResult::GivenNightlyRollback);
+    }
+
+    if let Some(version) = &version.semver {
+        if version <= &Version::new(0, 2, 2) {
+            return Err(anyhow!("Versions below 0.2.2 are not supported"));
+        }
     }
 
     let root = directories::get_downloads_directory(config).await?;
@@ -132,7 +139,7 @@ async fn handle_rollback(config: &Config) -> Result<()> {
         if #[cfg(unix)] {
             use std::os::unix::prelude::PermissionsExt;
 
-            let platform = helpers::get_platform_name();
+            let platform = helpers::get_platform_name(&None);
             let file = &format!("nightly/{platform}/bin/nvim");
             let mut perms = fs::metadata(file).await?.permissions();
             let octal_perms = format!("{:o}", perms.mode());
@@ -193,7 +200,7 @@ async fn download_version(
 ) -> Result<PostDownloadVersionType> {
     match version.version_type {
         VersionType::Normal | VersionType::Nightly | VersionType::Latest => {
-            let response = send_request(client, config, &version.tag_name).await;
+            let response = send_request(client, config, version).await;
 
             match response {
                 Ok(response) => {
@@ -234,9 +241,13 @@ async fn download_version(
                             file_name: version.tag_name.to_owned(),
                             file_format: file_type.to_string(),
                             path: root.display().to_string(),
+                            semver: version.semver.clone(),
                         }))
                     } else {
-                        Err(anyhow!("Please provide an existing neovim version"))
+                        Err(anyhow!(
+                            "Please provide an existing neovim version, {}",
+                            response.text().await?
+                        ))
                     }
                 }
                 Err(error) => Err(anyhow!(error)),
@@ -388,7 +399,7 @@ async fn handle_building_from_source(
 
     let mut downloads_location = directories::get_downloads_directory(config).await?;
     downloads_location.push(&version.tag_name[0..7]);
-    downloads_location.push(helpers::get_platform_name());
+    downloads_location.push(helpers::get_platform_name(&version.semver));
 
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
@@ -430,14 +441,15 @@ async fn handle_building_from_source(
 async fn send_request(
     client: &Client,
     config: &Config,
-    version: &str,
+    version: &ParsedVersion,
 ) -> Result<reqwest::Response, reqwest::Error> {
-    let platform = helpers::get_platform_name_download();
+    let platform = helpers::get_platform_name_download(&version.semver);
     let file_type = helpers::get_file_type();
     let url = match &config.github_mirror {
         Some(val) => val.to_string(),
         None => "https://github.com".to_string(),
     };
+    let version = &version.tag_name;
     let request_url =
         format!("{url}/neovim/neovim/releases/download/{version}/{platform}.{file_type}",);
 

@@ -1,7 +1,7 @@
 [package]
 name = "bob-nvim"
 edition = "2021"
-version = "2.8.2"
+version = "2.8.3"
 description = "A version manager for neovim"
 readme = "README.md"
 keywords = ["neovim", "version-manager"]
@@ -24,6 +24,7 @@ yansi = "0.5.1"
 async-recursion = "1.0.2"
 clap_complete = "4.1"
 toml = "0.8.8"
+semver = "1.0.22"
 
 [dependencies.chrono]
 version = "0.4.23"
