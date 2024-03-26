@@ -201,7 +201,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
             format!("{}/nvim-macos", downloaded_file.file_name),
         )?;
     }
-    let platform = helpers::get_platform_name(&downloaded_file.semver.clone());
+    let platform = helpers::get_platform_name(&downloaded_file.semver);
     let file = &format!("{}/{platform}/bin/nvim", downloaded_file.file_name);
     let mut perms = fs::metadata(file)?.permissions();
     perms.set_mode(0o551);
