@@ -49,7 +49,7 @@ async fn run() -> Result<()> {
         let downloads_dir = directories::get_downloads_directory(&config).await?;
         let used_version = version::get_current_version(&config)
             .await?
-            .replace("v", "");
+            .replace('v', "");
         let version = semver::Version::parse(&used_version)?;
         let platform = helpers::get_platform_name(&Some(version));
 
@@ -75,7 +75,7 @@ async fn run() -> Result<()> {
         let downloads_dir = directories::get_downloads_directory(&config).await?;
         let used_version = version::get_current_version(&config)
             .await?
-            .replace("v", "");
+            .replace('v', "");
         let version = semver::Version::parse(&used_version)?;
         let platform = helpers::get_platform_name(&Some(version));
 

@@ -8,6 +8,7 @@ use anyhow::{anyhow, Result};
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
+use semver::Version;
 use std::cmp::min;
 use std::env;
 use std::path::Path;
@@ -27,6 +28,12 @@ pub async fn start(
 ) -> Result<InstallResult> {
     if version.version_type == VersionType::NightlyRollback {
         return Ok(InstallResult::GivenNightlyRollback);
+    }
+
+    if let Some(version) = &version.semver {
+        if version <= &Version::new(0, 2, 2) {
+            return Err(anyhow!("Versions below 0.2.2 are not supported"));
+        }
     }
 
     let root = directories::get_downloads_directory(config).await?;
@@ -132,7 +139,7 @@ async fn handle_rollback(config: &Config) -> Result<()> {
         if #[cfg(unix)] {
             use std::os::unix::prelude::PermissionsExt;
 
-            let platform = helpers::get_platform_name();
+            let platform = helpers::get_platform_name(&None);
             let file = &format!("nightly/{platform}/bin/nvim");
             let mut perms = fs::metadata(file).await?.permissions();
             let octal_perms = format!("{:o}", perms.mode());
@@ -234,9 +241,13 @@ async fn download_version(
                             file_name: version.tag_name.to_owned(),
                             file_format: file_type.to_string(),
                             path: root.display().to_string(),
+                            semver: version.semver.as_ref().unwrap().clone(),
                         }))
                     } else {
-                        Err(anyhow!("Please provide an existing neovim version"))
+                        Err(anyhow!(
+                            "Please provide an existing neovim version, {}",
+                            response.text().await?
+                        ))
                     }
                 }
                 Err(error) => Err(anyhow!(error)),
@@ -441,6 +452,7 @@ async fn send_request(
     let version = &version.tag_name;
     let request_url =
         format!("{url}/neovim/neovim/releases/download/{version}/{platform}.{file_type}",);
+    info!("Request URL: {}", request_url);
 
     client
         .get(request_url)
