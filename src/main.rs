@@ -15,7 +15,7 @@ use std::{
     path::Path,
     process::{exit, Command},
 };
-use tracing::{error, Level};
+use tracing::{error, info, Level};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -81,6 +81,7 @@ async fn run() -> Result<()> {
             .join("bin")
             .join("nvim");
 
+        info!("Spawning child process: {:?}", location);
         let mut child = Command::new(location)
             .args(rest_args)
             .spawn()
