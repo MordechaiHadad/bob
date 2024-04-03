@@ -25,6 +25,11 @@ Bob is a cross-platform and easy-to-use Neovim version manager, allowing for eas
         On Windows: `C:\Users\<username>\AppData\Local\neovim`
 
     Secondly the name of the downloads directory property in the configuration file has changed. Please refer to the updated list of properties for the new name.
+- **2024-03-04**: Due to neovim recent macos binary changes bob now supports arm completely, but unforunetly it comes with some breaking changes specifically for bob's proxy executeable. To fix that follow these steps (will not be necessary soon):
+
+  1. Remove `nvim` binary from `nvim-bin` which is located in the same directory the same as the neovim binaries downloads folder.
+  2. Copy your newly downloaded bob binary and put the copy inside of `nvim-bin`
+  3. Rename your bob binary inside `nvim-bin` to `nvim`.
 
 ## 📦 Requirements
 
