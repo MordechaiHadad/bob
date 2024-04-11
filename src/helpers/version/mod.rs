@@ -43,7 +43,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
             Ok(ParsedVersion {
                 tag_name: latest_commit.chars().take(7).collect(),
                 version_type: VersionType::Hash,
-                non_parsed_string: version.to_string(),
+                non_parsed_string: latest_commit,
                 semver: None,
             })
         }
