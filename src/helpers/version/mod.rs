@@ -37,7 +37,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                 semver: Some(Version::parse(&cloned_version.replace('v', ""))?),
             })
         }
-        "head" | "git" => {
+        "head" | "git" | "HEAD" => {
             info!("Fetching latest commit");
             let latest_commit = get_latest_commit(client).await?;
             Ok(ParsedVersion {
