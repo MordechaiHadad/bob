@@ -41,7 +41,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
             info!("Fetching latest commit");
             let latest_commit = get_latest_commit(client).await?;
             Ok(ParsedVersion {
-                tag_name: latest_commit,
+                tag_name: latest_commit.chars().take(7).collect(),
                 version_type: VersionType::Hash,
                 non_parsed_string: version.to_string(),
                 semver: None,
