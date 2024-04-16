@@ -2,6 +2,7 @@ use anyhow::Result;
 use reqwest::Client;
 use std::env;
 use std::path::Path;
+use std::process::Command;
 use tokio::fs;
 use tracing::info;
 
@@ -92,17 +93,19 @@ async fn copy_nvim_bob(config: &Config) -> Result<()> {
         installation_dir.push("nvim");
     }
 
-    if fs::metadata(&installation_dir).await.is_err() {
-        fs::copy(&exe_path, &installation_dir).await?;
+    let output = Command::new("nvim").arg("--version").output()?.stdout;
+
+    let version = String::from_utf8(output)?.trim().to_string();
+
+    if version == env!("CARGO_PKG_VERSION") {
+        return Ok(());
     }
+
+    fs::copy(&exe_path, &installation_dir).await?;
 
     if cfg!(windows) {
         installation_dir = installation_dir.parent().unwrap().to_path_buf();
         installation_dir.push("nvim-qt.exe");
-
-        if fs::metadata(&installation_dir).await.is_ok() {
-            return Ok(());
-        }
 
         fs::copy(exe_path, installation_dir).await?;
     }
