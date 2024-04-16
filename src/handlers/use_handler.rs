@@ -19,7 +19,7 @@ pub async fn start(
 ) -> Result<()> {
     let is_version_used = helpers::version::is_version_used(&version.tag_name, &config).await;
 
-    copy_nvim_bob(&config).await?;
+    copy_nvim_proxy(&config).await?;
     if is_version_used && version.tag_name != "nightly" {
         info!("{} is already installed and used!", version.tag_name);
         return Ok(());
@@ -55,7 +55,6 @@ pub async fn start(
 pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
     std::env::set_current_dir(helpers::directories::get_downloads_directory(config).await?)?;
 
-    copy_nvim_bob(config).await?;
     fs::write("used", &version.tag_name).await?;
     if let Some(version_sync_file_location) =
         helpers::version::get_version_sync_file_location(config).await?
@@ -77,7 +76,7 @@ pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
     Ok(())
 }
 
-async fn copy_nvim_bob(config: &Config) -> Result<()> {
+async fn copy_nvim_proxy(config: &Config) -> Result<()> {
     let exe_path = env::current_exe().unwrap();
     let mut installation_dir = helpers::directories::get_installation_directory(config).await?;
 
@@ -101,7 +100,7 @@ async fn copy_nvim_bob(config: &Config) -> Result<()> {
         return Ok(());
     }
 
-    println!("Updating neovim proxy");
+    info!("Updating neovim proxy");
     fs::copy(&exe_path, &installation_dir).await?;
 
     if cfg!(windows) {
