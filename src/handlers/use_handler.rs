@@ -2,6 +2,7 @@ use anyhow::Result;
 use reqwest::Client;
 use std::env;
 use std::path::Path;
+use std::process::Command;
 use tokio::fs;
 use tracing::info;
 
@@ -18,7 +19,7 @@ pub async fn start(
 ) -> Result<()> {
     let is_version_used = helpers::version::is_version_used(&version.tag_name, &config).await;
 
-    copy_nvim_bob(&config).await?;
+    copy_nvim_proxy(&config).await?;
     if is_version_used && version.tag_name != "nightly" {
         info!("{} is already installed and used!", version.tag_name);
         return Ok(());
@@ -54,7 +55,6 @@ pub async fn start(
 pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
     std::env::set_current_dir(helpers::directories::get_downloads_directory(config).await?)?;
 
-    copy_nvim_bob(config).await?;
     fs::write("used", &version.tag_name).await?;
     if let Some(version_sync_file_location) =
         helpers::version::get_version_sync_file_location(config).await?
@@ -76,7 +76,7 @@ pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
     Ok(())
 }
 
-async fn copy_nvim_bob(config: &Config) -> Result<()> {
+async fn copy_nvim_proxy(config: &Config) -> Result<()> {
     let exe_path = env::current_exe().unwrap();
     let mut installation_dir = helpers::directories::get_installation_directory(config).await?;
 
@@ -92,17 +92,20 @@ async fn copy_nvim_bob(config: &Config) -> Result<()> {
         installation_dir.push("nvim");
     }
 
-    if fs::metadata(&installation_dir).await.is_err() {
-        fs::copy(&exe_path, &installation_dir).await?;
+    let output = Command::new("nvim").arg("--version").output()?.stdout;
+
+    let version = String::from_utf8(output)?.trim().to_string();
+
+    if version == env!("CARGO_PKG_VERSION") {
+        return Ok(());
     }
+
+    info!("Updating neovim proxy");
+    fs::copy(&exe_path, &installation_dir).await?;
 
     if cfg!(windows) {
         installation_dir = installation_dir.parent().unwrap().to_path_buf();
         installation_dir.push("nvim-qt.exe");
-
-        if fs::metadata(&installation_dir).await.is_ok() {
-            return Ok(());
-        }
 
         fs::copy(exe_path, installation_dir).await?;
     }

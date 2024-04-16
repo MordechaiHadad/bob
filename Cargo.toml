@@ -25,6 +25,7 @@ async-recursion = "1.0.2"
 clap_complete = "4.1"
 toml = "0.8.8"
 semver = "1.0.22"
+sysinfo = "0.30.10"
 
 [dependencies.chrono]
 version = "0.4.23"
