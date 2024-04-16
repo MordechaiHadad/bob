@@ -101,6 +101,7 @@ async fn copy_nvim_bob(config: &Config) -> Result<()> {
         return Ok(());
     }
 
+    println!("Updating neovim proxy");
     fs::copy(&exe_path, &installation_dir).await?;
 
     if cfg!(windows) {
