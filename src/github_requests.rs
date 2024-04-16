@@ -12,6 +12,7 @@ pub struct UpstreamVersion {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RepoCommit {
+    pub sha: String,
     pub commit: Commit,
 }
 

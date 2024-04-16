@@ -5,7 +5,7 @@ use self::types::{ParsedVersion, VersionType};
 use super::directories;
 use crate::{
     config::Config,
-    github_requests::{deserialize_response, UpstreamVersion},
+    github_requests::{deserialize_response, RepoCommit, UpstreamVersion},
 };
 use anyhow::{anyhow, Context, Result};
 use regex::Regex;
@@ -35,6 +35,16 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                 version_type: VersionType::Latest,
                 non_parsed_string: version.to_string(),
                 semver: Some(Version::parse(&cloned_version.replace('v', ""))?),
+            })
+        }
+        "head" | "git" | "HEAD" => {
+            info!("Fetching latest commit");
+            let latest_commit = get_latest_commit(client).await?;
+            Ok(ParsedVersion {
+                tag_name: latest_commit.chars().take(7).collect(),
+                version_type: VersionType::Hash,
+                non_parsed_string: latest_commit,
+                semver: None,
             })
         }
         _ => {
@@ -142,4 +152,19 @@ async fn search_stable_version(client: &Client) -> Result<String> {
         .find(|v| v.tag_name != "stable" && v.target_commitish == stable_release.target_commitish)
         .ok_or(anyhow!("Cannot find version of stable release"))?;
     Ok(stable_pin_release.tag_name.clone())
+}
+
+async fn get_latest_commit(client: &Client) -> Result<String> {
+    let response = client
+        .get("https://api.github.com/repos/neovim/neovim/commits/master")
+        .header("user-agent", "bob")
+        .header("Accept", "application/vnd.github.v3+json")
+        .send()
+        .await?
+        .text()
+        .await?;
+
+    let commit: RepoCommit = deserialize_response(response)?;
+
+    Ok(commit.sha)
 }
