@@ -92,12 +92,13 @@ async fn copy_nvim_proxy(config: &Config) -> Result<()> {
         installation_dir.push("nvim");
     }
 
-    let output = Command::new("nvim").arg("--version").output()?.stdout;
+    if fs::metadata(&installation_dir).await.is_ok() {
+        let output = Command::new("nvim").arg("--version").output()?.stdout;
+        let version = String::from_utf8(output)?.trim().to_string();
 
-    let version = String::from_utf8(output)?.trim().to_string();
-
-    if version == env!("CARGO_PKG_VERSION") {
-        return Ok(());
+        if version == env!("CARGO_PKG_VERSION") {
+            return Ok(());
+        }
     }
 
     info!("Updating neovim proxy");
