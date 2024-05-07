@@ -46,7 +46,7 @@ async fn run() -> Result<()> {
             return Err(anyhow!("This is only usable on windows"));
         }
 
-        if rest_args[0].eq("--&bob") {
+       if !rest_args.is_empty() && rest_args[0].eq("--&bob") {
             print!("{}", env!("CARGO_PKG_VERSION"));
             return Ok(());
         }
@@ -75,7 +75,7 @@ async fn run() -> Result<()> {
         child.spawn().expect("Failed to spawn child process");
         return Ok(());
     } else if exe_name.contains("nvim") {
-        if rest_args[0].eq("--&bob") {
+        if !rest_args.is_empty() && rest_args[0].eq("--&bob") {
             print!("{}", env!("CARGO_PKG_VERSION"));
             return Ok(());
         }
