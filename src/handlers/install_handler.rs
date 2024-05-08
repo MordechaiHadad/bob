@@ -401,6 +401,13 @@ async fn handle_building_from_source(
     downloads_location.push(&version.tag_name[0..7]);
     downloads_location.push(helpers::get_platform_name(&version.semver));
 
+    let build_type = match config.enable_release_build {
+        Some(true) => "Release",
+        _ => "RelWithDebInfo",
+    };
+
+    let build_arg = format!("CMAKE_BUILD_TYPE={}", build_type);
+
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
             if fs::metadata(".deps").await.is_ok() {
@@ -416,20 +423,13 @@ async fn handle_building_from_source(
             env::set_current_dir(parent.join("build"))?;
 
             handle_subprocess(Command::new("cmake").arg("..")).await?;
-            handle_subprocess(Command::new("cmake").arg("--build").arg(".")).await?;
+            handle_subprocess(Command::new("cmake").arg("--build").arg(".").arg("-D").arg(&build_arg)).await?;
             handle_subprocess(Command::new("cmake").arg("--install").arg(".").arg("--prefix").arg(downloads_location)).await?;
         } else {
             let location_arg = format!(
                 "CMAKE_INSTALL_PREFIX={}",
                 downloads_location.to_string_lossy()
             );
-
-            let build_type = match config.enable_release_build {
-                Some(true) => "Release",
-                _ => "RelWithDebInfo",
-            };
-
-            let build_arg = format!("CMAKE_BUILD_TYPE={}", build_type);
 
             handle_subprocess(Command::new("make").arg(&location_arg).arg(&build_arg)).await?;
             handle_subprocess(Command::new("make").arg("install")).await?;
