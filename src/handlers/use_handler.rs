@@ -55,14 +55,14 @@ pub async fn start(
 pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
     std::env::set_current_dir(helpers::directories::get_downloads_directory(config).await?)?;
 
-    fs::write("used", &version.tag_name).await?;
+    fs::write("used", &version.non_parsed_string).await?;
     if let Some(version_sync_file_location) =
         helpers::version::get_version_sync_file_location(config).await?
     {
         // Write the used version to version_sync_file_location only if it's different
         let stored_version = fs::read_to_string(&version_sync_file_location).await?;
-        if stored_version != version.tag_name {
-            fs::write(&version_sync_file_location, &version.tag_name).await?;
+        if stored_version != version.non_parsed_string {
+            fs::write(&version_sync_file_location, &version.non_parsed_string).await?;
             info!(
                 "Written version to {}",
                 version_sync_file_location
