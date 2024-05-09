@@ -15,7 +15,6 @@ use std::{
     path::Path,
     process::{exit, Command},
 };
-use sysinfo::{get_current_pid, System};
 use tracing::{error, Level};
 
 #[tokio::main]
@@ -42,19 +41,12 @@ async fn run() -> Result<()> {
 
     let rest_args = &args[1..];
 
-    let mut system = System::new_all();
-    system.refresh_processes();
-
-    let pid = get_current_pid().unwrap();
-    let process = system.process(pid).unwrap();
-
     if exe_name.contains("nvim-qt") {
         if cfg!(unix) {
             return Err(anyhow!("This is only usable on windows"));
         }
 
-        let parent = system.process(process.parent().unwrap()).unwrap();
-        if parent.name().contains("bob") {
+        if !rest_args.is_empty() && rest_args[0].eq("--&bob") {
             print!("{}", env!("CARGO_PKG_VERSION"));
             return Ok(());
         }
@@ -83,8 +75,7 @@ async fn run() -> Result<()> {
         child.spawn().expect("Failed to spawn child process");
         return Ok(());
     } else if exe_name.contains("nvim") {
-        let parent = system.process(process.parent().unwrap()).unwrap();
-        if parent.name().contains("bob") {
+        if !rest_args.is_empty() && rest_args[0].eq("--&bob") {
             print!("{}", env!("CARGO_PKG_VERSION"));
             return Ok(());
         }
