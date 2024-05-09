@@ -413,18 +413,11 @@ async fn handle_building_from_source(
             if fs::metadata(".deps").await.is_ok() {
                 helpers::filesystem::remove_dir(".deps").await?;
             }
-            fs::create_dir(".deps").await?;
-            env::set_current_dir(".deps")?;
-            handle_subprocess(Command::new("cmake").arg("../cmake.deps")).await?;
-            handle_subprocess(Command::new("cmake").arg("--build").arg(".")).await?;
-
-            let current_dir = env::current_dir()?;
-            let parent = current_dir.parent().unwrap();
-            env::set_current_dir(parent.join("build"))?;
-
-            handle_subprocess(Command::new("cmake").arg("..")).await?;
-            handle_subprocess(Command::new("cmake").arg("--build").arg(".").arg("-D").arg(&build_arg)).await?;
-            handle_subprocess(Command::new("cmake").arg("--install").arg(".").arg("--prefix").arg(downloads_location)).await?;
+            handle_subprocess(Command::new("cmake").arg("-S").arg("cmake.deps").arg("-B").arg(".deps").arg("-D").arg(&build_arg)).await?;
+            handle_subprocess(Command::new("cmake").arg("--build").arg(".deps").arg("--config").arg(build_type)).await?;
+            handle_subprocess(Command::new("cmake").arg("-B").arg("build").arg("-D").arg(&build_arg)).await?;
+            handle_subprocess(Command::new("cmake").arg("--build").arg("build").arg("--config").arg(build_type)).await?;
+            handle_subprocess(Command::new("cmake").arg("--install").arg("build").arg("--prefix").arg(downloads_location)).await?;
         } else {
             let location_arg = format!(
                 "CMAKE_INSTALL_PREFIX={}",
