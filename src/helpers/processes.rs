@@ -13,23 +13,10 @@ pub async fn handle_subprocess(process: &mut Command) -> Result<()> {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum NvimProcessType {
-    Nvim,
-    NvimQt,
-}
-
 pub async fn handle_nvim_process(
     config: &Config,
     args: &[String],
-    _process_type: NvimProcessType,
 ) -> Result<()> {
-    let _term = Arc::new(AtomicBool::new(false));
-    #[cfg(unix)]
-    {
-        signal_hook::flag::register(signal_hook::consts::SIGUSR1, Arc::clone(&_term))?;
-    }
-
     let downloads_dir = directories::get_downloads_directory(config).await?;
     let used_version = version::get_current_version(config).await?;
     let version = semver::Version::parse(&used_version.replace('v', "")).ok();
@@ -41,17 +28,14 @@ pub async fn handle_nvim_process(
         .join("bin")
         .join("nvim");
 
+    let _term = Arc::new(AtomicBool::new(false));
+    #[cfg(unix)]
+    {
+        signal_hook::flag::register(signal_hook::consts::SIGUSR1, Arc::clone(&_term))?;
+    }
+
     let mut child = std::process::Command::new(location);
     child.args(args);
-
-    cfg_if::cfg_if! {
-        if #[cfg(windows)] {
-            if _process_type == NvimProcessType::NvimQt {
-                use std::os::windows::process::CommandExt;
-                child.creation_flags(0x00000008);
-            }
-        }
-    }
 
     let mut spawned_child = child.spawn()?;
 

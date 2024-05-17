@@ -40,24 +40,14 @@ async fn run() -> Result<()> {
     let rest_args = &args[1..];
 
     if exe_name.contains("nvim") {
-        let is_qt = exe_name.contains("qt");
-
-        if cfg!(unix) && is_qt {
-            return Err(anyhow!("This is only usable on windows"));
-        }
-
         if !rest_args.is_empty() && rest_args[0].eq("--&bob") {
             print!("{}", env!("CARGO_PKG_VERSION"));
             return Ok(());
         }
 
-        let process_type = if is_qt {
-            NvimProcessType::NvimQt
-        } else {
-            NvimProcessType::Nvim
-        };
+        handle_nvim_process(&config, rest_args).await?;
 
-        handle_nvim_process(&config, rest_args, process_type).await?;
+        return Ok(());
     }
 
     cli::start(config).await?;
