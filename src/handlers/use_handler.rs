@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use reqwest::Client;
 use std::env;
 use std::path::Path;
@@ -55,14 +55,35 @@ pub async fn start(
 pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
     std::env::set_current_dir(helpers::directories::get_downloads_directory(config).await?)?;
 
-    fs::write("used", &version.non_parsed_string).await?;
+    let file_version: String = if version.version_type == VersionType::Hash {
+        if version.non_parsed_string.len() <= 7 {
+            let mut current_dir = env::current_dir()?;
+            current_dir.push(&version.non_parsed_string);
+            current_dir.push("full-hash.txt");
+            let hash = fs::read_to_string(&current_dir).await;
+
+            let hash = if let Ok(hash) = hash {
+                hash
+            } else {
+                return Err(anyhow!("Full hash file doesn't exist, please rebuild this commit."));
+            };
+
+            hash
+        } else {
+            version.non_parsed_string.to_string()
+        }
+    } else {
+        version.tag_name.to_string()
+    };
+
+    fs::write("used", &file_version).await?;
     if let Some(version_sync_file_location) =
         helpers::version::get_version_sync_file_location(config).await?
     {
         // Write the used version to version_sync_file_location only if it's different
         let stored_version = fs::read_to_string(&version_sync_file_location).await?;
         if stored_version != version.non_parsed_string {
-            fs::write(&version_sync_file_location, &version.non_parsed_string).await?;
+            fs::write(&version_sync_file_location, file_version).await?;
             info!(
                 "Written version to {}",
                 version_sync_file_location

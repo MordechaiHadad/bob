@@ -397,9 +397,9 @@ async fn handle_building_from_source(
     }
     fs::create_dir("build").await?;
 
-    let mut downloads_location = directories::get_downloads_directory(config).await?;
-    downloads_location.push(&version.tag_name[0..7]);
-    downloads_location.push(helpers::get_platform_name(&version.semver));
+    let downloads_location = directories::get_downloads_directory(config).await?;
+    let folder_name = downloads_location.join(&version.tag_name[0..7]);
+    let build_location = folder_name.join(helpers::get_platform_name(&version.semver));
 
     let build_type = match config.enable_release_build {
         Some(true) => "Release",
@@ -417,7 +417,7 @@ async fn handle_building_from_source(
             handle_subprocess(Command::new("cmake").arg("--build").arg(".deps").arg("--config").arg(build_type)).await?;
             handle_subprocess(Command::new("cmake").arg("-B").arg("build").arg("-D").arg(&build_arg)).await?;
             handle_subprocess(Command::new("cmake").arg("--build").arg("build").arg("--config").arg(build_type)).await?;
-            handle_subprocess(Command::new("cmake").arg("--install").arg("build").arg("--prefix").arg(downloads_location)).await?;
+            handle_subprocess(Command::new("cmake").arg("--install").arg("build").arg("--prefix").arg(build_location)).await?;
         } else {
             let location_arg = format!(
                 "CMAKE_INSTALL_PREFIX={}",
@@ -428,6 +428,10 @@ async fn handle_building_from_source(
             handle_subprocess(Command::new("make").arg("install")).await?;
         }
     }
+
+    let mut file = File::create(folder_name.join("full-hash.txt")).await?;
+    file.write_all(version.non_parsed_string.as_bytes()).await?;
+
     Ok(PostDownloadVersionType::Hash)
 }
 

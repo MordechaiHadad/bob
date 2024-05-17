@@ -49,7 +49,6 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
         }
         _ => {
             let version_regex = Regex::new(r"^v?[0-9]+\.[0-9]+\.[0-9]+$")?;
-            let hash_regex = Regex::new(r"\b[0-9a-f]{5,40}\b")?;
             if version_regex.is_match(version) {
                 let mut returned_version = version.to_string();
                 if !version.contains('v') {
@@ -62,7 +61,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                     non_parsed_string: version.to_string(),
                     semver: Some(Version::parse(&cloned_version.replace('v', ""))?),
                 });
-            } else if hash_regex.is_match(version) {
+            } else if is_hash(version) {
                 return Ok(ParsedVersion {
                     tag_name: version.to_string().chars().take(7).collect(),
                     version_type: VersionType::Hash,
@@ -85,6 +84,11 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
             Err(anyhow!("Please provide a proper version string"))
         }
     }
+}
+
+pub fn is_hash(version: &str) -> bool {
+    let hash_regex = Regex::new(r"\b[0-9a-f]{5,40}\b").unwrap();
+    hash_regex.is_match(version)
 }
 
 pub async fn get_version_sync_file_location(config: &Config) -> Result<Option<PathBuf>> {
