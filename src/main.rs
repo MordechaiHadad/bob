@@ -12,11 +12,7 @@ use helpers::{
     processes::{handle_nvim_process, NvimProcessType},
     version,
 };
-use std::{
-    env,
-    path::Path,
-    process::exit,
-};
+use std::{env, path::Path, process::exit};
 use tracing::{error, Level};
 
 #[tokio::main]

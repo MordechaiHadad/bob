@@ -68,6 +68,7 @@ pub async fn handle_nvim_process(
                 {
                     use nix::sys::signal::{self, Signal};
                     use nix::unistd::Pid;
+                    use std::sync::atomic::Ordering;
                     if term.load(Ordering::Relaxed) {
                         let pid = spawned_child.id() as i32;
                         signal::kill(Pid::from_raw(pid), Signal::SIGTERM)?;

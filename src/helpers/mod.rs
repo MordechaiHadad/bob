@@ -1,9 +1,9 @@
 pub mod directories;
 pub mod filesystem;
+pub mod processes;
 pub mod sync;
 pub mod unarchive;
 pub mod version;
-pub mod processes;
 use semver::Version;
 
 pub fn get_file_type() -> &'static str {
