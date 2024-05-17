@@ -13,7 +13,17 @@ pub async fn handle_subprocess(process: &mut Command) -> Result<()> {
     }
 }
 
-pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()> {
+#[derive(Debug, PartialEq)]
+pub enum NvimProcessType {
+    Nvim,
+    NvimQt,
+}
+
+pub async fn handle_nvim_process(
+    config: &Config,
+    args: &[String],
+    process_type: NvimProcessType,
+) -> Result<()> {
     let term = Arc::new(AtomicBool::new(false));
     #[cfg(unix)]
     {
@@ -36,8 +46,10 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
 
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
-            use std::os::windows::process::CommandExt;
-            child.creation_flags(0x00000008);
+            if process_type == NvimProcessType::NvimQt {
+                use std::os::windows::process::CommandExt;
+                child.creation_flags(0x00000008);
+            }
         }
     }
 

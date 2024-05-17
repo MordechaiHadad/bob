@@ -9,7 +9,10 @@ extern crate core;
 use crate::helpers::directories;
 use anyhow::{anyhow, Result};
 use config::{handle_config, Config};
-use helpers::version;
+use helpers::{
+    processes::{handle_nvim_process, NvimProcessType},
+    version,
+};
 use std::{
     env,
     path::Path,
@@ -41,66 +44,17 @@ async fn run() -> Result<()> {
 
     let rest_args = &args[1..];
 
-    if exe_name.contains("nvim-qt") {
-        if cfg!(unix) {
+    if exe_name.contains("nvim") {
+        let is_qt = exe_name.contains("qt");
+        if cfg!(unix) && is_qt {
             return Err(anyhow!("This is only usable on windows"));
         }
-
         if !rest_args.is_empty() && rest_args[0].eq("--&bob") {
             print!("{}", env!("CARGO_PKG_VERSION"));
             return Ok(());
         }
 
-        let downloads_dir = directories::get_downloads_directory(&config).await?;
-        let used_version = version::get_current_version(&config).await?;
-        let version = semver::Version::parse(&used_version.replace('v', "")).ok();
-        let platform = helpers::get_platform_name(&version);
-
-        let location = downloads_dir
-            .join(used_version)
-            .join(platform)
-            .join("bin")
-            .join("nvim-qt");
-
-        let mut child = Command::new(location);
-        child.args(rest_args);
-
-
-
-        child.spawn().expect("Failed to spawn child process");
-        return Ok(());
-    } else if exe_name.contains("nvim") {
-        if !rest_args.is_empty() && rest_args[0].eq("--&bob") {
-            print!("{}", env!("CARGO_PKG_VERSION"));
-            return Ok(());
-        }
-
-        let downloads_dir = directories::get_downloads_directory(&config).await?;
-        let used_version = version::get_current_version(&config).await?;
-        let version = semver::Version::parse(&used_version.replace('v', "")).ok();
-        let platform = helpers::get_platform_name(&version);
-
-        let location = downloads_dir
-            .join(used_version)
-            .join(platform)
-            .join("bin")
-            .join("nvim");
-
-        let mut child = Command::new(location)
-            .args(rest_args)
-            .spawn()
-            .expect("Failed to spawn child process");
-
-        let exit_status = child
-            .wait()
-            .expect("Failed to wait on child process")
-            .code();
-
-        match exit_status {
-            Some(0) => return Ok(()),
-            Some(code) => return Err(anyhow!("Process exited with error code {}", code)),
-            None => return Err(anyhow!("Process terminated by signal")),
-        }
+        handle_nvim_process(&config, rest_args, NvimProcessType::Nvim).await?;
     }
 
     cli::start(config).await?;
