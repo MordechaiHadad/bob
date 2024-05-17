@@ -65,12 +65,7 @@ async fn run() -> Result<()> {
         let mut child = Command::new(location);
         child.args(rest_args);
 
-        cfg_if::cfg_if! {
-            if #[cfg(windows)] {
-                use std::os::windows::process::CommandExt;
-                child.creation_flags(0x00000008);
-            }
-        }
+
 
         child.spawn().expect("Failed to spawn child process");
         return Ok(());
