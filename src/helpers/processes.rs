@@ -30,8 +30,8 @@ pub async fn handle_nvim_process(
         signal_hook::flag::register(signal_hook::consts::SIGUSR1, Arc::clone(&term))?;
     }
 
-    let downloads_dir = directories::get_downloads_directory(&config).await?;
-    let used_version = version::get_current_version(&config).await?;
+    let downloads_dir = directories::get_downloads_directory(config).await?;
+    let used_version = version::get_current_version(config).await?;
     let version = semver::Version::parse(&used_version.replace('v', "")).ok();
     let platform = get_platform_name(&version);
 
@@ -41,7 +41,7 @@ pub async fn handle_nvim_process(
         .join("bin")
         .join("nvim");
 
-    let mut child = std::process::Command::new(&location);
+    let mut child = std::process::Command::new(location);
     child.args(args);
 
     cfg_if::cfg_if! {
