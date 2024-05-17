@@ -27,7 +27,7 @@ pub async fn handle_nvim_process(
     let _term = Arc::new(AtomicBool::new(false));
     #[cfg(unix)]
     {
-        signal_hook::flag::register(signal_hook::consts::SIGUSR1, Arc::clone(&term))?;
+        signal_hook::flag::register(signal_hook::consts::SIGUSR1, Arc::clone(&_term))?;
     }
 
     let downloads_dir = directories::get_downloads_directory(config).await?;
