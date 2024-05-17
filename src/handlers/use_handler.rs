@@ -60,15 +60,15 @@ pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
             let mut current_dir = env::current_dir()?;
             current_dir.push(&version.non_parsed_string);
             current_dir.push("full-hash.txt");
-            let hash = fs::read_to_string(&current_dir).await;
+            let hash_result = fs::read_to_string(&current_dir).await;
 
-            let hash = if let Ok(hash) = hash {
+            if let Ok(hash) = hash_result {
                 hash
             } else {
-                return Err(anyhow!("Full hash file doesn't exist, please rebuild this commit."));
-            };
-
-            hash
+                return Err(anyhow!(
+                    "Full hash file doesn't exist, please rebuild this commit"
+                ));
+            }
         } else {
             version.non_parsed_string.to_string()
         }
