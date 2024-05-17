@@ -6,7 +6,6 @@ mod helpers;
 
 extern crate core;
 
-use crate::helpers::directories;
 use anyhow::{anyhow, Result};
 use config::{handle_config, Config};
 use helpers::{
@@ -16,7 +15,7 @@ use helpers::{
 use std::{
     env,
     path::Path,
-    process::{exit, Command},
+    process::exit,
 };
 use tracing::{error, Level};
 
