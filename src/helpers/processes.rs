@@ -57,7 +57,7 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
                     use nix::sys::signal::{self, Signal};
                     use nix::unistd::Pid;
                     if term.load(Ordering::Relaxed) {
-                        let pid = child.id() as i32;
+                        let pid = spawned_child.id() as i32;
                         signal::kill(Pid::from_raw(pid), Signal::SIGTERM)?;
                         return Err(anyhow!("Terminated due to SIGUSR1"));
                     }
