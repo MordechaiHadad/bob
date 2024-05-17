@@ -22,7 +22,7 @@ pub enum NvimProcessType {
 pub async fn handle_nvim_process(
     config: &Config,
     args: &[String],
-    process_type: NvimProcessType,
+    _process_type: NvimProcessType,
 ) -> Result<()> {
     let term = Arc::new(AtomicBool::new(false));
     #[cfg(unix)]

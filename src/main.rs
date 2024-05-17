@@ -49,7 +49,13 @@ async fn run() -> Result<()> {
             return Ok(());
         }
 
-        handle_nvim_process(&config, rest_args, NvimProcessType::Nvim).await?;
+        let process_type = if is_qt {
+            NvimProcessType::NvimQt
+        } else {
+            NvimProcessType::Nvim
+        };
+
+        handle_nvim_process(&config, rest_args, process_type).await?;
     }
 
     cli::start(config).await?;
