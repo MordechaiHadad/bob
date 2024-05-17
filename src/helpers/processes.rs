@@ -24,7 +24,7 @@ pub async fn handle_nvim_process(
     args: &[String],
     _process_type: NvimProcessType,
 ) -> Result<()> {
-    let term = Arc::new(AtomicBool::new(false));
+    let _term = Arc::new(AtomicBool::new(false));
     #[cfg(unix)]
     {
         signal_hook::flag::register(signal_hook::consts::SIGUSR1, Arc::clone(&term))?;
@@ -46,7 +46,7 @@ pub async fn handle_nvim_process(
 
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
-            if process_type == NvimProcessType::NvimQt {
+            if _process_type == NvimProcessType::NvimQt {
                 use std::os::windows::process::CommandExt;
                 child.creation_flags(0x00000008);
             }
@@ -69,7 +69,7 @@ pub async fn handle_nvim_process(
                     use nix::sys::signal::{self, Signal};
                     use nix::unistd::Pid;
                     use std::sync::atomic::Ordering;
-                    if term.load(Ordering::Relaxed) {
+                    if _term.load(Ordering::Relaxed) {
                         let pid = spawned_child.id() as i32;
                         signal::kill(Pid::from_raw(pid), Signal::SIGTERM)?;
                         return Err(anyhow!("Terminated due to SIGUSR1"));
