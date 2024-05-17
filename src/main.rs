@@ -32,11 +32,11 @@ async fn run() -> Result<()> {
     let args: Vec<String> = env::args().collect();
 
     let exe_name_path = Path::new(&args[0]);
-    let exe_name = exe_name_path.file_name().unwrap().to_str().unwrap();
+    let exe_name = exe_name_path.file_stem().unwrap().to_str().unwrap();
 
     let rest_args = &args[1..];
 
-    if exe_name.contains("nvim") {
+    if exe_name.eq("nvim") {
         if !rest_args.is_empty() && rest_args[0].eq("--&bob") {
             print!("{}", env!("CARGO_PKG_VERSION"));
             return Ok(());
