@@ -41,9 +41,11 @@ async fn run() -> Result<()> {
 
     if exe_name.contains("nvim") {
         let is_qt = exe_name.contains("qt");
+
         if cfg!(unix) && is_qt {
             return Err(anyhow!("This is only usable on windows"));
         }
+
         if !rest_args.is_empty() && rest_args[0].eq("--&bob") {
             print!("{}", env!("CARGO_PKG_VERSION"));
             return Ok(());
