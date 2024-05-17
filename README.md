@@ -26,6 +26,7 @@ Bob is a cross-platform and easy-to-use Neovim version manager, allowing for eas
 
     Secondly the name of the downloads directory property in the configuration file has changed. Please refer to the updated list of properties for the new name.
 - **2024-03-04**: Due to Neovim's recent MacOS binary changes, bob now supports arm completely, but unfortunately, it comes with some breaking changes specifically for bob's proxy executable. To fix that, follow these steps (which will not be necessary soon):
+- **2024-05-17**: Support for `nvim-qt` is now deprecated as Neovim no longer supports it in newer releases. If you're currently using `nvim-qt`, we recommend switching to a different Neovim GUI or using Neovim in the terminal. Please refer to the Neovim documentation for more information on supported GUIs.
 
   1. Remove `nvim` binary from `nvim-bin` which is located in the same directory the same as the neovim binaries downloads folder.
   2. Copy your newly downloaded bob binary and put the copy inside of `nvim-bin`

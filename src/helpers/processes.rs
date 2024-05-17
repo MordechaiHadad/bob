@@ -13,10 +13,7 @@ pub async fn handle_subprocess(process: &mut Command) -> Result<()> {
     }
 }
 
-pub async fn handle_nvim_process(
-    config: &Config,
-    args: &[String],
-) -> Result<()> {
+pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()> {
     let downloads_dir = directories::get_downloads_directory(config).await?;
     let used_version = version::get_current_version(config).await?;
     let version = semver::Version::parse(&used_version.replace('v', "")).ok();

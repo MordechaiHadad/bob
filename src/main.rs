@@ -6,12 +6,9 @@ mod helpers;
 
 extern crate core;
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use config::{handle_config, Config};
-use helpers::{
-    processes::{handle_nvim_process, NvimProcessType},
-    version,
-};
+use helpers::{processes::handle_nvim_process, version};
 use std::{env, path::Path, process::exit};
 use tracing::{error, Level};
 
