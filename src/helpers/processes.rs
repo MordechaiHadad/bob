@@ -3,7 +3,10 @@ use anyhow::{anyhow, Result};
 use std::sync::{atomic::AtomicBool, Arc};
 use tokio::process::Command;
 
-use super::{directories, get_platform_name, version::{self, is_hash}};
+use super::{
+    directories, get_platform_name,
+    version::{self, is_hash},
+};
 
 pub async fn handle_subprocess(process: &mut Command) -> Result<()> {
     match process.status().await?.code() {
