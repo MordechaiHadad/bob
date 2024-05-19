@@ -31,6 +31,8 @@ Bob is a cross-platform and easy-to-use Neovim version manager, allowing for eas
   2. Copy your newly downloaded bob binary and put the copy inside of `nvim-bin`
   3. Rename your bob binary inside `nvim-bin` to `nvim`.
 
+- **2024-05-17**: Support for `nvim-qt` is now deprecated as Neovim no longer supports it in newer releases. If you're currently using `nvim-qt`, we recommend switching to a different Neovim GUI or using Neovim in the terminal. Please refer to the Neovim documentation for more information on supported GUIs.
+
 ## 📦 Requirements
 
 Make sure you don't have Neovim already installed via other ways e.g. a package manager.

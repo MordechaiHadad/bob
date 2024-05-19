@@ -6,15 +6,10 @@ mod helpers;
 
 extern crate core;
 
-use crate::helpers::directories;
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use config::{handle_config, Config};
-use helpers::version;
-use std::{
-    env,
-    path::Path,
-    process::{exit, Command},
-};
+use helpers::{processes::handle_nvim_process, version};
+use std::{env, path::Path, process::exit};
 use tracing::{error, Level};
 
 #[tokio::main]
@@ -37,75 +32,19 @@ async fn run() -> Result<()> {
     let args: Vec<String> = env::args().collect();
 
     let exe_name_path = Path::new(&args[0]);
-    let exe_name = exe_name_path.file_name().unwrap().to_str().unwrap();
+    let exe_name = exe_name_path.file_stem().unwrap().to_str().unwrap();
 
     let rest_args = &args[1..];
 
-    if exe_name.contains("nvim-qt") {
-        if cfg!(unix) {
-            return Err(anyhow!("This is only usable on windows"));
-        }
-
+    if exe_name.eq("nvim") {
         if !rest_args.is_empty() && rest_args[0].eq("--&bob") {
             print!("{}", env!("CARGO_PKG_VERSION"));
             return Ok(());
         }
 
-        let downloads_dir = directories::get_downloads_directory(&config).await?;
-        let used_version = version::get_current_version(&config).await?;
-        let version = semver::Version::parse(&used_version.replace('v', "")).ok();
-        let platform = helpers::get_platform_name(&version);
+        handle_nvim_process(&config, rest_args).await?;
 
-        let location = downloads_dir
-            .join(used_version)
-            .join(platform)
-            .join("bin")
-            .join("nvim-qt");
-
-        let mut child = Command::new(location);
-        child.args(rest_args);
-
-        cfg_if::cfg_if! {
-            if #[cfg(windows)] {
-                use std::os::windows::process::CommandExt;
-                child.creation_flags(0x00000008);
-            }
-        }
-
-        child.spawn().expect("Failed to spawn child process");
         return Ok(());
-    } else if exe_name.contains("nvim") {
-        if !rest_args.is_empty() && rest_args[0].eq("--&bob") {
-            print!("{}", env!("CARGO_PKG_VERSION"));
-            return Ok(());
-        }
-
-        let downloads_dir = directories::get_downloads_directory(&config).await?;
-        let used_version = version::get_current_version(&config).await?;
-        let version = semver::Version::parse(&used_version.replace('v', "")).ok();
-        let platform = helpers::get_platform_name(&version);
-
-        let location = downloads_dir
-            .join(used_version)
-            .join(platform)
-            .join("bin")
-            .join("nvim");
-
-        let mut child = Command::new(location)
-            .args(rest_args)
-            .spawn()
-            .expect("Failed to spawn child process");
-
-        let exit_status = child
-            .wait()
-            .expect("Failed to wait on child process")
-            .code();
-
-        match exit_status {
-            Some(0) => return Ok(()),
-            Some(code) => return Err(anyhow!("Process exited with error code {}", code)),
-            None => return Err(anyhow!("Process terminated by signal")),
-        }
     }
 
     cli::start(config).await?;
