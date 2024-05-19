@@ -53,7 +53,7 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
                     if _term.load(Ordering::Relaxed) {
                         let pid = spawned_child.id() as i32;
                         signal::kill(Pid::from_raw(pid), Signal::SIGUSR1)?;
-                        _term.store(false);
+                        _term.store(false, Ordering::Relaxed);
                     }
                 }
             }
