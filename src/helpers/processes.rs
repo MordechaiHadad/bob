@@ -52,8 +52,8 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
                     use std::sync::atomic::Ordering;
                     if _term.load(Ordering::Relaxed) {
                         let pid = spawned_child.id() as i32;
-                        signal::kill(Pid::from_raw(pid), Signal::SIGTERM)?;
-                        return Err(anyhow!("Terminated due to SIGUSR1"));
+                        signal::kill(Pid::from_raw(pid), Signal::SIGUSR1)?;
+                        _term.store(false);
                     }
                 }
             }
