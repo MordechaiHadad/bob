@@ -1,9 +1,10 @@
 use crate::config::Config;
 use crate::github_requests::{get_commits_for_nightly, get_upstream_nightly, UpstreamVersion};
 use crate::helpers::directories::get_downloads_directory;
+use crate::helpers::processes::handle_subprocess;
 use crate::helpers::version::nightly::produce_nightly_vec;
 use crate::helpers::version::types::{LocalVersion, ParsedVersion, VersionType};
-use crate::helpers::{self, directories, filesystem, handle_subprocess, unarchive};
+use crate::helpers::{self, directories, filesystem, unarchive};
 use anyhow::{anyhow, Result};
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};

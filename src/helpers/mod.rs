@@ -1,12 +1,10 @@
 pub mod directories;
 pub mod filesystem;
+pub mod processes;
 pub mod sync;
 pub mod unarchive;
 pub mod version;
-
-use anyhow::{anyhow, Result};
 use semver::Version;
-use tokio::process::Command;
 
 pub fn get_file_type() -> &'static str {
     if cfg!(target_family = "windows") {
@@ -53,14 +51,6 @@ pub fn get_platform_name_download(version: &Option<Version>) -> &'static str {
         }
     } else {
         "nvim"
-    }
-}
-
-pub async fn handle_subprocess(process: &mut Command) -> Result<()> {
-    match process.status().await?.code() {
-        Some(0) => Ok(()),
-        Some(code) => Err(anyhow!(code)),
-        None => Err(anyhow!("process terminated by signal")),
     }
 }
 
