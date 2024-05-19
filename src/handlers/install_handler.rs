@@ -422,7 +422,7 @@ async fn handle_building_from_source(
         } else {
             let location_arg = format!(
                 "CMAKE_INSTALL_PREFIX={}",
-                downloads_location.to_string_lossy()
+                build_location.to_string_lossy()
             );
 
             handle_subprocess(Command::new("make").arg(&location_arg).arg(&build_arg)).await?;
