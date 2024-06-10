@@ -28,7 +28,7 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
                 .unwrap()
                 .to_str()
                 .unwrap()
-                .contains("v")
+                .contains('v')
         })
         .map(|entry| entry.path())
         .collect();
@@ -36,7 +36,7 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
     let versions: Vec<RemoteVersion> = deserialize_response(response)?;
     let filtered_versions: Vec<RemoteVersion> = versions
         .into_iter()
-        .filter(|v| v.name.starts_with("v"))
+        .filter(|v| v.name.starts_with('v'))
         .collect();
 
     for version in filtered_versions {
