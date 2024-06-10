@@ -6,7 +6,8 @@ use crate::{config::Config, helpers::directories};
 
 pub async fn start(config: Config) -> Result<()> {
     let downloads = directories::get_downloads_directory(&config).await?;
-    let installation_dir = directories::get_installation_directory(&config).await?;
+    let mut installation_dir = directories::get_installation_directory(&config).await?;
+    installation_dir.push("nvim-bin");
 
     if fs::remove_dir_all(&installation_dir).await.is_ok() {
         info!("Successfully removed neovim's installation folder");
