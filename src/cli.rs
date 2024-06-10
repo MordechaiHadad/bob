@@ -10,7 +10,7 @@ use clap::{Args, CommandFactory, Parser};
 use clap_complete::Shell;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use reqwest::{Client, Error};
-use tracing::{error, info};
+use tracing::info;
 
 fn create_reqwest_client() -> Result<Client, Error> {
     // fetch env variable
@@ -144,11 +144,7 @@ pub async fn start(config: Config) -> Result<()> {
             clap_complete::generate(shell, &mut Cli::command(), "bob", &mut std::io::stdout())
         }
         Cli::Update(data) => {
-            if data.version.is_some() || data.all {
-                update_handler::start(data, &client, config).await?;
-            } else {
-                error!("Please provide a version or use the --all flag");
-            }
+            update_handler::start(data, &client, config).await?;
         }
     }
 
