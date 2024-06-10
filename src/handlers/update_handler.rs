@@ -24,7 +24,7 @@ pub async fn start(data: Update, client: &Client, config: Config) -> Result<()> 
             let mut nightly = crate::version::parse_version_type(client, "nightly").await?;
             match install_handler::start(&mut nightly, client, &config).await? {
                 InstallResult::InstallationSuccess(_) => did_update = true,
-                InstallResult::NightlyIsUpdated 
+                InstallResult::NightlyIsUpdated
                 | InstallResult::VersionAlreadyInstalled
                 | InstallResult::GivenNightlyRollback => (),
             }
