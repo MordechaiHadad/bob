@@ -1,7 +1,8 @@
 use crate::{
     config::Config,
     handlers::{
-        self, erase_handler, list_handler, list_remote_handler, rollback_handler, sync_handler, uninstall_handler, update_handler, InstallResult
+        self, erase_handler, list_handler, list_remote_handler, rollback_handler, sync_handler,
+        uninstall_handler, update_handler, InstallResult,
     },
 };
 use anyhow::Result;
