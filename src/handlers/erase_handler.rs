@@ -6,11 +6,20 @@ use crate::{config::Config, helpers::directories};
 
 pub async fn start(config: Config) -> Result<()> {
     let downloads = directories::get_downloads_directory(&config).await?;
-    let installation_dir = directories::get_installation_directory(&config).await?;
+    let mut installation_dir = directories::get_installation_directory(&config).await?;
 
-    if fs::remove_dir_all(&installation_dir).await.is_ok() {
+    if installation_dir.read_dir()?.count() > 1 {
+        if cfg!(windows) {
+            installation_dir.push("nvim.exe")
+        } else {
+            installation_dir.push("nvim")
+        };
+        fs::remove_file(installation_dir).await?;
+        info!("Successfully removed neovim's executable from the installation folder");
+    } else if fs::remove_dir_all(&installation_dir).await.is_ok() {
         info!("Successfully removed neovim's installation folder");
     }
+
     if fs::remove_dir_all(downloads).await.is_ok() {
         // For some weird reason this check doesn't really work for downloads folder
         // as it keeps thinking the folder exists and it runs with no issues even tho the folder
