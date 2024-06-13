@@ -139,37 +139,50 @@ pub struct ErrorResponse {
     pub documentation_url: String,
 }
 
-/// Fetches the upstream nightly version from the GitHub API.
+/// Asynchronously makes a GitHub API request.
 ///
-/// This function sends a GET request to the GitHub API to fetch the upstream nightly version of the software. The request is sent to the URL "https://api.github.com/repos/neovim/neovim/releases/tags/nightly".
+/// This function takes a reference to a `Client` and a URL as arguments. It sets the "user-agent" header to "bob" and the "Accept" header to "application/vnd.github.v3+json".
+/// It then sends the request and awaits the response. It reads the response body as text and returns it as a `String`.
 ///
-/// # Parameters
+/// # Arguments
 ///
-/// * `client: &Client` - The HTTP client used to send the request.
+/// * `client` - A reference to a `Client` used to make the request.
+/// * `url` - A URL that implements `AsRef<str>` and `reqwest::IntoUrl`.
 ///
 /// # Returns
 ///
-/// * `Result<UpstreamVersion>` - The upstream nightly version as an `UpstreamVersion` object, or an error if the request failed.
+/// This function returns a `Result` that contains a `String` representing the response body if the operation was successful.
+/// If the operation failed, the function returns `Err` with a description of the error.
 ///
 /// # Example
 ///
 /// ```rust
 /// let client = Client::new();
-/// let result = get_upstream_nightly(&client).await;
-/// match result {
-///     Ok(version) => println!("Received version: {:?}", version),
-///     Err(e) => println!("An error occurred: {:?}", e),
-/// }
+/// let url = "https://api.github.com/repos/neovim/neovim/tags";
+/// let response = make_github_request(&client, url).await?;
 /// ```
-pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
+pub async fn make_github_request<T: AsRef<str> + reqwest::IntoUrl>(
+    client: &Client,
+    url: T,
+) -> Result<String> {
     let response = client
-        .get("https://api.github.com/repos/neovim/neovim/releases/tags/nightly")
+        .get(url)
         .header("user-agent", "bob")
         .header("Accept", "application/vnd.github.v3+json")
         .send()
         .await?
         .text()
         .await?;
+
+    Ok(response)
+}
+
+pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
+    let response = make_github_request(
+        client,
+        "https://api.github.com/repos/neovim/neovim/releases/tags/nightly",
+    )
+    .await?;
 
     deserialize_response(response)
 }
@@ -205,15 +218,8 @@ pub async fn get_commits_for_nightly(
     since: &DateTime<Utc>,
     until: &DateTime<Utc>,
 ) -> Result<Vec<RepoCommit>> {
-    let response = client
-        .get(format!(
-            "https://api.github.com/repos/neovim/neovim/commits?since={since}&until={until}&per_page=100"))
-        .header("user-agent", "bob")
-        .header("Accept", "application/vnd.github.v3+json")
-        .send()
-        .await?
-        .text()
-        .await?;
+    let response = make_github_request(client, format!(
+            "https://api.github.com/repos/neovim/neovim/commits?since={since}&until={until}&per_page=100")).await?;
 
     deserialize_response(response)
 }

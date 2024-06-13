@@ -1,8 +1,8 @@
 use crate::{
     config::Config,
     handlers::{
-        self, erase_handler, list_handler, rollback_handler, sync_handler, uninstall_handler,
-        update_handler, InstallResult,
+        self, erase_handler, list_handler, list_remote_handler, rollback_handler, sync_handler,
+        uninstall_handler, update_handler, InstallResult,
     },
 };
 use anyhow::Result;
@@ -93,6 +93,9 @@ enum Cli {
     /// List all installed and used versions
     #[clap(visible_alias = "ls")]
     List,
+
+    #[clap(visible_alias = "ls-remote")]
+    ListRemote,
 
     /// Generate shell completion
     Complete {
@@ -199,6 +202,7 @@ pub async fn start(config: Config) -> Result<()> {
         Cli::Update(data) => {
             update_handler::start(data, &client, config).await?;
         }
+        Cli::ListRemote => list_remote_handler::start(config, client).await?,
     }
 
     Ok(())
