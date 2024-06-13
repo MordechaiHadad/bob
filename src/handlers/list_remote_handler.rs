@@ -84,9 +84,17 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
         };
 
         if helpers::version::is_version_used(&version.name, &config).await {
-            println!("{padding}{}{}", Paint::green(version.name), stable_version_string);
+            println!(
+                "{padding}{}{}",
+                Paint::green(version.name),
+                stable_version_string
+            );
         } else if version_installed {
-            println!("{padding}{}{}", Paint::yellow(&version.name), stable_version_string);
+            println!(
+                "{padding}{}{}",
+                Paint::yellow(&version.name),
+                stable_version_string
+            );
 
             local_versions.retain(|v| {
                 v.file_name()
