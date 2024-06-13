@@ -139,6 +139,28 @@ pub struct ErrorResponse {
     pub documentation_url: String,
 }
 
+/// Asynchronously makes a GitHub API request.
+///
+/// This function takes a reference to a `Client` and a URL as arguments. It sets the "user-agent" header to "bob" and the "Accept" header to "application/vnd.github.v3+json".
+/// It then sends the request and awaits the response. It reads the response body as text and returns it as a `String`.
+///
+/// # Arguments
+///
+/// * `client` - A reference to a `Client` used to make the request.
+/// * `url` - A URL that implements `AsRef<str>` and `reqwest::IntoUrl`.
+///
+/// # Returns
+///
+/// This function returns a `Result` that contains a `String` representing the response body if the operation was successful.
+/// If the operation failed, the function returns `Err` with a description of the error.
+///
+/// # Example
+///
+/// ```rust
+/// let client = Client::new();
+/// let url = "https://api.github.com/repos/neovim/neovim/tags";
+/// let response = make_github_request(&client, url).await?;
+/// ```
 pub async fn make_github_request<T: AsRef<str> + reqwest::IntoUrl>(
     client: &Client,
     url: T,

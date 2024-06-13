@@ -259,6 +259,28 @@ pub async fn is_version_used(version: &str, config: &Config) -> bool {
     }
 }
 
+/// Asynchronously searches for the stable version of Neovim.
+///
+/// This function takes a reference to a `Client` as an argument and makes a GitHub API request to get the releases of the Neovim repository.
+/// It then deserializes the response into a vector of `UpstreamVersion`.
+/// It finds the release that has the tag name "stable" and the release that has the same `target_commitish` as the stable release but does not have the tag name "stable".
+/// The function returns the tag name of the found release.
+///
+/// # Arguments
+///
+/// * `client` - A reference to a `Client` used to make the GitHub API request.
+///
+/// # Returns
+///
+/// This function returns a `Result` that contains a `String` representing the tag name of the stable version if the operation was successful.
+/// If the operation failed, the function returns `Err` with a description of the error.
+///
+/// # Example
+///
+/// ```rust
+/// let client = Client::new();
+/// let stable_version = search_stable_version(&client).await?;
+/// ```
 pub async fn search_stable_version(client: &Client) -> Result<String> {
     let response = client
         .get("https://api.github.com/repos/neovim/neovim/releases?per_page=10")

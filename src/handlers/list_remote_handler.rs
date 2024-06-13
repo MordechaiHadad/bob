@@ -79,7 +79,7 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
                 .map_or(false, |str| str.contains(&version.name))
         });
 
-        let stable_version_string = if stable_version  == version.name {
+        let stable_version_string = if stable_version == version.name {
             " (stable)"
         } else {
             ""
