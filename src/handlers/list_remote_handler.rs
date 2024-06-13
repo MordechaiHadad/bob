@@ -41,6 +41,7 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
 
     let length = filtered_versions.len();
     let mut counter = 0;
+    let stable_version = search_stable_version(&client).await?;
 
     for version in filtered_versions {
         counter += 1;
@@ -50,7 +51,7 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
                 .map_or(false, |str| str.contains(&version.name))
         });
 
-        let stable_version_string = if search_stable_version(&client).await? == version.name {
+        let stable_version_string = if stable_version  == version.name {
             " (stable)"
         } else {
             ""
