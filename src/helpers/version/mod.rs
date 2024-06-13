@@ -132,7 +132,7 @@ pub async fn is_version_used(version: &str, config: &Config) -> bool {
     }
 }
 
-async fn search_stable_version(client: &Client) -> Result<String> {
+pub async fn search_stable_version(client: &Client) -> Result<String> {
     let response = client
         .get("https://api.github.com/repos/neovim/neovim/releases?per_page=10")
         .header("user-agent", "bob")

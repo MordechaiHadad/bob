@@ -8,7 +8,7 @@ use yansi::Paint;
 use crate::{
     config::Config,
     github_requests::{deserialize_response, make_github_request},
-    helpers::{self, directories},
+    helpers::{self, directories, version::search_stable_version},
 };
 
 pub async fn start(config: Config, client: Client) -> Result<()> {
@@ -39,17 +39,27 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
         .filter(|v| v.name.starts_with('v'))
         .collect();
 
+    let length = filtered_versions.len();
+    let mut counter = 0;
+
     for version in filtered_versions {
+        counter += 1;
         let version_installed = local_versions.iter().any(|v| {
             v.file_name()
                 .and_then(|str| str.to_str())
                 .map_or(false, |str| str.contains(&version.name))
         });
 
+        let stable_version_string = if search_stable_version(&client).await? == version.name {
+            " (stable)"
+        } else {
+            ""
+        };
+
         if helpers::version::is_version_used(&version.name, &config).await {
-            println!("{}", Paint::green(version.name));
+            println!("{}{}", Paint::green(version.name), stable_version_string);
         } else if version_installed {
-            println!("{}", Paint::yellow(&version.name));
+            println!("{}{}", Paint::yellow(&version.name), stable_version_string);
 
             local_versions.retain(|v| {
                 v.file_name()
@@ -57,14 +67,18 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
                     .map_or(true, |str| !str.contains(&version.name))
             });
         } else {
-            println!("{}", version.name);
+            println!("{}{}", version.name, stable_version_string);
+        }
+
+        if length != counter {
+            println!("");
         }
     }
 
     Ok(())
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 struct RemoteVersion {
     pub name: String,
 }
