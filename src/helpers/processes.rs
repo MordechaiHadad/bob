@@ -3,7 +3,10 @@ use anyhow::{anyhow, Result};
 use std::sync::{atomic::AtomicBool, Arc};
 use tokio::process::Command;
 
-use super::{directories, get_platform_name, version};
+use super::{
+    directories, get_platform_name,
+    version::{self, is_hash},
+};
 
 /// Handles the execution of a subprocess.
 ///
@@ -87,8 +90,14 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
     let version = semver::Version::parse(&used_version.replace('v', "")).ok();
     let platform = get_platform_name(&version);
 
+    let new_version: String = if is_hash(&used_version) {
+        used_version.chars().take(7).collect()
+    } else {
+        used_version
+    };
+
     let location = downloads_dir
-        .join(used_version)
+        .join(new_version)
         .join(platform)
         .join("bin")
         .join("nvim");
