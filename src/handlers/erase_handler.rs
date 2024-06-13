@@ -6,11 +6,17 @@ use crate::{config::Config, helpers::directories};
 
 pub async fn start(config: Config) -> Result<()> {
     let downloads = directories::get_downloads_directory(&config).await?;
-    let installation_dir = directories::get_installation_directory(&config).await?;
+    let mut installation_dir = directories::get_installation_directory(&config).await?;
 
-    if config.installation_location.is_none() && fs::remove_dir_all(&installation_dir).await.is_ok()
-    {
-        info!("Successfully removed neovim's installation folder");
+    if let Some(_) = config.installation_location {
+        installation_dir.push("nvim");
+        if fs::remove_file(&installation_dir).await.is_ok() {
+            info!("Successfully removed neovim executable");
+        }
+    } else {
+        if fs::remove_dir_all(&installation_dir).await.is_ok() {
+            info!("Successfully removed neovim's installation folder");
+        }
     }
     if fs::remove_dir_all(downloads).await.is_ok() {
         // For some weird reason this check doesn't really work for downloads folder
