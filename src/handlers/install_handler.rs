@@ -22,6 +22,45 @@ use yansi::Paint;
 
 use super::{InstallResult, PostDownloadVersionType};
 
+/// Starts the installation process for a given version.
+///
+/// # Arguments
+///
+/// * `version` - A mutable reference to a `ParsedVersion` object representing the version to be installed.
+/// * `client` - A reference to a `Client` object used for making HTTP requests.
+/// * `config` - A reference to a `Config` object containing the configuration settings.
+///
+/// # Returns
+///
+/// * `Result<InstallResult>` - Returns a `Result` that contains an `InstallResult` enum on success, or an error on failure.
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// * The version is below 0.2.2.
+/// * There is a problem setting the current directory.
+/// * There is a problem checking if the version is already installed.
+/// * There is a problem getting the upstream nightly version.
+/// * There is a problem getting the local nightly version.
+/// * There is a problem handling a rollback.
+/// * There is a problem printing commits.
+/// * There is a problem downloading the version.
+/// * There is a problem handling building from source.
+/// * There is a problem unarchiving the downloaded file.
+/// * There is a problem creating the file `nightly/bob.json`.
+///
+/// # Panics
+///
+/// This function does not panic.
+///
+/// # Examples
+///
+/// ```rust
+/// let mut version = ParsedVersion::new(VersionType::Normal, "1.0.0");
+/// let client = Client::new();
+/// let config = Config::default();
+/// let result = start(&mut version, &client, &config).await;
+/// ```
 pub async fn start(
     version: &mut ParsedVersion,
     client: &Client,
@@ -117,6 +156,37 @@ pub async fn start(
     ))
 }
 
+/// Asynchronously handles the rollback of the nightly version of Neovim.
+///
+/// This function checks if the nightly version is used and if the rollback limit is not zero.
+/// If these conditions are met, it produces a vector of nightly versions and removes the oldest version if the vector's length is greater than or equal to the rollback limit.
+/// It also handles permissions for older installations of nightly on Unix platforms.
+/// Finally, it creates a rollback by copying the nightly directory to a new directory with the ID of the target commitish and updates the JSON file in the new directory.
+///
+/// # Arguments
+///
+/// * `config` - A reference to the configuration object.
+///
+/// # Returns
+///
+/// * `Result<()>` - Returns a `Result` that contains `()` on success, or an error on failure.
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// * There is a failure in producing the vector of nightly versions.
+/// * There is a failure in removing the oldest version.
+/// * There is a failure in reading the nightly JSON file.
+/// * There is a failure in parsing the JSON file.
+/// * There is a failure in copying the nightly directory.
+/// * There is a failure in writing the updated JSON file.
+///
+/// # Example
+///
+/// ```rust
+/// let config = Config::default();
+/// handle_rollback(&config).await?;
+/// `
 async fn handle_rollback(config: &Config) -> Result<()> {
     if !helpers::version::is_version_used("nightly", config).await {
         return Ok(());
@@ -174,6 +244,34 @@ async fn handle_rollback(config: &Config) -> Result<()> {
     Ok(())
 }
 
+/// Asynchronously prints the commits between two versions of Neovim.
+///
+/// This function fetches the commits between the published dates of the local and upstream versions of Neovim.
+/// It then prints each commit with the author's name in blue and the commit message.
+///
+/// # Arguments
+///
+/// * `client` - A reference to the HTTP client.
+/// * `local` - A reference to the local version of Neovim.
+/// * `upstream` - A reference to the upstream version of Neovim.
+///
+/// # Returns
+///
+/// * `Result<()>` - Returns a `Result` that contains `()` on success, or an error on failure.
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// * There is a failure in fetching the commits between the published dates of the local and upstream versions.
+///
+/// # Example
+///
+/// ```rust
+/// let client = Client::new();
+/// let local = UpstreamVersion::get_local_version();
+/// let upstream = UpstreamVersion::get_upstream_version(&client).await?;
+/// print_commits(&client, &local, &upstream).await?;
+/// ```
 async fn print_commits(
     client: &Client,
     local: &UpstreamVersion,
@@ -193,6 +291,41 @@ async fn print_commits(
     Ok(())
 }
 
+/// Asynchronously downloads a specified version of Neovim.
+///
+/// This function sends a request to download the specified version of Neovim based on the version type.
+/// If the version type is Normal, Nightly, or Latest, it sends a request to download the version.
+/// If the version type is Hash, it handles building from source.
+/// If the version type is NightlyRollback, it does nothing.
+///
+/// # Arguments
+///
+/// * `client` - A reference to the HTTP client.
+/// * `version` - A reference to the parsed version of Neovim to be downloaded.
+/// * `root` - A reference to the path where the downloaded file will be saved.
+/// * `config` - A reference to the configuration object.
+///
+/// # Returns
+///
+/// * `Result<PostDownloadVersionType>` - Returns a `Result` that contains a `PostDownloadVersionType` on success, or an error on failure.
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// * There is a failure in sending the request to download the version.
+/// * The response status is not 200.
+/// * There is a failure in creating the file where the downloaded version will be saved.
+/// * There is a failure in writing the downloaded bytes to the file.
+///
+/// # Example
+///
+/// ```rust
+/// let client = Client::new();
+/// let version = ParsedVersion::parse("0.5.0");
+/// let root = Path::new("/path/to/save");
+/// let config = Config::default();
+/// let result = download_version(&client, &version, &root, &config).await;
+/// ```
 async fn download_version(
     client: &Client,
     version: &ParsedVersion,
@@ -259,6 +392,41 @@ async fn download_version(
     }
 }
 
+/// Asynchronously handles the building of a specified version from source.
+///
+/// This function checks for the presence of necessary tools (like Clang, GCC, Cmake, and Git) in the system.
+/// It then proceeds to create a directory named "neovim-git" if it doesn't exist, and sets the current directory to it.
+/// It initializes a Git repository if one doesn't exist, and sets the remote to Neovim's GitHub repository.
+/// It fetches the specified version from the remote repository and checks out the fetched files.
+/// It then builds the fetched files and installs them to a specified location.
+///
+/// # Arguments
+///
+/// * `version` - A reference to the parsed version of Neovim to be built.
+/// * `config` - A reference to the configuration object.
+///
+/// # Returns
+///
+/// * `Result<PostDownloadVersionType>` - Returns a `Result` that contains a `PostDownloadVersionType` on success, or an error on failure.
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// * The necessary tools are not installed in the system.
+/// * There is a failure in creating the "neovim-git" directory.
+/// * There is a failure in initializing the Git repository.
+/// * There is a failure in setting the remote repository.
+/// * There is a failure in fetching the specified version from the remote repository.
+/// * There is a failure in checking out the fetched files.
+/// * There is a failure in building and installing the fetched files.
+///
+/// # Example
+///
+/// ```rust
+/// let version = ParsedVersion::parse("0.5.0");
+/// let config = Config::default();
+/// let result = handle_building_from_source(&version, &config).await;
+/// ```
 async fn handle_building_from_source(
     version: &ParsedVersion,
     config: &Config,
@@ -436,6 +604,41 @@ async fn handle_building_from_source(
     Ok(PostDownloadVersionType::Hash)
 }
 
+/// Sends a GET request to the specified URL to download a specific version of Neovim.
+///
+/// # Arguments
+///
+/// * `client: &Client` - A reference to the `Client` used for making requests.
+/// * `config: &Config` - Contains the configuration settings.
+/// * `version: &ParsedVersion` - Contains the version information to be downloaded.
+///
+/// # Behavior
+///
+/// The function constructs the download URL based on the provided `version` and `config.github_mirror`. If `config.github_mirror` is `None`, it defaults to "https://github.com".
+///
+/// It then sends a GET request to the constructed URL with the header "user-agent" set to "bob".
+///
+/// # Returns
+///
+/// * `Result<reqwest::Response, reqwest::Error>` - Returns a `Result` containing the server's response to the GET request. If the request fails, it returns an error.
+///
+/// # Example
+///
+/// ```rust
+/// let client = Client::new();
+/// let config = Config::default();
+/// let version = ParsedVersion { tag_name: "v0.2.2", semver: Version::parse("0.2.2").unwrap() };
+/// let response = send_request(&client, &config, &version).await?;
+/// ```
+///
+/// # Note
+///
+/// This function is asynchronous and must be awaited.
+///
+/// # See Also
+///
+/// * [`helpers::get_platform_name_download`](src/helpers/platform.rs)
+/// * [`helpers::get_file_type`](src/helpers/file.rs)
 async fn send_request(
     client: &Client,
     config: &Config,
