@@ -10,6 +10,24 @@ use crate::{
     helpers::{self, version::types::ParsedVersion},
 };
 
+/// Starts the rollback process.
+///
+/// This function presents a list of available versions to the user, allows them to select a version to rollback to, and then performs the rollback.
+///
+/// # Arguments
+///
+/// * `config` - The configuration for the rollback process.
+///
+/// # Returns
+///
+/// * `Result<()>` - Returns a `Result` that indicates whether the rollback process was successful or not.
+///
+/// # Example
+///
+/// ```rust
+/// let config = Config::default();
+/// start(config).await.unwrap();
+/// ```
 pub async fn start(config: Config) -> Result<()> {
     let nightly_vec = produce_nightly_vec(&config).await?;
 
@@ -80,6 +98,25 @@ pub async fn start(config: Config) -> Result<()> {
     Ok(())
 }
 
+/// Converts a `Duration` into a human-readable string.
+///
+/// This function takes a `Duration` and converts it into a string that represents the duration in weeks, days, and hours.
+///
+/// # Arguments
+///
+/// * `duration` - The `Duration` to be converted.
+///
+/// # Returns
+///
+/// * `Result<String>` - Returns a `Result` that contains a string representing the duration in a human-readable format, or an error if there is a failure in the conversion process.
+///
+/// # Example
+///
+/// ```rust
+/// let duration = Duration::hours(25);
+/// let humanized_duration = humanize_duration(duration).unwrap();
+/// assert_eq!(humanized_duration, "1 day, 1 hour");
+/// ```
 fn humanize_duration(duration: Duration) -> Result<String> {
     let mut humanized_duration = String::new();
 

@@ -4,6 +4,41 @@ use tracing::info;
 
 use crate::{config::Config, helpers::directories};
 
+/// Starts the erase process based on the provided `Config`.
+///
+/// # Arguments
+///
+/// * `config: Config` - Contains the configuration settings.
+///
+/// # Behavior
+///
+/// The function attempts to remove the installation and downloads directories. If successful, it logs a success message. If the directories do not exist, it returns an error.
+///
+/// On Windows, it also attempts to remove the Neovim installation path from the registry. If successful, it logs a success message.
+///
+/// # Returns
+///
+/// * `Result<()>` - Returns `Ok(())` if the function executes successfully, otherwise it returns an error.
+///
+/// # Errors
+///
+/// This function will return an error if there's a problem with removing the directories or modifying the registry.
+///
+/// # Example
+///
+/// ```rust
+/// let config = Config::default();
+/// start(config).await?;
+/// ```
+///
+/// # Note
+///
+/// This function is asynchronous and must be awaited.
+///
+/// # See Also
+///
+/// * [`directories::get_downloads_directory`](src/helpers/directories.rs)
+/// * [`directories::get_installation_directory`](src/helpers/directories.rs)
 pub async fn start(config: Config) -> Result<()> {
     let downloads = directories::get_downloads_directory(&config).await?;
     let installation_dir = directories::get_installation_directory(&config).await?;

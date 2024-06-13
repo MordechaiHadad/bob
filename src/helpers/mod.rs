@@ -6,6 +6,22 @@ pub mod unarchive;
 pub mod version;
 use semver::Version;
 
+/// Returns the file type for the Neovim binary download based on the target operating system.
+///
+/// This function checks the target operating system using the `cfg!` macro and returns a string that corresponds to the appropriate file type for the Neovim binary download.
+/// For Windows, it returns "zip".
+/// For macOS, it returns "tar.gz".
+/// For other operating systems, it returns "appimage".
+///
+/// # Returns
+///
+/// This function returns a `&'static str` that corresponds to the file type for the Neovim binary download.
+///
+/// # Example
+///
+/// ```rust
+/// let file_type = get_file_type();
+/// ```
 pub fn get_file_type() -> &'static str {
     if cfg!(target_family = "windows") {
         "zip"
@@ -16,6 +32,28 @@ pub fn get_file_type() -> &'static str {
     }
 }
 
+/// Returns the platform-specific name for the Neovim binary.
+///
+/// This function takes an `Option<Version>` as an argument, which represents the version of Neovim.
+/// It checks the target operating system and architecture using the `cfg!` macro and returns a string that corresponds to the appropriate Neovim binary for the platform.
+/// For Windows, it returns "nvim-win64".
+/// For macOS, it checks the version of Neovim. If the version is less than or equal to 0.9.5, it returns "nvim-macos". If the target architecture is "aarch64", it returns "nvim-macos-arm64". Otherwise, it returns "nvim-macos-x86_64".
+/// For other operating systems, it returns "nvim-linux64".
+///
+/// # Arguments
+///
+/// * `version` - An `Option<Version>` representing the version of Neovim.
+///
+/// # Returns
+///
+/// This function returns a `&'static str` that corresponds to the platform-specific name for the Neovim binary.
+///
+/// # Example
+///
+/// ```rust
+/// let version = Some(Version::new(0, 9, 5));
+/// let platform_name = get_platform_name(&version);
+/// ```
 pub fn get_platform_name(version: &Option<Version>) -> &'static str {
     if cfg!(target_os = "windows") {
         "nvim-win64"
@@ -35,6 +73,28 @@ pub fn get_platform_name(version: &Option<Version>) -> &'static str {
     }
 }
 
+/// Returns the platform-specific name for the Neovim download.
+///
+/// This function takes an `Option<Version>` as an argument, which represents the version of Neovim to be downloaded.
+/// It checks the target operating system and architecture using the `cfg!` macro and returns a string that corresponds to the appropriate Neovim download for the platform.
+/// For Windows, it returns "nvim-win64".
+/// For macOS, it checks the version of Neovim. If the version is less than or equal to 0.9.5, it returns "nvim-macos". If the target architecture is "aarch64", it returns "nvim-macos-arm64". Otherwise, it returns "nvim-macos-x86_64".
+/// For other operating systems, it returns "nvim".
+///
+/// # Arguments
+///
+/// * `version` - An `Option<Version>` representing the version of Neovim to be downloaded.
+///
+/// # Returns
+///
+/// This function returns a `&'static str` that corresponds to the platform-specific name for the Neovim download.
+///
+/// # Example
+///
+/// ```rust
+/// let version = Some(Version::new(0, 9, 5));
+/// let platform_name = get_platform_name_download(&version);
+/// ```
 pub fn get_platform_name_download(version: &Option<Version>) -> &'static str {
     if cfg!(target_os = "windows") {
         "nvim-win64"
