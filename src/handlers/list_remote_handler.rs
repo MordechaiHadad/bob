@@ -72,7 +72,7 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
         }
 
         if length != counter {
-            println!("");
+            println!();
         }
     }
 
