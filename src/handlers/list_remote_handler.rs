@@ -67,12 +67,10 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
         .filter(|v| v.name.starts_with('v'))
         .collect();
 
-    let length = filtered_versions.len();
-    let mut counter = 0;
     let stable_version = search_stable_version(&client).await?;
+    let padding = " ".repeat(12);
 
     for version in filtered_versions {
-        counter += 1;
         let version_installed = local_versions.iter().any(|v| {
             v.file_name()
                 .and_then(|str| str.to_str())
@@ -86,9 +84,9 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
         };
 
         if helpers::version::is_version_used(&version.name, &config).await {
-            println!("{}{}", Paint::green(version.name), stable_version_string);
+            println!("{padding}{}{}", Paint::green(version.name), stable_version_string);
         } else if version_installed {
-            println!("{}{}", Paint::yellow(&version.name), stable_version_string);
+            println!("{padding}{}{}", Paint::yellow(&version.name), stable_version_string);
 
             local_versions.retain(|v| {
                 v.file_name()
@@ -96,11 +94,7 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
                     .map_or(true, |str| !str.contains(&version.name))
             });
         } else {
-            println!("{}{}", version.name, stable_version_string);
-        }
-
-        if length != counter {
-            println!();
+            println!("{padding}{}{}", version.name, stable_version_string);
         }
     }
 
