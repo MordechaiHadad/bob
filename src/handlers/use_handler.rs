@@ -11,6 +11,38 @@ use crate::handlers::{install_handler, InstallResult};
 use crate::helpers;
 use crate::helpers::version::types::{ParsedVersion, VersionType};
 
+/// Starts the process of using a specified version.
+///
+/// This function checks if the specified version is already used, copies the Neovim proxy to the installation directory, installs the version if it's not already installed and used, switches to the version, and removes the "stable" directory if the version type is "Latest".
+///
+/// # Arguments
+///
+/// * `version` - The version to use.
+/// * `install` - Whether to install the version if it's not already installed.
+/// * `client` - The client to use for HTTP requests.
+/// * `config` - The configuration for the operation.
+///
+/// # Returns
+///
+/// * `Result<()>` - Returns a `Result` that indicates whether the operation was successful or not.
+///
+/// # Errors
+///
+/// This function will return an error if:
+///
+/// * The version is not already used and it cannot be installed.
+/// * The version cannot be switched to.
+/// * The "stable" directory exists and it cannot be removed.
+///
+/// # Example
+///
+/// ```rust
+/// let version = ParsedVersion::new("1.0.0");
+/// let install = true;
+/// let client = Client::new();
+/// let config = Config::default();
+/// start(version, install, &client, config).await.unwrap();
+/// ```
 pub async fn start(
     mut version: ParsedVersion,
     install: bool,
@@ -52,6 +84,36 @@ pub async fn start(
     Ok(())
 }
 
+/// Switches to a specified version.
+///
+/// This function changes the current directory to the downloads directory, writes the version to a file named "used", and if the version is different from the version stored in `version_sync_file_location`, it also writes the version to `version_sync_file_location`.
+///
+/// # Arguments
+///
+/// * `config` - The configuration for the operation.
+/// * `version` - The version to switch to.
+///
+/// # Returns
+///
+/// * `Result<()>` - Returns a `Result` that indicates whether the operation was successful or not.
+///
+/// # Errors
+///
+/// This function will return an error if:
+///
+/// * The downloads directory cannot be determined.
+/// * The current directory cannot be changed to the downloads directory.
+/// * The version cannot be written to the "used" file.
+/// * The version cannot be read from `version_sync_file_location`.
+/// * The version cannot be written to `version_sync_file_location`.
+///
+/// # Example
+///
+/// ```rust
+/// let config = Config::default();
+/// let version = ParsedVersion::new("1.0.0");
+/// switch(&config, &version).await.unwrap();
+/// ```
 pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
     std::env::set_current_dir(helpers::directories::get_downloads_directory(config).await?)?;
 
@@ -76,6 +138,36 @@ pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
     Ok(())
 }
 
+/// Copies the Neovim proxy to the installation directory.
+///
+/// This function gets the current executable's path, determines the installation directory, creates it if it doesn't exist, adds it to the system's PATH, and copies the current executable to the installation directory as "nvim" or "nvim.exe" (on Windows).
+///
+/// If a file named "nvim" or "nvim.exe" already exists in the installation directory, the function checks its version. If the version matches the current version, the function does nothing. Otherwise, it replaces the file with the current executable.
+///
+/// # Arguments
+///
+/// * `config` - The configuration for the operation.
+///
+/// # Returns
+///
+/// * `Result<()>` - Returns a `Result` that indicates whether the operation was successful or not.
+///
+/// # Errors
+///
+/// This function will return an error if:
+///
+/// * The current executable's path cannot be determined.
+/// * The installation directory cannot be created.
+/// * The installation directory cannot be added to the PATH.
+/// * The version of the existing file cannot be determined.
+/// * The existing file cannot be replaced.
+///
+/// # Example
+///
+/// ```rust
+/// let config = Config::default();
+/// copy_nvim_proxy(&config).await.unwrap();
+/// ```
 async fn copy_nvim_proxy(config: &Config) -> Result<()> {
     let exe_path = env::current_exe().unwrap();
     let mut installation_dir = helpers::directories::get_installation_directory(config).await?;
@@ -107,6 +199,32 @@ async fn copy_nvim_proxy(config: &Config) -> Result<()> {
     Ok(())
 }
 
+/// Adds the installation directory to the system's PATH.
+///
+/// This function checks if the installation directory is already in the PATH. If not, it adds the directory to the PATH.
+///
+/// # Arguments
+///
+/// * `installation_dir` - The directory to be added to the PATH.
+///
+/// # Returns
+///
+/// * `Result<()>` - Returns a `Result` that indicates whether the operation was successful or not.
+///
+/// # Errors
+///
+/// This function will return an error if:
+///
+/// * The installation directory cannot be converted to a string.
+/// * The current user's environment variables cannot be accessed or modified (Windows only).
+/// * The PATH environment variable cannot be read (non-Windows only).
+///
+/// # Example
+///
+/// ```rust
+/// let installation_dir = Path::new("/usr/local/bin");
+/// add_to_path(&installation_dir).unwrap();
+/// ```
 fn add_to_path(installation_dir: &Path) -> Result<()> {
     let installation_dir = installation_dir.to_str().unwrap();
 

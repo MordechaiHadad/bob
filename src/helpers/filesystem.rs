@@ -4,6 +4,30 @@ use indicatif::{ProgressBar, ProgressStyle};
 use std::path::Path;
 use tokio::fs;
 
+/// Asynchronously removes a directory and all its contents.
+///
+/// This function takes a string reference as an argument, which represents the directory to be removed.
+/// It first reads the directory and counts the number of entries. Then, it creates a progress bar with the total number of entries.
+/// It iterates over each entry in the directory. If the entry is a directory, it removes the directory and all its contents. If the entry is a file, it removes the file.
+/// After removing each entry, it updates the progress bar.
+/// Finally, it attempts to remove the directory itself. If this operation fails, it returns an error.
+///
+/// # Arguments
+///
+/// * `directory` - A string reference representing the directory to be removed.
+///
+/// # Returns
+///
+/// This function returns a `Result` that indicates whether the operation was successful.
+/// If the operation was successful, the function returns `Ok(())`.
+/// If the operation failed, the function returns `Err` with a description of the error.
+///
+/// # Example
+///
+/// ```rust
+/// let directory = "/path/to/directory";
+/// remove_dir(directory).await;
+/// ```
 pub async fn remove_dir(directory: &str) -> Result<()> {
     let path = Path::new(directory);
     let size = path.read_dir()?.count();
@@ -38,6 +62,32 @@ pub async fn remove_dir(directory: &str) -> Result<()> {
     Ok(())
 }
 
+/// Asynchronously copies a directory from one location to another.
+///
+/// This function takes two arguments: the source directory and the destination directory. Both arguments are implemented as references to `Path` and are static.
+/// It first creates the destination directory, then reads the entries of the source directory.
+/// For each entry in the source directory, it checks if the entry is a directory or a file.
+/// If the entry is a directory, it recursively calls `copy_dir` to copy the directory to the destination.
+/// If the entry is a file, it copies the file to the destination.
+///
+/// # Arguments
+///
+/// * `from` - A reference to a `Path` representing the source directory.
+/// * `to` - A reference to a `Path` representing the destination directory.
+///
+/// # Returns
+///
+/// This function returns a `Result` that indicates whether the operation was successful.
+/// If the operation was successful, the function returns `Ok(())`.
+/// If the operation failed, the function returns `Err` with a description of the error.
+///
+/// # Example
+///
+/// ```rust
+/// let from = Path::new("/path/to/source");
+/// let to = Path::new("/path/to/destination");
+/// copy_dir(from, to).await;
+/// ```
 #[async_recursion(?Send)]
 pub async fn copy_dir(
     from: impl AsRef<Path> + 'static,
