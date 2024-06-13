@@ -13,6 +13,34 @@ use crate::{
     helpers::{self, directories},
 };
 
+/// Starts the uninstall process.
+///
+/// This function creates a new HTTP client, determines the version to uninstall, checks if the version is currently in use, and if not, removes the version's directory.
+///
+/// # Arguments
+///
+/// * `version` - An optional string that represents the version to uninstall. If `None`, the function will call `uninstall_selections` to allow the user to select versions to uninstall.
+/// * `config` - The configuration for the uninstall process.
+///
+/// # Returns
+///
+/// * `Result<()>` - Returns a `Result` that indicates whether the uninstall process was successful or not.
+///
+/// # Errors
+///
+/// This function will return an error if:
+///
+/// * The version cannot be parsed.
+/// * The version is currently in use.
+/// * The downloads directory cannot be determined.
+/// * The version's directory cannot be removed.
+///
+/// # Example
+///
+/// ```rust
+/// let config = Config::default();
+/// start(Some("1.0.0"), config).await.unwrap();
+/// ```
 pub async fn start(version: Option<&str>, config: Config) -> Result<()> {
     let client = Client::new();
 
@@ -42,6 +70,35 @@ pub async fn start(version: Option<&str>, config: Config) -> Result<()> {
     Ok(())
 }
 
+/// Uninstalls selected versions.
+///
+/// This function reads the versions from the downloads directory, presents a list of installed versions to the user, allows them to select versions to uninstall, and then uninstalls the selected versions.
+///
+/// # Arguments
+///
+/// * `client` - The HTTP client to be used for network requests.
+/// * `config` - The configuration for the uninstall process.
+///
+/// # Returns
+///
+/// * `Result<()>` - Returns a `Result` that indicates whether the uninstall process was successful or not.
+///
+/// # Errors
+///
+/// This function will return an error if:
+///
+/// * The downloads directory cannot be read.
+/// * The version cannot be parsed from the file name.
+/// * The version is currently in use.
+/// * The user aborts the uninstall process.
+///
+/// # Example
+///
+/// ```rust
+/// let client = Client::new();
+/// let config = Config::default();
+/// uninstall_selections(&client, &config).await.unwrap();
+/// ```
 async fn uninstall_selections(client: &Client, config: &Config) -> Result<()> {
     let downloads_dir = directories::get_downloads_directory(config).await?;
 

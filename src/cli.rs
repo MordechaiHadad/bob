@@ -12,6 +12,23 @@ use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use reqwest::{Client, Error};
 use tracing::info;
 
+/// Creates a new `reqwest::Client` with default headers.
+///
+/// This function fetches the `GITHUB_TOKEN` environment variable and uses it to set the `Authorization` header for the client.
+///
+/// # Returns
+///
+/// This function returns a `Result` that contains a `reqwest::Client` if the client was successfully created, or an `Error` if the client could not be created.
+///
+/// # Example
+///
+/// ```rust
+/// let client = create_reqwest_client();
+/// ```
+///
+/// # Errors
+///
+/// This function will return an error if the `reqwest::Client` could not be built.
 fn create_reqwest_client() -> Result<Client, Error> {
     // fetch env variable
     let github_token = std::env::var("GITHUB_TOKEN");
@@ -32,6 +49,7 @@ fn create_reqwest_client() -> Result<Client, Error> {
     Ok(client)
 }
 
+/// The `Cli` enum represents the different commands that can be used in the command-line interface.
 #[derive(Debug, Parser)]
 #[command(version)]
 enum Cli {
@@ -86,6 +104,23 @@ enum Cli {
     Update(Update),
 }
 
+/// Represents an update command in the CLI.
+///
+/// This struct contains options for the update command, such as the version to update and whether to update all versions.
+///
+/// # Fields
+///
+/// * `version: Option<String>` - The version to update. This can be either "nightly" or "stable". This field conflicts with the `all` field, meaning you can't specify a version and use `all` at the same time.
+/// * `all: bool` - Whether to apply the update to all versions. If this is `true`, the `version` field must be `None`.
+///
+/// # Example
+///
+/// ```rust
+/// let update = Update {
+///     version: Some("nightly".to_string()),
+///     all: false,
+/// };
+/// ```
 #[derive(Args, Debug)]
 pub struct Update {
     /// Update specified version |nightly|stable|
@@ -97,6 +132,24 @@ pub struct Update {
     pub all: bool,
 }
 
+/// Starts the CLI application.
+///
+/// This function takes a `Config` object as input and returns a `Result`. It creates a Reqwest client, parses the CLI arguments, and then handles the arguments based on their type.
+///
+/// # Arguments
+///
+/// * `config: Config` - The configuration for the application.
+///
+/// # Returns
+///
+/// * `Result<()>` - Returns a `Result`. If the function completes successfully, it returns `Ok(())`. If an error occurs, it returns `Err`.
+///
+/// # Example
+///
+/// ```rust
+/// let config = Config::default();
+/// start(config).await.unwrap();
+/// ```
 pub async fn start(config: Config) -> Result<()> {
     let client = create_reqwest_client()?;
     let cli = Cli::parse();
