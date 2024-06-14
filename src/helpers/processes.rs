@@ -1,6 +1,9 @@
 use crate::config::Config;
 use anyhow::{anyhow, Result};
-use std::{sync::{atomic::AtomicBool, Arc}, time::Duration};
+use std::{
+    sync::{atomic::AtomicBool, Arc},
+    time::Duration,
+};
 use tokio::{process::Command, time::sleep};
 
 use super::{
