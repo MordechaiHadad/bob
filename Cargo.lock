@@ -157,7 +157,7 @@ checksum = "cf4b9d6a944f767f8e5e0db018570623c85f3d925ac718db4e06d0187adb21c1"
 
 [[package]]
 name = "bob-nvim"
-version = "3.0.0"
+version = "3.0.1"
 dependencies = [
  "anyhow",
  "async-recursion",
