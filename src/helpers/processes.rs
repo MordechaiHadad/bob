@@ -1,7 +1,7 @@
 use crate::config::Config;
 use anyhow::{anyhow, Result};
-use std::sync::{atomic::AtomicBool, Arc};
-use tokio::process::Command;
+use std::{sync::{atomic::AtomicBool, Arc}, time::Duration};
+use tokio::{process::Command, time::sleep};
 
 use super::{
     directories, get_platform_name,
@@ -133,6 +133,8 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
                         _term.store(false, Ordering::Relaxed);
                     }
                 }
+                // short delay to a void high cpu usage
+                sleep(Duration::from_millis(200)).await;
             }
             Err(_) => return Err(anyhow!("Failed to wait on child process")),
         }
