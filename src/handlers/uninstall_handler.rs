@@ -1,17 +1,17 @@
+use crate::{
+    config::Config,
+    helpers::{self, directories},
+};
 use anyhow::{anyhow, Result};
 use dialoguer::{
     console::{style, Term},
     theme::ColorfulTheme,
     Confirm, MultiSelect,
 };
+use regex::Regex;
 use reqwest::Client;
 use tokio::fs;
 use tracing::{info, warn};
-
-use crate::{
-    config::Config,
-    helpers::{self, directories},
-};
 
 /// Starts the uninstall process.
 ///
@@ -60,7 +60,13 @@ pub async fn start(version: Option<&str>, config: Config) -> Result<()> {
         Err(error) => return Err(anyhow!(error)),
     };
 
-    let path = downloads_dir.join(&version.non_parsed_string);
+    let version_regex = Regex::new(r"^[0-9]+\.[0-9]+\.[0-9]+$")?;
+    let path = if version_regex.is_match(&version.non_parsed_string) {
+        let intermediate = format!("v{}", &version.non_parsed_string);
+        downloads_dir.join(intermediate)
+    } else {
+        downloads_dir.join(&version.non_parsed_string)
+    };
 
     fs::remove_dir_all(path).await?;
     info!(
