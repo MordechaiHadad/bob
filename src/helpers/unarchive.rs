@@ -323,7 +323,8 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
             Ok(mut file) => {
                 let mut outpath = PathBuf::new();
                 outpath.push(&downloaded_file.file_name);
-                outpath.push(file.path()?.to_str().unwrap());
+                let no_parent_file = remove_base_parent(file.path().unwrap()).unwrap();
+                outpath.push(no_parent_file);
 
                 let file_name = format!("{}", file.path()?.display()); // file.path()?.is_dir() always returns false... weird
                 if file_name.ends_with('/') {
@@ -348,14 +349,8 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
         "Finished expanding to {}/{}",
         downloaded_file.path, downloaded_file.file_name
     ));
-    if fs::metadata(format!("{}/nvim-osx64", downloaded_file.file_name)).is_ok() {
-        fs::rename(
-            format!("{}/nvim-osx64", downloaded_file.file_name),
-            format!("{}/nvim-macos", downloaded_file.file_name),
-        )?;
-    }
-    let platform = helpers::get_platform_name(&downloaded_file.semver);
-    let file = &format!("{}/{platform}/bin/nvim", downloaded_file.file_name);
+   
+    let file = &format!("{}/bin/nvim", downloaded_file.file_name);
     let mut perms = fs::metadata(file)?.permissions();
     perms.set_mode(0o551);
     fs::set_permissions(file, perms)?;
