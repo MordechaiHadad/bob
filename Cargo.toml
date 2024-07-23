@@ -12,7 +12,7 @@ repository = "https://github.com/MordechaiHadad/bob"
 [features]
 default = ["rustls-tls"]
 native-tls = ["reqwest/default-tls"]
-rustls-tls = ["reqwest/rustls-tls"]
+rustls-tls = ["reqwest/rustls-tls-native-roots"]
 
 [dependencies]
 anyhow = "1.0.52"
