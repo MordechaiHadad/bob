@@ -349,7 +349,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
         "Finished expanding to {}/{}",
         downloaded_file.path, downloaded_file.file_name
     ));
-   
+
     let file = &format!("{}/bin/nvim", downloaded_file.file_name);
     let mut perms = fs::metadata(file)?.permissions();
     perms.set_mode(0o551);

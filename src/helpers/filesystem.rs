@@ -115,6 +115,7 @@ pub async fn copy_dir_async(
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
 pub fn copy_dir(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<()> {
     let original_path = from.as_ref().to_owned();
     let destination = to.as_ref().to_owned();
