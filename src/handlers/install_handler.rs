@@ -234,7 +234,7 @@ async fn handle_rollback(config: &Config) -> Result<()> {
         .collect();
 
     info!("Creating rollback: nightly-{id}");
-    filesystem::copy_dir("nightly", format!("nightly-{id}")).await?;
+    filesystem::copy_dir_async("nightly", format!("nightly-{id}")).await?;
 
     json_struct.tag_name += &format!("-{id}");
 

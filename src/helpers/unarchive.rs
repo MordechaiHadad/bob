@@ -106,9 +106,10 @@ pub async fn start(file: LocalVersion) -> Result<()> {
 /// ```
 #[cfg(target_os = "linux")]
 fn expand(downloaded_file: LocalVersion) -> Result<()> {
+    use crate::helpers::filesystem::copy_dir;
+
     use super::sync;
-    use std::env::set_current_dir;
-    use std::fs::{remove_file, rename};
+    use std::fs::remove_dir_all;
     use std::os::unix::fs::PermissionsExt;
     use std::process::Command;
 
@@ -126,18 +127,11 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
 
     sync::handle_subprocess(Command::new(file).arg("--appimage-extract"))?;
 
-    rename("squashfs-root", &downloaded_file.file_name)?;
+    let src_root = "squashfs-root";
+    let dest = downloaded_file.file_name;
 
-    set_current_dir(downloaded_file.file_name)?;
-
-    for x in ["AppRun", "nvim.desktop", "nvim.png", ".DirIcon"] {
-        remove_file(x)?;
-    }
-
-    rename("usr", "nvim-linux64")?;
-
-    let parent_dir = std::env::current_dir()?.parent().unwrap().to_path_buf();
-    std::env::set_current_dir(parent_dir)?;
+    copy_dir(Path::new(src_root).join("usr"), Path::new(&dest))?;
+    remove_dir_all(src_root)?;
 
     Ok(())
 }
