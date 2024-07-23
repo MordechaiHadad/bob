@@ -356,6 +356,35 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     Ok(())
 }
 
+/// Removes the base parent from a given path.
+///
+/// This function takes a path and removes its base parent component. For example, on Windows,
+/// if the path is "D:\\test.txt", this function will return "test.txt", effectively removing
+/// the drive letter and the root directory.
+///
+/// # Arguments
+///
+/// * `path` - A reference to a `Path` from which the base parent will be removed.
+///
+/// # Returns
+///
+/// This function returns an `Option<PathBuf>`. If the path has a base parent that can be
+/// removed, it returns `Some(PathBuf)` with the modified path. If the path does not have
+/// a base parent or cannot be modified, it may return `None`, although in the current
+/// implementation, it always returns `Some(PathBuf)` even if the path is unchanged.
+///
+/// # Examples
+///
+/// Basic usage:
+///
+/// ```
+/// use std::path::{Path, PathBuf};
+/// use your_crate_name::remove_base_parent; // Adjust the use path according to your crate's structure
+///
+/// let path = Path::new("D:\\test.txt");
+/// let new_path = remove_base_parent(path).unwrap();
+/// assert_eq!(new_path, PathBuf::from("test.txt"));
+/// ```
 #[allow(dead_code)]
 fn remove_base_parent(path: &Path) -> Option<PathBuf> {
     let mut components = path.components();
