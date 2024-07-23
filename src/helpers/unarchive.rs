@@ -1,5 +1,8 @@
 use anyhow::{anyhow, Result};
-use std::fs;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use super::version::types::LocalVersion;
 
@@ -210,10 +213,11 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     std::fs::create_dir(downloaded_file.file_name.clone())?;
 
     let mut downloaded: u64 = 0;
+
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
-        let temp = &format!("{}/{}", downloaded_file.file_name, file.name());
-        let outpath = Path::new(temp);
+        let file_path = remove_base_parent(&file.mangled_name()).unwrap();
+        let outpath = Path::new(&downloaded_file.file_name).join(file_path);
 
         if file.is_dir() {
             fs::create_dir_all(outpath)?;
@@ -362,4 +366,12 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     perms.set_mode(0o551);
     fs::set_permissions(file, perms)?;
     Ok(())
+}
+
+fn remove_base_parent(path: &Path) -> Option<PathBuf> {
+    let mut components = path.components();
+
+    components.next();
+
+    Some(components.as_path().to_path_buf())
 }
