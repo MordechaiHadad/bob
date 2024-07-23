@@ -357,6 +357,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     Ok(())
 }
 
+#[allow(dead_code)]
 fn remove_base_parent(path: &Path) -> Option<PathBuf> {
     let mut components = path.components();
 

@@ -122,9 +122,9 @@ pub fn copy_dir(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<()> {
 
     std::fs::create_dir(&destination)?;
 
-    let mut entries = std::fs::read_dir(original_path)?;
+    let entries = std::fs::read_dir(original_path)?;
 
-    while let Some(entry) = entries.next() {
+    for entry in entries {
         let path = entry?.path();
 
         if path.is_dir() {
