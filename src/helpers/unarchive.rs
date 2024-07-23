@@ -277,7 +277,6 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
 /// ```
 #[cfg(target_os = "macos")] // I don't know if its worth making both expand functions into one function, but the API difference will cause so much if statements
 fn expand(downloaded_file: LocalVersion) -> Result<()> {
-    use crate::helpers;
     use flate2::read::GzDecoder;
     use indicatif::{ProgressBar, ProgressStyle};
     use std::cmp::min;
@@ -323,7 +322,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
             Ok(mut file) => {
                 let mut outpath = PathBuf::new();
                 outpath.push(&downloaded_file.file_name);
-                let no_parent_file = remove_base_parent(file.path().unwrap()).unwrap();
+                let no_parent_file = remove_base_parent(&file.path().unwrap()).unwrap();
                 outpath.push(no_parent_file);
 
                 let file_name = format!("{}", file.path()?.display()); // file.path()?.is_dir() always returns false... weird
