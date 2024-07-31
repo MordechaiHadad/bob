@@ -317,6 +317,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     pb.set_message("Expanding archive");
 
     let mut downloaded: u64 = 0;
+    let mut display = true;
     for file in archive.entries()? {
         match file {
             Ok(mut file) => {
@@ -324,6 +325,10 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
                 outpath.push(&downloaded_file.file_name);
                 let no_parent_file = remove_base_parent(&file.path().unwrap()).unwrap();
                 outpath.push(no_parent_file);
+                if display {
+                    println!("{} {} {}", outpath.display(), no_parent_file.display(), file.path().unwrap().display());
+                    display = false;
+                }
 
                 let file_name = format!("{}", file.path()?.display()); // file.path()?.is_dir() always returns false... weird
                 if file_name.ends_with('/') {
