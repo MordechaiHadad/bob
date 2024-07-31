@@ -1,5 +1,8 @@
 use anyhow::{anyhow, Result};
-use std::fs;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use super::version::types::LocalVersion;
 
@@ -103,9 +106,10 @@ pub async fn start(file: LocalVersion) -> Result<()> {
 /// ```
 #[cfg(target_os = "linux")]
 fn expand(downloaded_file: LocalVersion) -> Result<()> {
+    use crate::helpers::filesystem::copy_dir;
+
     use super::sync;
-    use std::env::set_current_dir;
-    use std::fs::{remove_file, rename};
+    use std::fs::remove_dir_all;
     use std::os::unix::fs::PermissionsExt;
     use std::process::Command;
 
@@ -123,18 +127,11 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
 
     sync::handle_subprocess(Command::new(file).arg("--appimage-extract"))?;
 
-    rename("squashfs-root", &downloaded_file.file_name)?;
+    let src_root = "squashfs-root";
+    let dest = downloaded_file.file_name;
 
-    set_current_dir(downloaded_file.file_name)?;
-
-    for x in ["AppRun", "nvim.desktop", "nvim.png", ".DirIcon"] {
-        remove_file(x)?;
-    }
-
-    rename("usr", "nvim-linux64")?;
-
-    let parent_dir = std::env::current_dir()?.parent().unwrap().to_path_buf();
-    std::env::set_current_dir(parent_dir)?;
+    copy_dir(Path::new(src_root).join("usr"), Path::new(&dest))?;
+    remove_dir_all(src_root)?;
 
     Ok(())
 }
@@ -210,10 +207,11 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     std::fs::create_dir(downloaded_file.file_name.clone())?;
 
     let mut downloaded: u64 = 0;
+
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
-        let temp = &format!("{}/{}", downloaded_file.file_name, file.name());
-        let outpath = Path::new(temp);
+        let file_path = remove_base_parent(&file.mangled_name()).unwrap();
+        let outpath = Path::new(&downloaded_file.file_name).join(file_path);
 
         if file.is_dir() {
             fs::create_dir_all(outpath)?;
@@ -279,7 +277,6 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
 /// ```
 #[cfg(target_os = "macos")] // I don't know if its worth making both expand functions into one function, but the API difference will cause so much if statements
 fn expand(downloaded_file: LocalVersion) -> Result<()> {
-    use crate::helpers;
     use flate2::read::GzDecoder;
     use indicatif::{ProgressBar, ProgressStyle};
     use std::cmp::min;
@@ -325,7 +322,8 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
             Ok(mut file) => {
                 let mut outpath = PathBuf::new();
                 outpath.push(&downloaded_file.file_name);
-                outpath.push(file.path()?.to_str().unwrap());
+                let no_parent_file = remove_base_parent(&file.path().unwrap()).unwrap();
+                outpath.push(no_parent_file);
 
                 let file_name = format!("{}", file.path()?.display()); // file.path()?.is_dir() always returns false... weird
                 if file_name.ends_with('/') {
@@ -350,16 +348,48 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
         "Finished expanding to {}/{}",
         downloaded_file.path, downloaded_file.file_name
     ));
-    if fs::metadata(format!("{}/nvim-osx64", downloaded_file.file_name)).is_ok() {
-        fs::rename(
-            format!("{}/nvim-osx64", downloaded_file.file_name),
-            format!("{}/nvim-macos", downloaded_file.file_name),
-        )?;
-    }
-    let platform = helpers::get_platform_name(&downloaded_file.semver);
-    let file = &format!("{}/{platform}/bin/nvim", downloaded_file.file_name);
+
+    let file = &format!("{}/bin/nvim", downloaded_file.file_name);
     let mut perms = fs::metadata(file)?.permissions();
     perms.set_mode(0o551);
     fs::set_permissions(file, perms)?;
     Ok(())
+}
+
+/// Removes the base parent from a given path.
+///
+/// This function takes a path and removes its base parent component. For example, on Windows,
+/// if the path is "D:\\test.txt", this function will return "test.txt", effectively removing
+/// the drive letter and the root directory.
+///
+/// # Arguments
+///
+/// * `path` - A reference to a `Path` from which the base parent will be removed.
+///
+/// # Returns
+///
+/// This function returns an `Option<PathBuf>`. If the path has a base parent that can be
+/// removed, it returns `Some(PathBuf)` with the modified path. If the path does not have
+/// a base parent or cannot be modified, it may return `None`, although in the current
+/// implementation, it always returns `Some(PathBuf)` even if the path is unchanged.
+///
+/// # Examples
+///
+/// Basic usage:
+///
+/// ```
+/// use std::path::{Path, PathBuf};
+/// use your_crate_name::remove_base_parent; // Adjust the use path according to your crate's structure
+///
+/// let path = Path::new("D:\\test.txt");
+/// let new_path = remove_base_parent(path).unwrap();
+/// assert_eq!(new_path, PathBuf::from("test.txt"));
+/// ```
+#[allow(dead_code)]
+fn remove_base_parent(path: &Path) -> Option<PathBuf> {
+    let mut components = path.components();
+
+    components.next();
+
+    Some(components.as_path().to_path_buf())
 }

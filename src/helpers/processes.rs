@@ -99,11 +99,23 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
         used_version
     };
 
-    let location = downloads_dir
-        .join(new_version)
-        .join(platform)
-        .join("bin")
-        .join("nvim");
+    let mut location = downloads_dir.join(&new_version).join("bin").join("nvim");
+
+    if cfg!(windows) {
+        location = location.with_extension("exe");
+    }
+
+    if !location.exists() {
+        location = downloads_dir
+            .join(new_version)
+            .join(platform)
+            .join("bin")
+            .join("nvim");
+
+        if cfg!(windows) {
+            location = location.with_extension("exe");
+        }
+    }
 
     let _term = Arc::new(AtomicBool::new(false));
     #[cfg(unix)]
