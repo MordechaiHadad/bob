@@ -343,11 +343,11 @@ async fn download_version(
                         let mut response_bytes = response.bytes_stream();
 
                         // Progress Bar Setup
-                    //     let pb = ProgressBar::new(total_size);
-                    //     pb.set_style(ProgressStyle::default_bar()
-                    // .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
-                    // .progress_chars("█  "));
-                    //     pb.set_message(format!("Downloading version: {}", version.tag_name));
+                        let pb = ProgressBar::new(total_size);
+                        pb.set_style(ProgressStyle::default_bar()
+                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
+                    .progress_chars("█  "));
+                        pb.set_message(format!("Downloading version: {}", version.tag_name));
 
                         let file_type = helpers::get_file_type();
                         let mut file =
@@ -361,15 +361,15 @@ async fn download_version(
                             file.write_all(&chunk).await?;
                             let new = min(downloaded + (chunk.len() as u64), total_size);
                             downloaded = new;
-                            // pb.set_position(new);
+                            pb.set_position(new);
                         }
 
-                        // pb.finish_with_message(format!(
-                        //     "Downloaded version {} to {}/{}.{file_type}",
-                        //     version.tag_name,
-                        //     root.display(),
-                        //     version.tag_name
-                        // ));
+                        pb.finish_with_message(format!(
+                            "Downloaded version {} to {}/{}.{file_type}",
+                            version.tag_name,
+                            root.display(),
+                            version.tag_name
+                        ));
 
                         Ok(PostDownloadVersionType::Standard(LocalVersion {
                             file_name: version.tag_name.to_owned(),

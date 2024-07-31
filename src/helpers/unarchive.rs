@@ -306,15 +306,15 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     let mut archive = Archive::new(decompress_stream);
 
     let totalsize = 1692; // hard coding this is pretty unwise, but you cant get the length of an archive in tar-rs unlike zip-rs
-    // let pb = ProgressBar::new(totalsize);
-    // pb.set_style(
-    //     ProgressStyle::default_bar()
-    //         .template(
-    //             "{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len}",
-    //         )
-    //         .progress_chars("█  "),
-    // );
-    // pb.set_message("Expanding archive");
+    let pb = ProgressBar::new(totalsize);
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template(
+                "{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len}",
+            )
+            .progress_chars("█  "),
+    );
+    pb.set_message("Expanding archive");
 
     let mut downloaded: u64 = 0;
     let mut display = true;
@@ -324,11 +324,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
                 let mut outpath = PathBuf::new();
                 outpath.push(&downloaded_file.file_name);
                 let no_parent_file = remove_base_parent(&file.path().unwrap()).unwrap();
-                outpath.push(no_parent_file.clone());
-                if display {
-                    println!("{} {} {}", &outpath.display(), &no_parent_file.display(), &file.path().unwrap().display());
-                    display = false;
-                }
+                outpath.push(no_parent_file);
 
                 let file_name = format!("{}", file.path()?.display()); // file.path()?.is_dir() always returns false... weird
                 if file_name.ends_with('/') {
@@ -344,15 +340,15 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
                 }
                 let new = min(downloaded + 1, totalsize);
                 downloaded = new;
-                // pb.set_position(new);
+                pb.set_position(new);
             }
             Err(error) => println!("{error}"),
         }
     }
-    // pb.finish_with_message(format!(
-    //     "Finished expanding to {}/{}",
-    //     downloaded_file.path, downloaded_file.file_name
-    // ));
+    pb.finish_with_message(format!(
+        "Finished expanding to {}/{}",
+        downloaded_file.path, downloaded_file.file_name
+    ));
 
     let file = &format!("{}/bin/nvim", downloaded_file.file_name);
     let mut perms = fs::metadata(file)?.permissions();
