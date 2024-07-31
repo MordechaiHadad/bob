@@ -324,7 +324,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
                 let mut outpath = PathBuf::new();
                 outpath.push(&downloaded_file.file_name);
                 let no_parent_file = remove_base_parent(&file.path().unwrap()).unwrap();
-                outpath.push(no_parent_file);
+                outpath.push(no_parent_file.clone());
                 if display {
                     println!("{} {} {}", &outpath.display(), &no_parent_file.display(), &file.path().unwrap().display());
                     display = false;
