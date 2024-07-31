@@ -317,7 +317,6 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     pb.set_message("Expanding archive");
 
     let mut downloaded: u64 = 0;
-    let mut display = true;
     for file in archive.entries()? {
         match file {
             Ok(mut file) => {
