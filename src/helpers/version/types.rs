@@ -2,6 +2,7 @@ use semver::Version;
 
 use crate::github_requests::UpstreamVersion;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 /// Represents a parsed version of the software.
 ///
@@ -120,4 +121,12 @@ pub struct LocalVersion {
     pub file_format: String,
     pub path: String,
     pub semver: Option<Version>,
+}
+
+impl LocalVersion {
+    pub fn full_path(&self) -> PathBuf {
+        PathBuf::from_str(&self.path)
+            .unwrap()
+            .join(format!("{}.{}", self.file_name, self.file_format))
+    }
 }

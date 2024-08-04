@@ -15,6 +15,7 @@ use super::version::types::LocalVersion;
 /// This enum has four variants:
 ///
 /// * `InstallationSuccess(String)` - The installation was successful.
+/// * `ChecksumMismatch` - The given checksum does not match the checksum of the downloaded file.
 /// * `VersionAlreadyInstalled` - The version that was attempted to be installed is already installed.
 /// * `NightlyIsUpdated` - The nightly version is updated.
 /// * `GivenNightlyRollback` - The given nightly version is a rollback.
