@@ -1,3 +1,4 @@
+pub mod checksum;
 pub mod directories;
 pub mod filesystem;
 pub mod processes;
