@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::github_requests::{get_commits_for_nightly, get_upstream_nightly, UpstreamVersion};
-use crate::helpers::directories::get_downloads_directory;
+use crate::helpers::checksum::sha256cmp;
 use crate::helpers::processes::handle_subprocess;
 use crate::helpers::version::nightly::produce_nightly_vec;
 use crate::helpers::version::types::{LocalVersion, ParsedVersion, VersionType};
@@ -115,32 +115,49 @@ pub async fn start(
         }
     }
 
-    let downloaded_file = match version.version_type {
+    let downloaded_archive = match version.version_type {
         VersionType::Normal | VersionType::Latest => {
-            download_version(client, version, root, config).await
+            download_version(client, version, root, config, false).await
         }
         VersionType::Nightly => {
             if config.enable_release_build == Some(true) {
                 handle_building_from_source(version, config).await
             } else {
-                download_version(client, version, root, config).await
+                download_version(client, version, root, config, false).await
             }
         }
         VersionType::Hash => handle_building_from_source(version, config).await,
         VersionType::NightlyRollback => Ok(PostDownloadVersionType::None),
     }?;
 
-    if let PostDownloadVersionType::Standard(downloaded_file) = downloaded_file {
-        unarchive::start(downloaded_file).await?
+    if let PostDownloadVersionType::Standard(downloaded_archive) = downloaded_archive {
+        let downloaded_checksum = download_version(client, version, root, config, true).await?;
+
+        if let PostDownloadVersionType::Standard(downloaded_checksum) = downloaded_checksum {
+            let archive_path = root
+                .join(&downloaded_archive.file_name)
+                .with_extension(&downloaded_archive.file_format);
+            let checksum_path = root
+                .join(&downloaded_checksum.file_name)
+                .with_extension(&downloaded_checksum.file_format);
+
+            if sha256cmp(&archive_path, &checksum_path)? {
+                info!("Checksum matched!");
+                tokio::fs::remove_file(checksum_path).await?;
+                unarchive::start(downloaded_archive).await?
+            } else {
+                tokio::fs::remove_file(archive_path).await?;
+                tokio::fs::remove_file(checksum_path).await?;
+                return Err(anyhow!("Checksum mismatch!"));
+            }
+        }
     }
 
     if let VersionType::Nightly = version.version_type {
         if let Some(nightly_version) = nightly_version {
             let nightly_string = serde_json::to_string(&nightly_version)?;
 
-            let mut downloads_dir = get_downloads_directory(config).await?;
-            downloads_dir.push("nightly");
-            downloads_dir.push("bob.json");
+            let downloads_dir = root.join("nightly").join("bob.json");
             let mut json_file = File::create(downloads_dir).await?;
 
             if let Err(error) = json_file.write_all(nightly_string.as_bytes()).await {
@@ -304,6 +321,7 @@ async fn print_commits(
 /// * `version` - A reference to the parsed version of Neovim to be downloaded.
 /// * `root` - A reference to the path where the downloaded file will be saved.
 /// * `config` - A reference to the configuration object.
+/// * `sha256sum` - A boolean indicating whether to get the sha256sum
 ///
 /// # Returns
 ///
@@ -331,10 +349,11 @@ async fn download_version(
     version: &ParsedVersion,
     root: &Path,
     config: &Config,
+    get_sha256sum: bool,
 ) -> Result<PostDownloadVersionType> {
     match version.version_type {
         VersionType::Normal | VersionType::Nightly | VersionType::Latest => {
-            let response = send_request(client, config, version).await;
+            let response = send_request(client, config, version, get_sha256sum).await;
 
             match response {
                 Ok(response) => {
@@ -347,9 +366,16 @@ async fn download_version(
                         pb.set_style(ProgressStyle::default_bar()
                     .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
                     .progress_chars("█  "));
-                        pb.set_message(format!("Downloading version: {}", version.tag_name));
+                        let dl = if get_sha256sum { "checksum" } else { "version" };
+                        pb.set_message(format!("Downloading {dl}: {}", version.tag_name));
 
                         let file_type = helpers::get_file_type();
+                        let file_type = if get_sha256sum {
+                            format!("{file_type}.sha256sum")
+                        } else {
+                            file_type.to_owned()
+                        };
+
                         let mut file =
                             tokio::fs::File::create(format!("{}.{file_type}", version.tag_name))
                                 .await?;
@@ -364,8 +390,12 @@ async fn download_version(
                             pb.set_position(new);
                         }
 
+                        pb.set_message(format!("Writing {dl} {} to disk", version.tag_name));
+                        file.flush().await?;
+                        file.sync_all().await?;
+
                         pb.finish_with_message(format!(
-                            "Downloaded version {} to {}/{}.{file_type}",
+                            "Downloaded {dl} {} to {}/{}.{file_type}",
                             version.tag_name,
                             root.display(),
                             version.tag_name
@@ -610,6 +640,7 @@ async fn handle_building_from_source(
 /// * `client: &Client` - A reference to the `Client` used for making requests.
 /// * `config: &Config` - Contains the configuration settings.
 /// * `version: &ParsedVersion` - Contains the version information to be downloaded.
+/// * `get_sha256sum: bool` - A boolean indicating whether to get the sha256sum.
 ///
 /// # Behavior
 ///
@@ -627,7 +658,7 @@ async fn handle_building_from_source(
 /// let client = Client::new();
 /// let config = Config::default();
 /// let version = ParsedVersion { tag_name: "v0.2.2", semver: Version::parse("0.2.2").unwrap() };
-/// let response = send_request(&client, &config, &version).await?;
+/// let response = send_request(&client, &config, &version, false).await?;
 /// ```
 ///
 /// # Note
@@ -642,9 +673,15 @@ async fn send_request(
     client: &Client,
     config: &Config,
     version: &ParsedVersion,
+    get_sha256sum: bool,
 ) -> Result<reqwest::Response, reqwest::Error> {
     let platform = helpers::get_platform_name_download(&version.semver);
     let file_type = helpers::get_file_type();
+    let file_type = if get_sha256sum {
+        format!("{file_type}.sha256sum")
+    } else {
+        file_type.to_owned()
+    };
     let url = match &config.github_mirror {
         Some(val) => val.to_string(),
         None => "https://github.com".to_string(),
