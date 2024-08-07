@@ -145,6 +145,7 @@ pub async fn start(
                 tokio::fs::remove_file(archive_path).await?;
                 tokio::fs::remove_file(checksum_path).await?;
                 return Err(anyhow!("Checksum mismatch!"));
+            }
  
             info!("Checksum matched!");
             tokio::fs::remove_file(checksum_path).await?;
@@ -686,7 +687,7 @@ async fn send_request(
     };
     let version = &version.tag_name;
     let request_url =
-        format!("{url}/neovim/neovim/releases/download/{version}/{platform}.{file_type}",);
+        format!("{url}/neovim/neovim/releases/download/{version}/{platform}.{file_type}");
 
     client
         .get(request_url)
