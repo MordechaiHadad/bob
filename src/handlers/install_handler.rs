@@ -141,15 +141,14 @@ pub async fn start(
                 .join(&downloaded_checksum.file_name)
                 .with_extension(&downloaded_checksum.file_format);
 
-            if sha256cmp(&archive_path, &checksum_path)? {
-                info!("Checksum matched!");
-                tokio::fs::remove_file(checksum_path).await?;
-                unarchive::start(downloaded_archive).await?
-            } else {
+            if !sha256cmp(&archive_path, &checksum_path)? {
                 tokio::fs::remove_file(archive_path).await?;
                 tokio::fs::remove_file(checksum_path).await?;
                 return Err(anyhow!("Checksum mismatch!"));
-            }
+ 
+            info!("Checksum matched!");
+            tokio::fs::remove_file(checksum_path).await?;
+            unarchive::start(downloaded_archive).await?
         }
     }
 
@@ -390,7 +389,6 @@ async fn download_version(
                             pb.set_position(new);
                         }
 
-                        pb.set_message(format!("Writing {dl} {} to disk", version.tag_name));
                         file.flush().await?;
                         file.sync_all().await?;
 
