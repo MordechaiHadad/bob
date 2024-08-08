@@ -1,6 +1,6 @@
 use anyhow::Result;
 use sha2::{Digest, Sha256};
-use tracing::info;
+use tracing::{info, warn};
 use std::path::Path;
 use std::{fs, io};
 
@@ -16,9 +16,8 @@ use std::{fs, io};
 /// If there is an error opening or reading the files, the function returns `Err(error)`.
 pub fn sha256cmp(a: &Path, b: &Path) -> Result<bool> {
     info!("Checking checksum of file at path: {:?}", a);
-    if !a.exists() {
-        info!("PLZZZ NOOOOOOOOOOOOOOOO {}", a.display());
-    }
+    warn!("{} exists? {}", a.display(), a.exists());
+    warn!("{} exists? {}", b.display(), b.exists());
     let checksum = fs::read_to_string(b)?;
     let checksum = checksum.split(' ').next().unwrap();
 
