@@ -16,6 +16,9 @@ use std::{fs, io};
 /// If there is an error opening or reading the files, the function returns `Err(error)`.
 pub fn sha256cmp(a: &Path, b: &Path) -> Result<bool> {
     info!("Checking checksum of file at path: {:?}", a);
+    if !a.exists() {
+        info!("PLZZZ NOOOOOOOOOOOOOOOO {}", a.display());
+    }
     let checksum = fs::read_to_string(b)?;
     let checksum = checksum.split(' ').next().unwrap();
 
