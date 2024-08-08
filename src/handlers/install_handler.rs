@@ -134,6 +134,8 @@ pub async fn start(
         let downloaded_checksum = download_version(client, version, root, config, true).await?;
 
         if let PostDownloadVersionType::Standard(downloaded_checksum) = downloaded_checksum {
+            info!("{} {}", downloaded_archive.file_name, downloaded_archive.file_format);
+            info!("{} {}", downloaded_checksum.file_name, downloaded_checksum.file_format);
             let archive_path = root
                 .join(&downloaded_archive.file_name)
                 .with_extension(&downloaded_archive.file_format);
