@@ -15,21 +15,15 @@ use std::{fs, io};
 /// This function returns a `Result` that contains a `bool` indicating whether the checksum of the file at path 'a' matches the checksum saved in the file at path 'b'.
 /// If there is an error opening or reading the files, the function returns `Err(error)`.
 pub fn sha256cmp(a: &Path, b: &Path) -> Result<bool> {
-    info!("Checking checksum of file at path: {:?}", a);
-    warn!("{} exists? {}", a.display(), a.exists());
-    warn!("{} exists? {}", b.display(), b.exists());
     let checksum = fs::read_to_string(b)?;
     let checksum = checksum.split(' ').next().unwrap();
 
     let mut hasher = Sha256::new();
     let mut file = fs::File::open(a)?;
     io::copy(&mut file, &mut hasher)?;
-    info!("Checksum of file at path {:?} is: {:?}", a, hasher);
 
     let hash = hasher.finalize();
     let hash = format!("{:x}", hash);
-
-    info!("Checksum of file at path {:?} is: {:?}", a, hash);
 
     Ok(hash == checksum)
 }

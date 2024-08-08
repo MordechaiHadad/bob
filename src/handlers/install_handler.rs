@@ -134,14 +134,15 @@ pub async fn start(
         let downloaded_checksum = download_version(client, version, root, config, true).await?;
 
         if let PostDownloadVersionType::Standard(downloaded_checksum) = downloaded_checksum {
-            info!("{} {}", downloaded_archive.file_name, downloaded_archive.file_format);
-            info!("{} {}", downloaded_checksum.file_name, downloaded_checksum.file_format);
-            let archive_path = root
-                .join(&downloaded_archive.file_name)
-                .with_extension(&downloaded_archive.file_format);
-            let checksum_path = root
-                .join(&downloaded_checksum.file_name)
-                .with_extension(&downloaded_checksum.file_format);
+            let mut archive_path = root
+                .join(&downloaded_archive.file_name);
+
+            archive_path.set_file_name(format!("{}.{}", archive_path.file_name().unwrap().to_string_lossy(), downloaded_archive.file_format));
+
+            let mut checksum_path = root
+                .join(&downloaded_checksum.file_name);
+
+            checksum_path.set_file_name(format!("{}.{}", checksum_path.file_name().unwrap().to_string_lossy(), downloaded_checksum.file_format));
 
             if !sha256cmp(&archive_path, &checksum_path)? {
                 tokio::fs::remove_file(archive_path).await?;
