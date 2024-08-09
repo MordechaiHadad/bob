@@ -131,28 +131,34 @@ pub async fn start(
     }?;
 
     if let PostDownloadVersionType::Standard(downloaded_archive) = downloaded_archive {
-        let downloaded_checksum = download_version(client, version, root, config, true).await?;
-
-        if let PostDownloadVersionType::Standard(downloaded_checksum) = downloaded_checksum {
-            let mut archive_path = root
-                .join(&downloaded_archive.file_name);
-
-            archive_path.set_file_name(format!("{}.{}", archive_path.file_name().unwrap().to_string_lossy(), downloaded_archive.file_format));
-
-            let mut checksum_path = root
-                .join(&downloaded_checksum.file_name);
-
-            checksum_path.set_file_name(format!("{}.{}", checksum_path.file_name().unwrap().to_string_lossy(), downloaded_checksum.file_format));
-
-            if !sha256cmp(&archive_path, &checksum_path)? {
-                tokio::fs::remove_file(archive_path).await?;
-                tokio::fs::remove_file(checksum_path).await?;
-                return Err(anyhow!("Checksum mismatch!"));
+        if let Some(version) = &version.semver {
+            if version <= &Version::new(0, 4, 4) {
+                unarchive::start(downloaded_archive).await?
             }
- 
-            info!("Checksum matched!");
-            tokio::fs::remove_file(checksum_path).await?;
-            unarchive::start(downloaded_archive).await?
+        } else {
+            let downloaded_checksum = download_version(client, version, root, config, true).await?;
+
+            if let PostDownloadVersionType::Standard(downloaded_checksum) = downloaded_checksum {
+                let archive_path = root.join(format!(
+                    "{}.{}",
+                    downloaded_archive.file_name, downloaded_archive.file_format
+                ));
+
+                let checksum_path = root.join(format!(
+                    "{}.{}",
+                    downloaded_checksum.file_name, downloaded_checksum.file_format
+                ));
+
+                if !sha256cmp(&archive_path, &checksum_path)? {
+                    tokio::fs::remove_file(archive_path).await?;
+                    tokio::fs::remove_file(checksum_path).await?;
+                    return Err(anyhow!("Checksum mismatch!"));
+                }
+
+                info!("Checksum matched!");
+                tokio::fs::remove_file(checksum_path).await?;
+                unarchive::start(downloaded_archive).await?
+            }
         }
     }
 
