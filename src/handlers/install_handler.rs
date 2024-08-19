@@ -147,8 +147,6 @@ pub async fn start(
                     downloaded_checksum.file_name, downloaded_checksum.file_format
                 ));
 
-                println!("{} {}", archive_path.display(), checksum_path.display());
-
                 if !sha256cmp(&archive_path, &checksum_path)? {
                     tokio::fs::remove_file(archive_path).await?;
                     tokio::fs::remove_file(checksum_path).await?;
