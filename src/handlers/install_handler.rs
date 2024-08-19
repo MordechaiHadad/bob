@@ -131,11 +131,8 @@ pub async fn start(
     }?;
 
     if let PostDownloadVersionType::Standard(downloaded_archive) = downloaded_archive {
-        println!("Unarchiving {}", downloaded_archive.file_name);
-        if let Some(version) = &version.semver {
-            if version >= &Version::new(0, 4, 4) {
-                unarchive::start(downloaded_archive).await?
-            }
+        if version.semver.is_some() && version.semver.as_ref().unwrap() <= &Version::new(0, 4, 4) {
+            unarchive::start(downloaded_archive).await?
         } else {
             let downloaded_checksum = download_version(client, version, root, config, true).await?;
 
