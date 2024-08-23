@@ -229,24 +229,6 @@ async fn handle_rollback(config: &Config) -> Result<()> {
         fs::remove_dir_all(oldest_path).await?;
     }
 
-    // handle this for older installations of nightly instead of introducing breaking changes
-    cfg_if::cfg_if! {
-        if #[cfg(unix)] {
-            use std::os::unix::prelude::PermissionsExt;
-
-            let platform = helpers::get_platform_name(&None);
-            let file = &format!("nightly/{platform}/bin/nvim");
-            let mut perms = fs::metadata(file).await?.permissions();
-            let octal_perms = format!("{:o}", perms.mode());
-
-            if octal_perms == "100111" {
-            perms.set_mode(0o551);
-            fs::set_permissions(file, perms).await?;
-            }
-
-        }
-    }
-
     let nightly_file = fs::read_to_string("nightly/bob.json").await?;
     let mut json_struct: UpstreamVersion = serde_json::from_str(&nightly_file)?;
     let id: String = json_struct
