@@ -1,0 +1,13 @@
+on: push
+
+jobs:
+  arm:
+    runs-on: macos-latest
+    steps:
+      - name: Get architecture
+        run: uname -m
+  regular:
+    runs-on: macos-latest-large
+    steps:
+      - name: Get arch again
+      run: uname -m
