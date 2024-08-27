@@ -1,8 +1,0 @@
-name: Test
-on: push
-jobs:
-  check_architecture:
-    runs-on: macos-latest
-    steps:
-      - name: Get architecture
-        run: uname -m
