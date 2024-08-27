@@ -10,4 +10,4 @@ jobs:
     runs-on: macos-latest-large
     steps:
       - name: Get arch again
-      run: uname -m
+        run: uname -m
