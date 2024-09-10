@@ -7,7 +7,7 @@ jobs:
       - name: Get architecture
         run: uname -m
   regular:
-    runs-on: macos-latest-large
+    runs-on: macos-13
     steps:
       - name: Get arch again
         run: uname -m
