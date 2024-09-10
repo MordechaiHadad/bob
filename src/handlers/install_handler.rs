@@ -347,7 +347,7 @@ async fn download_version(
             match response {
                 Ok(response) => {
                     if response.status() == 200 {
-                        let total_size = response.content_length().unwrap();
+                        let total_size = response.content_length().unwrap_or(0);
                         let mut response_bytes = response.bytes_stream();
 
                         // Progress Bar Setup
