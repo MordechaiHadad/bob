@@ -5,7 +5,7 @@ jobs:
     check:
         strategy:
             matrix:
-                os: [macos-latest, windows-latest, ubuntu-latest, macos-13]
+                os: [macos-latest, windows-latest, ubuntu-latest]
         runs-on: ${{matrix.os}}
         steps:
             - name: Checkout
@@ -91,7 +91,7 @@ jobs:
                       }
                     - {
                           NAME: macos,
-                          OS: macos-latest-large,
+                          OS: macos-13,
                           PATH: target/optimized/bob,
                       }
                     - { NAME: windows, OS: windows-latest, PATH: build }
