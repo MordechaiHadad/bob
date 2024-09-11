@@ -265,7 +265,6 @@ async fn copy_file_with_error_handling(old_path: &Path, new_path: &Path) -> Resu
         Err(e) => {
             match e.raw_os_error() {
                 Some(26) | Some(32) => {
-                    eprintln!("Error: The file is busy. Please make sure to close any processes using it.");
                     Err(anyhow::anyhow!(
                         "The file {} is busy. Please make sure to close any processes using it.",
                         old_path.display()
