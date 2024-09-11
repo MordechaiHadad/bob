@@ -137,7 +137,7 @@ jobs:
             - name: Upload Bob binary
               uses: actions/upload-artifact@v4
               with:
-                  name: "bob-${{ matrix.os.NAME }}${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}"
+                  name: "bob-${{ matrix.os.NAME }}-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}"
                   path: ${{ matrix.os.PATH }}
                   if-no-files-found: error
                   retention-days: 7
