@@ -92,7 +92,7 @@ jobs:
                       }
                     - {
                           NAME: macos,
-                          OS: macos-latest-large,
+                          OS: macos-13,
                           ARCH: x86_64,
                           PATH: target/optimized/bob,
                       }

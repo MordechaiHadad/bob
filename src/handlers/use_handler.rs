@@ -262,17 +262,13 @@ async fn copy_nvim_proxy(config: &Config) -> Result<()> {
 async fn copy_file_with_error_handling(old_path: &Path, new_path: &Path) -> Result<()> {
     match fs::copy(&old_path, &new_path).await {
         Ok(_) => Ok(()),
-        Err(e) => {
-            match e.raw_os_error() {
-                Some(26) | Some(32) => {
-                    Err(anyhow::anyhow!(
-                        "The file {} is busy. Please make sure to close any processes using it.",
-                        old_path.display()
-                    ))
-                }
-                _ => Err(anyhow::anyhow!(e).context("Failed to copy file")),
-            }
-        }
+        Err(e) => match e.raw_os_error() {
+            Some(26) | Some(32) => Err(anyhow::anyhow!(
+                "The file {} is busy. Please make sure to close any processes using it.",
+                old_path.display()
+            )),
+            _ => Err(anyhow::anyhow!(e).context("Failed to copy file")),
+        },
     }
 }
 
