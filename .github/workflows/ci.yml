@@ -5,7 +5,7 @@ jobs:
     check:
         strategy:
             matrix:
-                os: [macos-latest, windows-latest, ubuntu-latest, macos-13]
+                os: [macos-latest, windows-latest, ubuntu-latest]
         runs-on: ${{matrix.os}}
         steps:
             - name: Checkout
@@ -87,17 +87,20 @@ jobs:
                     - {
                           NAME: linux,
                           OS: ubuntu-latest,
+                          ARCH: x86_64,
                           PATH: target/optimized/bob,
                       }
                     - {
                           NAME: macos,
-                          OS: macos-latest-large,
+                          OS: macos-13,
+                          ARCH: x86_64,
                           PATH: target/optimized/bob,
                       }
-                    - { NAME: windows, OS: windows-latest, PATH: build }
+                    - { NAME: windows, OS: windows-latest, ARCH: x86_64, PATH: build }
                     - {
-                          NAME: macos-arm,
+                          NAME: macos,
                           OS: macos-latest,
+                          ARCH: arm,
                           PATH: target/optimized/bob,
                       }
                 tls:
@@ -134,7 +137,7 @@ jobs:
             - name: Upload Bob binary
               uses: actions/upload-artifact@v4
               with:
-                  name: "bob-${{ matrix.os.NAME }}-x86_64${{ matrix.tls.SUFFIX }}"
+                  name: "bob-${{ matrix.os.NAME }}-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}"
                   path: ${{ matrix.os.PATH }}
                   if-no-files-found: error
                   retention-days: 7

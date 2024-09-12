@@ -215,9 +215,61 @@ async fn copy_nvim_proxy(config: &Config) -> Result<()> {
     }
 
     info!("Updating neovim proxy");
-    fs::copy(&exe_path, &installation_dir).await?;
+    copy_file_with_error_handling(&exe_path, &installation_dir).await?;
 
     Ok(())
+}
+
+/// Asynchronously copies a file from `old_path` to `new_path`, handling specific OS errors.
+///
+/// This function attempts to copy a file from the specified `old_path` to the specified `new_path`.
+/// If the file is being used by another process (OS error 26 or 32), it prints an error message
+/// and returns an error indicating that the file is busy. For any other errors, it returns a
+/// generic error with additional context.
+///
+/// # Arguments
+///
+/// * `old_path` - A reference to the source `Path` of the file to be copied.
+/// * `new_path` - A reference to the destination `Path` where the file should be copied.
+///
+/// # Returns
+///
+/// This function returns a `Result<()>`. If the file is successfully copied, it returns `Ok(())`.
+/// If an error occurs, it returns an `Err` with a detailed error message.
+///
+/// # Errors
+///
+/// This function will return an error in the following cases:
+/// - If the file is being used by another process (OS error 26 or 32), it returns an error
+///   indicating that the file is busy.
+/// - For any other errors, it returns a generic error with additional context.
+///
+/// # Examples
+///
+/// ```rust
+/// use std::path::Path;
+/// use anyhow::Result;
+///
+/// #[tokio::main]
+/// async fn main() -> Result<()> {
+///     let old_path = Path::new("path/to/source/file");
+///     let new_path = Path::new("path/to/destination/file");
+///
+///     copy_file_with_error_handling(&old_path, &new_path).await?;
+///     Ok(())
+/// }
+/// ```
+async fn copy_file_with_error_handling(old_path: &Path, new_path: &Path) -> Result<()> {
+    match fs::copy(&old_path, &new_path).await {
+        Ok(_) => Ok(()),
+        Err(e) => match e.raw_os_error() {
+            Some(26) | Some(32) => Err(anyhow::anyhow!(
+                "The file {} is busy. Please make sure to close any processes using it.",
+                old_path.display()
+            )),
+            _ => Err(anyhow::anyhow!(e).context("Failed to copy file")),
+        },
+    }
 }
 
 /// Adds the installation directory to the system's PATH.
