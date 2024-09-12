@@ -83,7 +83,7 @@ jobs:
                   copy .\\target\\optimized\\bob.exe .\\build
               if: matrix.os.OS == 'windows-latest'
             - name: Upload Bob binary
-              uses: actions/upload-artifact@v2
+              uses: actions/upload-artifact@v4
               with:
                   name: "bob-${{ matrix.os.NAME }}-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}"
                   path: ${{ matrix.os.PATH }}
@@ -117,7 +117,7 @@ jobs:
                   command: build
                   args: --locked --profile optimized --target aarch64-unknown-linux-gnu
             - name: Upload Bob Linux-aarch64 binary
-              uses: actions/upload-artifact@v2
+              uses: actions/upload-artifact@v4
               with:
                   name: bob-linux-aarch64
                   path: "target/aarch64-unknown-linux-gnu/optimized/bob"
@@ -132,7 +132,7 @@ jobs:
               with:
                   fetch-depth: 0
             - name: Download artifacts
-              uses: actions/download-artifact@v2
+              uses: actions/download-artifact@v4
               with:
                   path: artifacts
             - name: Generate a changelog
