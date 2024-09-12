@@ -1,209 +1,173 @@
 name: Continuous Deployment
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
+    push:
+        tags:
+            - "v*.*.*"
 
 jobs:
-  check-version:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Check version
-        id: check_version
-        run: |
-          VERSION=v$(grep '^version =' Cargo.toml | cut -d '"' -f 2 | head -n 1)
-          GIT_TAG_VERSION=${{ github.ref }} 
-          GIT_TAG_VERSION=${GIT_TAG_VERSION#refs/tags/}
-          if [[ "$VERSION" != "$GIT_TAG_VERSION" ]]; then
-            echo "Version in Cargo.toml ($VERSION) does not match pushed tag ($GIT_TAG_VERSION)"
-            exit 1
-          fi  
-          
-  build:
-    needs: [check-version]
-    strategy:
-      matrix:
-        os: 
-          - { 
-            NAME: linux,
-            OS: ubuntu-latest,
-            PATH: target/optimized/bob
-          }
-          - {
-            NAME: macos,
-            OS: macos-latest,
-            PATH: target/optimized/bob
-          }
-          - {
-            NAME: windows,
-            OS: windows-latest,
-            PATH: build
-          }
-        tls: 
-          - {
-            NAME: Rustls,
-            SUFFIX: '',
-            ARGS: ''
-          }
-          - {
-            NAME: OpenSSL,
-            SUFFIX: '-openssl',
-            ARGS: '--no-default-features --features native-tls'
-          }
-    runs-on: ${{matrix.os.OS}}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-      - name: Install OpenSSL libraries
-        run: sudo apt update && sudo apt install libssl-dev
-        if: matrix.os.OS == 'ubuntu-latest' && matrix.tls.NAME == 'OpenSSL'
-      - uses: Swatinem/rust-cache@v1
-      - name: Build Bob
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --locked --profile optimized ${{matrix.tls.ARGS}}
-      - name: Setup Bob build directory
-        run: |
-          mkdir build
-          copy .\\bin\\vcruntime140.dll .\\build
-          copy .\\target\\optimized\\bob.exe .\\build
-        if: matrix.os.OS == 'windows-latest'
-      - name: Upload Bob binary
-        uses: actions/upload-artifact@v2
-        with:
-          name: "bob-${{ matrix.os.NAME }}-x86_64${{ matrix.tls.SUFFIX }}"
-          path: ${{ matrix.os.PATH }}
-          if-no-files-found: error
+    check-version:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v2
+            - name: Check version
+              id: check_version
+              run: |
+                  VERSION=v$(grep '^version =' Cargo.toml | cut -d '"' -f 2 | head -n 1)
+                  GIT_TAG_VERSION=${{ github.ref }} 
+                  GIT_TAG_VERSION=${GIT_TAG_VERSION#refs/tags/}
+                  if [[ "$VERSION" != "$GIT_TAG_VERSION" ]]; then
+                    echo "Version in Cargo.toml ($VERSION) does not match pushed tag ($GIT_TAG_VERSION)"
+                    exit 1
+                  fi
 
-  build-linux-arm:
-    needs: [check-version]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: aarch64-unknown-linux-gnu
-          profile: minimal
-          override: true
-      - name: Install aarch64 compiler
-        run:  sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
-      - name: Change linker
-        run: |
-          mkdir .cargo
-          cat > .cargo/config << EOF
-          [target.aarch64-unknown-linux-gnu]
-          linker = "aarch64-linux-gnu-gcc"
-          EOF
-      - uses: Swatinem/rust-cache@v1
-      - name: Build Bob
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --locked --profile optimized --target aarch64-unknown-linux-gnu
-      - name: Upload Bob Linux-aarch64 binary
-        uses: actions/upload-artifact@v2
-        with:
-          name: bob-linux-aarch64
-          path: "target/aarch64-unknown-linux-gnu/optimized/bob"
-          if-no-files-found: error
+    build:
+        needs: [check-version]
+        strategy:
+            matrix:
+                os:
+                    - {
+                          NAME: linux,
+                          OS: ubuntu-latest,
+                          ARCH: x86_64,
+                          PATH: target/optimized/bob,
+                      }
+                    - {
+                          NAME: macos,
+                          OS: macos-13,
+                          ARCH: x86_64,
+                          PATH: target/optimized/bob,
+                      }
+                    - {
+                          NAME: windows,
+                          OS: windows-latest,
+                          ARCH: x86_64,
+                          PATH: build,
+                      }
+                    - {
+                          NAME: macos,
+                          OS: macos-latest,
+                          ARCH: arm,
+                          PATH: target/optimized/bob,
+                      }
+                tls:
+                    - { NAME: Rustls, SUFFIX: "", ARGS: "" }
+                    - {
+                          NAME: OpenSSL,
+                          SUFFIX: "-openssl",
+                          ARGS: "--no-default-features --features native-tls",
+                      }
+        runs-on: ${{matrix.os.OS}}
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install Rust
+              uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: stable
+                  profile: minimal
+                  override: true
+            - name: Install OpenSSL libraries
+              run: sudo apt update && sudo apt install libssl-dev
+              if: matrix.os.OS == 'ubuntu-latest' && matrix.tls.NAME == 'OpenSSL'
+            - uses: Swatinem/rust-cache@v1
+            - name: Build Bob
+              uses: actions-rs/cargo@v1
+              with:
+                  command: build
+                  args: --locked --profile optimized ${{matrix.tls.ARGS}}
+            - name: Setup Bob build directory
+              run: |
+                  mkdir build
+                  copy .\\bin\\vcruntime140.dll .\\build
+                  copy .\\target\\optimized\\bob.exe .\\build
+              if: matrix.os.OS == 'windows-latest'
+            - name: Upload Bob binary
+              uses: actions/upload-artifact@v2
+              with:
+                  name: "bob-${{ matrix.os.NAME }}-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}"
+                  path: ${{ matrix.os.PATH }}
+                  if-no-files-found: error
 
-  build-macos-arm:
-      needs: [check-version]
-      runs-on: macos-latest
-      strategy:
-        matrix: 
-         tls: 
-          - {
-            SUFFIX: '',
-            ARGS: ''
-          }
-          - {
-            SUFFIX: '-openssl',
-            ARGS: '--no-default-features --features native-tls'
-          }
-      steps:
-        - uses: actions/checkout@v2
-        - name: Install Rust
-          uses: actions-rs/toolchain@v1
-          with:
-            toolchain: stable
-            target: aarch64-apple-darwin
-            profile: minimal
-            override: true
-        - uses: Swatinem/rust-cache@v1
-        - name: Build Bob
-          uses: actions-rs/cargo@v1
-          with:
-            command: build
-            args: --locked --profile optimized --target aarch64-apple-darwin ${{ matrix.tls.ARGS }}
-        - name: Check lints
-          uses: actions-rs/cargo@v1
-          with:
-            command: clippy
-            args: --verbose -- -D warnings
-        - name: Upload Bob M1 MacOS binary
-          uses: actions/upload-artifact@v2
-          with:
-            name: "bob-macos-arm${{ matrix.tls.SUFFIX }}"
-            path: "target/aarch64-apple-darwin/optimized/bob"
-            if-no-files-found: error
+    build-linux-arm:
+        needs: [check-version]
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install Rust
+              uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: stable
+                  target: aarch64-unknown-linux-gnu
+                  profile: minimal
+                  override: true
+            - name: Install aarch64 compiler
+              run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+            - name: Change linker
+              run: |
+                  mkdir .cargo
+                  cat > .cargo/config << EOF
+                  [target.aarch64-unknown-linux-gnu]
+                  linker = "aarch64-linux-gnu-gcc"
+                  EOF
+            - uses: Swatinem/rust-cache@v1
+            - name: Build Bob
+              uses: actions-rs/cargo@v1
+              with:
+                  command: build
+                  args: --locked --profile optimized --target aarch64-unknown-linux-gnu
+            - name: Upload Bob Linux-aarch64 binary
+              uses: actions/upload-artifact@v2
+              with:
+                  name: bob-linux-aarch64
+                  path: "target/aarch64-unknown-linux-gnu/optimized/bob"
+                  if-no-files-found: error
 
-  github-release:
-    needs: [build, build-macos-arm, build-linux-arm]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Download artifacts
-        uses: actions/download-artifact@v2
-        with:
-          path: artifacts
-      - name: Generate a changelog
-        uses: orhun/git-cliff-action@v2
-        with:
-          config: cliff.toml
-          args: --verbose --current
-        env:
-          OUTPUT: CHANGELOG.md
-      - name: Test changelog
-        run: echo CHANGELOG.md
-      - name: Zip artifacts
-        run: |
-          cd artifacts
-          for dir in */; do
-            base=$(basename "$dir")
-            zip -r "${base}.zip" "$dir"
-          done
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          body_path: CHANGELOG.md
-          files: |
-            ./artifacts/*.zip
-  
-  publish-cargo:
-    needs: github-release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - uses: katyo/publish-crates@v2
-        with:
-          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+    github-release:
+        needs: [build, build-linux-arm]
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v3
+              with:
+                  fetch-depth: 0
+            - name: Download artifacts
+              uses: actions/download-artifact@v2
+              with:
+                  path: artifacts
+            - name: Generate a changelog
+              uses: orhun/git-cliff-action@v2
+              with:
+                  config: cliff.toml
+                  args: --verbose --current
+              env:
+                  OUTPUT: CHANGELOG.md
+            - name: Test changelog
+              run: echo CHANGELOG.md
+            - name: Zip artifacts
+              run: |
+                  cd artifacts
+                  for dir in */; do
+                    base=$(basename "$dir")
+                    zip -r "${base}.zip" "$dir"
+                  done
+            - name: Release
+              uses: softprops/action-gh-release@v1
+              if: startsWith(github.ref, 'refs/tags/')
+              with:
+                  body_path: CHANGELOG.md
+                  files: |
+                      ./artifacts/*.zip
+
+    publish-cargo:
+        needs: github-release
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+            - uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: stable
+                  override: true
+            - uses: katyo/publish-crates@v2
+              with:
+                  registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
