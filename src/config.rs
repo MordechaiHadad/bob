@@ -1,8 +1,58 @@
 use anyhow::Result;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::env;
+use std::{env, path::PathBuf};
 use tokio::fs::{self};
+
+#[derive(Debug)]
+pub struct ConfigFile {
+    pub path: PathBuf,
+    pub format: ConfigFormat,
+    pub config: Config,
+}
+
+impl ConfigFile {
+    pub async fn get() -> Result<ConfigFile> {
+        let config_file = crate::helpers::directories::get_config_file()?;
+        let mut config_format = ConfigFormat::JSON;
+        let config = match fs::read_to_string(&config_file).await {
+            Ok(config) => {
+                if config_file.extension().unwrap() == "toml" {
+                    let mut config: Config = toml::from_str(&config)?;
+                    handle_envars(&mut config)?;
+                    config_format = ConfigFormat::TOML;
+                    config
+                } else {
+                    let mut config: Config = serde_json::from_str(&config)?;
+                    handle_envars(&mut config)?;
+                    config
+                }
+            }
+            Err(_) => Config {
+                enable_nightly_info: None,
+                enable_release_build: None,
+                downloads_location: None,
+                installation_location: None,
+                version_sync_file_location: None,
+                github_mirror: None,
+                rollback_limit: None,
+                add_neovim_binary_to_path: None,
+            },
+        };
+
+        Ok(ConfigFile {
+            path: config_file,
+            format: config_format,
+            config
+        })
+    }
+}
+
+#[derive(Debug)]
+pub enum ConfigFormat {
+    TOML,
+    JSON,
+}
 
 /// Represents the application configuration.
 ///
@@ -17,6 +67,7 @@ use tokio::fs::{self};
 /// * `version_sync_file_location: Option<String>` - The location for the version sync file. This is optional and may be `None`.
 /// * `github_mirror: Option<String>` - The GitHub mirror to use. This is optional and may be `None`.
 /// * `rollback_limit: Option<u8>` - The rollback limit. This is optional and may be `None`.
+/// * `add_neovim_binary_to_path: Option<bool>` - Tells bob whenever to add neovim proxy path to $PATH.
 ///
 /// # Example
 ///
@@ -29,6 +80,7 @@ use tokio::fs::{self};
 ///     version_sync_file_location: Some("/path/to/version_sync_file".to_string()),
 ///     github_mirror: Some("https://github.com".to_string()),
 ///     rollback_limit: Some(5),
+///     rollback_limit: Some(true),
 /// };
 /// println!("The configuration is {:?}", config);
 /// ```
@@ -41,48 +93,7 @@ pub struct Config {
     pub version_sync_file_location: Option<String>,
     pub github_mirror: Option<String>,
     pub rollback_limit: Option<u8>,
-}
-
-/// Handles the application configuration.
-///
-/// This function reads the configuration file, which can be in either TOML or JSON format, and returns a `Config` object. If the configuration file does not exist, it returns a `Config` object with all fields set to `None`.
-///
-/// # Returns
-///
-/// * `Result<Config>` - Returns a `Result` that contains a `Config` object if the function completes successfully. If an error occurs, it returns `Err`.
-///
-/// # Example
-///
-/// ```rust
-/// let config = handle_config().await.unwrap();
-/// println!("The configuration is {:?}", config);
-/// ```
-pub async fn handle_config() -> Result<Config> {
-    let config_file = crate::helpers::directories::get_config_file()?;
-    let config = match fs::read_to_string(&config_file).await {
-        Ok(config) => {
-            if config_file.extension().unwrap() == "toml" {
-                let mut config: Config = toml::from_str(&config)?;
-                handle_envars(&mut config)?;
-                config
-            } else {
-                let mut config: Config = serde_json::from_str(&config)?;
-                handle_envars(&mut config)?;
-                config
-            }
-        }
-        Err(_) => Config {
-            enable_nightly_info: None,
-            enable_release_build: None,
-            downloads_location: None,
-            installation_location: None,
-            version_sync_file_location: None,
-            github_mirror: None,
-            rollback_limit: None,
-        },
-    };
-
-    Ok(config)
+    pub add_neovim_binary_to_path: Option<bool>,
 }
 
 /// Handles environment variables in the configuration.

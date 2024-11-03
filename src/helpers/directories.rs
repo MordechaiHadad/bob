@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use std::fs;
 use std::path::PathBuf;
 
-use crate::config::Config;
+use crate::config::{Config, ConfigFile};
 
 /// Returns the home directory path for the current user.
 ///

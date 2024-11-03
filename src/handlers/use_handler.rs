@@ -6,7 +6,7 @@ use std::process::Command;
 use tokio::fs;
 use tracing::info;
 
-use crate::config::Config;
+use crate::config::{Config, ConfigFile};
 use crate::handlers::{install_handler, InstallResult};
 use crate::helpers;
 use crate::helpers::version::types::{ParsedVersion, VersionType};
@@ -47,9 +47,9 @@ pub async fn start(
     mut version: ParsedVersion,
     install: bool,
     client: &Client,
-    config: Config,
+    config: ConfigFile,
 ) -> Result<()> {
-    let is_version_used = helpers::version::is_version_used(&version.tag_name, &config).await;
+    let is_version_used = helpers::version::is_version_used(&version.tag_name, &config.config).await;
 
     copy_nvim_proxy(&config).await?;
     if is_version_used && version.tag_name != "nightly" {
@@ -71,7 +71,7 @@ pub async fn start(
         }
     }
 
-    switch(&config, &version).await?;
+    switch(&config.config, &version).await?;
 
     if let VersionType::Latest = version.version_type {
         if fs::metadata("stable").await.is_ok() {
@@ -189,15 +189,15 @@ pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
 /// let config = Config::default();
 /// copy_nvim_proxy(&config).await.unwrap();
 /// ```
-async fn copy_nvim_proxy(config: &Config) -> Result<()> {
+async fn copy_nvim_proxy(config: &ConfigFile) -> Result<()> {
     let exe_path = env::current_exe().unwrap();
-    let mut installation_dir = helpers::directories::get_installation_directory(config).await?;
+    let mut installation_dir = helpers::directories::get_installation_directory(&config.config).await?;
 
     if fs::metadata(&installation_dir).await.is_err() {
         fs::create_dir_all(&installation_dir).await?;
     }
 
-    add_to_path(&installation_dir)?;
+    add_to_path(&installation_dir, config)?;
 
     if cfg!(windows) {
         installation_dir.push("nvim.exe");
@@ -301,7 +301,11 @@ async fn copy_file_with_error_handling(old_path: &Path, new_path: &Path) -> Resu
 /// let installation_dir = Path::new("/usr/local/bin");
 /// add_to_path(&installation_dir).unwrap();
 /// ```
-fn add_to_path(installation_dir: &Path) -> Result<()> {
+fn add_to_path(installation_dir: &Path, config: &ConfigFile) -> Result<()> {
+    if !config.config.add_neovim_binary_to_path.unwrap_or(false) {
+        return Ok(());
+    }
+
     let installation_dir = installation_dir.to_str().unwrap();
 
     cfg_if::cfg_if! {

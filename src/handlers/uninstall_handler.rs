@@ -1,5 +1,5 @@
 use crate::{
-    config::Config,
+    config::{Config, ConfigFile},
     helpers::{self, directories},
 };
 use anyhow::{anyhow, Result};

@@ -1,5 +1,5 @@
 use crate::{
-    config::Config,
+    config::{Config, ConfigFile},
     handlers::{
         self, erase_handler, list_handler, list_remote_handler, rollback_handler, sync_handler,
         uninstall_handler, update_handler, InstallResult,
@@ -153,7 +153,7 @@ pub struct Update {
 /// let config = Config::default();
 /// start(config).await.unwrap();
 /// ```
-pub async fn start(config: Config) -> Result<()> {
+pub async fn start(config: ConfigFile) -> Result<()> {
     let client = create_reqwest_client()?;
     let cli = Cli::parse();
 
@@ -191,18 +191,18 @@ pub async fn start(config: Config) -> Result<()> {
         }
         Cli::Uninstall { version } => {
             info!("Starting uninstallation process");
-            uninstall_handler::start(version.as_deref(), config).await?;
+            uninstall_handler::start(version.as_deref(), config.config).await?;
         }
-        Cli::Rollback => rollback_handler::start(config).await?,
-        Cli::Erase => erase_handler::start(config).await?,
-        Cli::List => list_handler::start(config).await?,
+        Cli::Rollback => rollback_handler::start(config.config).await?,
+        Cli::Erase => erase_handler::start(config.config).await?,
+        Cli::List => list_handler::start(config.config).await?,
         Cli::Complete { shell } => {
             clap_complete::generate(shell, &mut Cli::command(), "bob", &mut std::io::stdout())
         }
         Cli::Update(data) => {
             update_handler::start(data, &client, config).await?;
         }
-        Cli::ListRemote => list_remote_handler::start(config, client).await?,
+        Cli::ListRemote => list_remote_handler::start(config.config, client).await?,
     }
 
     Ok(())
