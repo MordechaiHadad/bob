@@ -4,15 +4,13 @@ use reqwest::Client;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use tokio::fs::{self, File};
-use tokio::io::AsyncWriteExt;
+use tokio::fs::{self};
 use tracing::info;
-use what_the_path::shell::Shell;
 
 use crate::config::{Config, ConfigFile};
 use crate::handlers::{install_handler, InstallResult};
 use crate::helpers;
-use crate::helpers::directories::{get_downloads_directory, get_installation_directory};
+use crate::helpers::directories::get_installation_directory;
 use crate::helpers::version::types::{ParsedVersion, VersionType};
 
 /// Starts the process of using a specified version.
@@ -351,6 +349,10 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
             };
             env.set_value("Path", &new_path)?;
         } else {
+            use tokio::fs::File;
+            use tokio::io::AsyncWriteExt;
+            use what_the_path::shell::Shell;
+
             let shell = Shell::detect_by_shell_var()?;
             let env_paths = copy_env_files_if_not_exist(&config.config, installation_dir).await?;
 
@@ -383,6 +385,9 @@ async fn copy_env_files_if_not_exist(
     config: &Config,
     installation_dir: &str,
 ) -> Result<Vec<PathBuf>> {
+    use crate::helpers::directories::get_downloads_directory;
+    use tokio::io::AsyncWriteExt;
+
     let fish_env = include_str!("../../env/env.fish").replace("{nvim_bin}", installation_dir);
     let posix_env = include_str!("../../env/env.sh").replace("{nvim_bin}", installation_dir);
     let downloads_dir = get_downloads_directory(config).await?;
