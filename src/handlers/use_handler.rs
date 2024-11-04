@@ -1,13 +1,13 @@
 use anyhow::{anyhow, Result};
 use dialoguer::Confirm;
 use reqwest::Client;
-use what_the_path::shell::{Shell};
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tokio::fs::{self, File};
 use tokio::io::AsyncWriteExt;
 use tracing::info;
+use what_the_path::shell::Shell;
 
 use crate::config::{Config, ConfigFile};
 use crate::handlers::{install_handler, InstallResult};
