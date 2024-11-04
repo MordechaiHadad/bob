@@ -1,6 +1,6 @@
+use crate::cli::Update;
 use crate::config::ConfigFile;
 use crate::helpers::version::is_version_installed;
-use crate::{cli::Update, config::Config};
 use anyhow::Result;
 use reqwest::Client;
 use tracing::{info, warn};

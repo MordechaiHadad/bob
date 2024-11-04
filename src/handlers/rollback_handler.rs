@@ -1,4 +1,4 @@
-use crate::{config::ConfigFile, helpers::version::nightly::produce_nightly_vec};
+use crate::helpers::version::nightly::produce_nightly_vec;
 use anyhow::Result;
 use chrono::{Duration, Utc};
 use dialoguer::{console::Term, theme::ColorfulTheme, Select};

@@ -2,9 +2,12 @@ use anyhow::Result;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{env, path::PathBuf};
-use tokio::fs::{self};
+use tokio::{
+    fs::{self, File},
+    io::AsyncWriteExt,
+};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConfigFile {
     pub path: PathBuf,
     pub format: ConfigFormat,
@@ -12,15 +15,38 @@ pub struct ConfigFile {
 }
 
 impl ConfigFile {
+    pub async fn save_to_file(&self) -> Result<()> {
+        if let Some(parent) = self.path.parent() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
+
+        let data = match self.format {
+            ConfigFormat::Toml => toml::to_string(&self.config)?,
+            ConfigFormat::Json => serde_json::to_string_pretty(&self.config)?,
+        };
+
+        let tmp_path = self.path.with_extension("tmp");
+        let mut file = File::create(&tmp_path).await?;
+        file.write_all(data.as_bytes()).await?;
+        file.flush().await?;
+
+        // atomic operation i guess
+        tokio::fs::rename(tmp_path, &self.path).await?;
+
+        Ok(())
+    }
+}
+
+impl ConfigFile {
     pub async fn get() -> Result<ConfigFile> {
         let config_file = crate::helpers::directories::get_config_file()?;
-        let mut config_format = ConfigFormat::JSON;
+        let mut config_format = ConfigFormat::Json;
         let config = match fs::read_to_string(&config_file).await {
             Ok(config) => {
                 if config_file.extension().unwrap() == "toml" {
                     let mut config: Config = toml::from_str(&config)?;
                     handle_envars(&mut config)?;
-                    config_format = ConfigFormat::TOML;
+                    config_format = ConfigFormat::Toml;
                     config
                 } else {
                     let mut config: Config = serde_json::from_str(&config)?;
@@ -43,15 +69,15 @@ impl ConfigFile {
         Ok(ConfigFile {
             path: config_file,
             format: config_format,
-            config
+            config,
         })
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ConfigFormat {
-    TOML,
-    JSON,
+    Toml,
+    Json,
 }
 
 /// Represents the application configuration.
@@ -84,15 +110,23 @@ pub enum ConfigFormat {
 /// };
 /// println!("The configuration is {:?}", config);
 /// ```
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub enable_nightly_info: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub enable_release_build: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub downloads_location: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub installation_location: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub version_sync_file_location: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub github_mirror: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub rollback_limit: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub add_neovim_binary_to_path: Option<bool>,
 }
 

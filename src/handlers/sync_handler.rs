@@ -3,7 +3,7 @@ use reqwest::Client;
 use tokio::fs;
 use tracing::info;
 
-use crate::{config::{Config, ConfigFile}, helpers::version};
+use crate::{config::ConfigFile, helpers::version};
 
 use super::use_handler;
 

@@ -134,7 +134,8 @@ pub async fn start(
         if version.semver.is_some() && version.semver.as_ref().unwrap() <= &Version::new(0, 4, 4) {
             unarchive::start(downloaded_archive).await?
         } else {
-            let downloaded_checksum = download_version(client, version, root, &config.config, true).await?;
+            let downloaded_checksum =
+                download_version(client, version, root, &config.config, true).await?;
 
             if let PostDownloadVersionType::Standard(downloaded_checksum) = downloaded_checksum {
                 let archive_path = root.join(format!(

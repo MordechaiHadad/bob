@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
 }
 
 async fn run() -> Result<()> {
-    let config  = ConfigFile::get().await?;
+    let config = ConfigFile::get().await?;
 
     let args: Vec<String> = env::args().collect();
 

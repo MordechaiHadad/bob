@@ -1,14 +1,18 @@
 use anyhow::{anyhow, Result};
+use dialoguer::Confirm;
 use reqwest::Client;
 use std::env;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
-use tokio::fs;
+use tokio::fs::{self, File};
+use tokio::io::AsyncWriteExt;
 use tracing::info;
+use what_the_path::shell::Shell;
 
 use crate::config::{Config, ConfigFile};
 use crate::handlers::{install_handler, InstallResult};
 use crate::helpers;
+use crate::helpers::directories::{get_downloads_directory, get_installation_directory};
 use crate::helpers::version::types::{ParsedVersion, VersionType};
 
 /// Starts the process of using a specified version.
@@ -49,7 +53,8 @@ pub async fn start(
     client: &Client,
     config: ConfigFile,
 ) -> Result<()> {
-    let is_version_used = helpers::version::is_version_used(&version.tag_name, &config.config).await;
+    let is_version_used =
+        helpers::version::is_version_used(&version.tag_name, &config.config).await;
 
     copy_nvim_proxy(&config).await?;
     if is_version_used && version.tag_name != "nightly" {
@@ -78,6 +83,10 @@ pub async fn start(
             fs::remove_dir_all("stable").await?;
         }
     }
+
+    let installation_dir = get_installation_directory(&config.config).await?;
+
+    add_to_path(installation_dir, config).await?;
 
     info!("You can now use {}!", version.tag_name);
 
@@ -191,13 +200,12 @@ pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
 /// ```
 async fn copy_nvim_proxy(config: &ConfigFile) -> Result<()> {
     let exe_path = env::current_exe().unwrap();
-    let mut installation_dir = helpers::directories::get_installation_directory(&config.config).await?;
+    let mut installation_dir =
+        helpers::directories::get_installation_directory(&config.config).await?;
 
     if fs::metadata(&installation_dir).await.is_err() {
         fs::create_dir_all(&installation_dir).await?;
     }
-
-    add_to_path(&installation_dir, config)?;
 
     if cfg!(windows) {
         installation_dir.push("nvim.exe");
@@ -301,12 +309,31 @@ async fn copy_file_with_error_handling(old_path: &Path, new_path: &Path) -> Resu
 /// let installation_dir = Path::new("/usr/local/bin");
 /// add_to_path(&installation_dir).unwrap();
 /// ```
-fn add_to_path(installation_dir: &Path, config: &ConfigFile) -> Result<()> {
-    if !config.config.add_neovim_binary_to_path.unwrap_or(false) {
+async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()> {
+    let installation_dir = installation_dir.to_str().unwrap();
+
+    if what_the_path::shell::exists_in_path("nvim-bin")
+        || config.config.add_neovim_binary_to_path == Some(false)
+    {
+        info!("Make sure to have {installation_dir} in PATH");
         return Ok(());
     }
 
-    let installation_dir = installation_dir.to_str().unwrap();
+    if config.config.add_neovim_binary_to_path.is_none() {
+        let confirmation = Confirm::new()
+            .with_prompt("Add bob-managed Neovim binary to your $PATH automatically?")
+            .interact()?;
+        let mut temp_confg = config.clone();
+
+        temp_confg.config.add_neovim_binary_to_path = Some(confirmation);
+        temp_confg.save_to_file().await?;
+
+        if !confirmation {
+            return Ok(());
+        }
+
+        drop(temp_confg);
+    }
 
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
@@ -317,10 +344,6 @@ fn add_to_path(installation_dir: &Path, config: &ConfigFile) -> Result<()> {
             let env = current_usr.open_subkey_with_flags("Environment", KEY_READ | KEY_WRITE)?;
             let usr_path: String = env.get_value("Path")?;
 
-            if usr_path.contains(installation_dir) {
-                return Ok(());
-            }
-
             let new_path = if usr_path.ends_with(';') {
                 format!("{usr_path}{}", installation_dir)
             } else {
@@ -328,11 +351,56 @@ fn add_to_path(installation_dir: &Path, config: &ConfigFile) -> Result<()> {
             };
             env.set_value("Path", &new_path)?;
         } else {
-            if !std::env::var("PATH")?.contains("nvim-bin") {
-                info!("Make sure to have {installation_dir} in PATH");
+            let shell = Shell::detect_by_shell_var()?;
+            let env_paths = copy_env_files_if_not_exist(&config.config, installation_dir).await?;
+
+            match shell {
+                Shell::Fish(fish) => {
+                    let files = fish.get_rcfiles()?;
+                    let new_file = files[0].join("bob.fish");
+                    if new_file.exists() { return Ok(()) }
+                    let mut opened_file = File::create(new_file).await?;
+                    opened_file.write_all(format!("source \"{}\"\n", env_paths[1].to_str().unwrap()).as_bytes()).await?;
+                    opened_file.flush().await?;
+                },
+                shell => todo!()
             }
         }
     }
 
+    info!("Added {installation_dir} to system PATH. Please start a new terminal session for changes to take effect.");
+
     Ok(())
+}
+
+async fn copy_env_files_if_not_exist(
+    config: &Config,
+    installation_dir: &str,
+) -> Result<Vec<PathBuf>> {
+    let fish_env = include_str!("../../env/env.fish").replace("{nvim_bin}", installation_dir);
+    let posix_env = include_str!("../../env/env.sh").replace("{nvim_bin}", installation_dir);
+    let downloads_dir = get_downloads_directory(&config).await?;
+    let env_dir = downloads_dir.join("env");
+
+    // Ensure the env directory exists
+    fs::create_dir_all(&env_dir).await?;
+
+    // Define the file paths
+    let fish_env_path = env_dir.join("env.fish");
+    let posix_env_path = env_dir.join("env.sh");
+
+    // Check if the files exist and write the content if they don't
+    if !fish_env_path.exists() {
+        let mut file = fs::File::create(&fish_env_path).await?;
+        file.write_all(fish_env.as_bytes()).await?;
+        file.flush().await?;
+    }
+
+    if !posix_env_path.exists() {
+        let mut file = fs::File::create(&posix_env_path).await?;
+        file.write_all(posix_env.as_bytes()).await?;
+        file.flush().await?;
+    }
+
+    Ok(vec![posix_env_path, fish_env_path])
 }

@@ -1,4 +1,4 @@
-use crate::config::{Config, ConfigFile};
+use crate::config::Config;
 use anyhow::{anyhow, Result};
 use std::{
     sync::{atomic::AtomicBool, Arc},

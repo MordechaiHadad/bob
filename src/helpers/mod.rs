@@ -7,8 +7,6 @@ pub mod unarchive;
 pub mod version;
 use semver::Version;
 
-use crate::config::Config;
-
 /// Returns the file type for the Neovim binary download based on the target operating system.
 ///
 /// This function checks the target operating system using the `cfg!` macro and returns a string that corresponds to the appropriate file type for the Neovim binary download.
