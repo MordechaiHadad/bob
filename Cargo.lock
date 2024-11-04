@@ -2178,7 +2178,7 @@ checksum = "5f20c57d8d7db6d3b86154206ae5d8fba62dd39573114de97c2cb0578251f8e1"
 [[package]]
 name = "what-the-path"
 version = "0.1.2"
-source = "git+https://github.com/MordechaiHadad/what-the-path#2dc519409d71467dc890b38003f48058a62f9407"
+source = "git+https://github.com/MordechaiHadad/what-the-path#ccd23eca4eae5fddfba6a2d844e8e8ff4f1a116e"
 dependencies = [
  "dirs",
  "thiserror",

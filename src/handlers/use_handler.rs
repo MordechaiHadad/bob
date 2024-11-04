@@ -1,13 +1,13 @@
 use anyhow::{anyhow, Result};
 use dialoguer::Confirm;
 use reqwest::Client;
+use what_the_path::shell::{Shell};
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tokio::fs::{self, File};
 use tokio::io::AsyncWriteExt;
 use tracing::info;
-use what_the_path::shell::Shell;
 
 use crate::config::{Config, ConfigFile};
 use crate::handlers::{install_handler, InstallResult};
@@ -357,13 +357,18 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
             match shell {
                 Shell::Fish(fish) => {
                     let files = fish.get_rcfiles()?;
-                    let new_file = files[0].join("bob.fish");
-                    if new_file.exists() { return Ok(()) }
-                    let mut opened_file = File::create(new_file).await?;
+                    let fish_file = files[0].join("bob.fish");
+                    if fish_file.exists() { return Ok(()) }
+                    let mut opened_file = File::create(fish_file).await?;
                     opened_file.write_all(format!("source \"{}\"\n", env_paths[1].to_str().unwrap()).as_bytes()).await?;
                     opened_file.flush().await?;
                 },
-                shell => todo!()
+                shell => {
+                    let files = shell.get_rcfiles()?;
+                    for file in files {
+                        what_the_path::shell::append_to_rcfile(file, &format!(". \"{}\"", installation_dir))?;
+                    }
+                }
             }
         }
     }
@@ -379,7 +384,7 @@ async fn copy_env_files_if_not_exist(
 ) -> Result<Vec<PathBuf>> {
     let fish_env = include_str!("../../env/env.fish").replace("{nvim_bin}", installation_dir);
     let posix_env = include_str!("../../env/env.sh").replace("{nvim_bin}", installation_dir);
-    let downloads_dir = get_downloads_directory(&config).await?;
+    let downloads_dir = get_downloads_directory(config).await?;
     let env_dir = downloads_dir.join("env");
 
     // Ensure the env directory exists
