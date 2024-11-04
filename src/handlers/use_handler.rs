@@ -378,6 +378,8 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
     Ok(())
 }
 
+
+#[cfg(target_family = "unix")]
 async fn copy_env_files_if_not_exist(
     config: &Config,
     installation_dir: &str,
