@@ -310,10 +310,13 @@ async fn copy_file_with_error_handling(old_path: &Path, new_path: &Path) -> Resu
 async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()> {
     let installation_dir = installation_dir.to_str().unwrap();
 
-    if what_the_path::shell::exists_in_path("nvim-bin")
-        || config.config.add_neovim_binary_to_path == Some(false)
+    if what_the_path::shell::exists_in_path("nvim-bin"){
+        return Ok(());
+    }
+
+    if config.config.add_neovim_binary_to_path == Some(false)
     {
-        info!("Make sure to have {installation_dir} in PATH");
+        info!("Make sure to add {installation_dir} to $PATH");
         return Ok(());
     }
 
