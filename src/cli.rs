@@ -57,6 +57,8 @@ enum Cli {
     /// install command if the version is not installed already
     Use {
         /// Version to switch to |nightly|stable|<version-string>|<commit-hash>|
+        /// 
+        /// A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
         version: String,
 
         /// Whether not to auto-invoke install command
@@ -68,6 +70,8 @@ enum Cli {
     /// out-of-date nightly version
     Install {
         /// Version to be installed |nightly|stable|<version-string>|<commit-hash>|
+        /// 
+        /// A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
         version: String,
     },
 
@@ -79,6 +83,9 @@ enum Cli {
     #[clap(alias = "remove", visible_alias = "rm")]
     Uninstall {
         /// Optional Version to be uninstalled |nightly|stable|<version-string>|<commit-hash>|
+        /// 
+        /// A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
+        /// 
         /// If no Version is provided a prompt is used to select the versions to be uninstalled
         version: Option<String>,
     },
