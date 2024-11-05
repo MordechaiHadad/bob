@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use tokio::fs;
 use tracing::info;
 
-use crate::{config::Config, helpers::directories};
+use crate::{config::Config, helpers::directories::{self, get_downloads_directory}};
 
 /// Starts the erase process based on the provided `Config`.
 ///
@@ -74,7 +74,28 @@ pub async fn start(config: Config) -> Result<()> {
 
                 info!("Successfully removed neovim's installation PATH from registry");
             }
+        } else {
+            use what_the_path::shell::Shell;
 
+            let shell = Shell::detect_by_shell_var()?;
+
+            match shell {
+                Shell::Fish(fish) => {
+                    let files = fish.get_rcfiles()?;
+                    let fish_file = files[0].join("bob.fish");
+                    if !fish_file.exists() { return Ok(()) }
+                    fs::remove_file(fish_file).await?;
+                },
+                shell => {
+                    let files = shell.get_rcfiles()?;
+                    let downloads_dir = get_downloads_directory(&config).await?;
+                    let env_path = downloads_dir.join("env/env.sh");
+                    let source_string = format!(". \"{}\"", env_path.display());
+                    for file in files {
+                        what_the_path::shell::remove_from_rcfile(file, &source_string)?;
+                    }
+                }
+            }
         }
     }
 
