@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use tokio::fs;
 use tracing::info;
 
-use crate::{config::Config, helpers::directories::{self, get_downloads_directory}};
+use crate::{config::Config, helpers::directories::{self}};
 
 /// Starts the erase process based on the provided `Config`.
 ///
@@ -76,6 +76,7 @@ pub async fn start(config: Config) -> Result<()> {
             }
         } else {
             use what_the_path::shell::Shell;
+            use crate::helpers::directories::get_downloads_directory;
 
             let shell = Shell::detect_by_shell_var()?;
 
