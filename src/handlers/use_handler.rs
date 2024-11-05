@@ -370,7 +370,7 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
                 shell => {
                     let files = shell.get_rcfiles()?;
                     for file in files {
-                        what_the_path::shell::append_to_rcfile(file, &format!(". \"{}\"", env_paths[0].to_str().unwrap().as_bytes()))?;
+                        what_the_path::shell::append_to_rcfile(file, &format!(". \"{}\"", env_paths[0].to_str().unwrap()))?;
                     }
                 }
             }
