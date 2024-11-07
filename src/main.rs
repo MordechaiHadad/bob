@@ -7,7 +7,7 @@ mod helpers;
 extern crate core;
 
 use anyhow::Result;
-use config::{handle_config, Config};
+use config::ConfigFile;
 use helpers::{processes::handle_nvim_process, version};
 use std::{env, path::Path, process::exit};
 use tracing::{error, Level};
@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
 }
 
 async fn run() -> Result<()> {
-    let config: Config = handle_config().await?;
+    let config = ConfigFile::get().await?;
 
     let args: Vec<String> = env::args().collect();
 
@@ -42,7 +42,7 @@ async fn run() -> Result<()> {
             return Ok(());
         }
 
-        handle_nvim_process(&config, rest_args).await?;
+        handle_nvim_process(&config.config, rest_args).await?;
 
         return Ok(());
     }

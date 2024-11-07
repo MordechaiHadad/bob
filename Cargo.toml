@@ -26,6 +26,7 @@ clap_complete = "4.1"
 toml = "0.8.8"
 semver = "1.0.22"
 sha2 = "0.10.8"
+what-the-path = { git = "https://github.com/MordechaiHadad/what-the-path" }
 
 [dependencies.chrono]
 version = "0.4.23"
@@ -92,7 +93,7 @@ tar = "0.4"
 
 [target."cfg(windows)".dependencies]
 winreg = "0.10.1"
-zip = "0.5"
+zip = "2.2.0"
 
 
 [[bin]]
