@@ -113,8 +113,8 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                 "Please provide a proper version string. Valid options are:
 
                     • stable|latest|nightly - Latest stable, most recent, or nightly build
-                    • [v]x.x.x             - Specific version (e.g., 0.6.0 or v0.6.0)
-                    • <commit-hash>        - Specific commit hash"
+                    • [v]x.x.x              - Specific version (e.g., 0.6.0 or v0.6.0)
+                    • <commit-hash>         - Specific commit hash"
             ))
         }
     }
