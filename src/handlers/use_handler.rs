@@ -302,7 +302,7 @@ async fn copy_file_with_error_handling(old_path: &Path, new_path: &Path) -> Resu
 /// add_to_path(&installation_dir).unwrap();
 /// ```
 fn add_to_path(installation_dir: &Path) -> Result<()> {
-    let installation_dir = installation_dir.to_str().unwrap();
+    let installation_dir = installation_dir.to_str().unwrap().replace('/', "\\");
 
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
@@ -313,7 +313,7 @@ fn add_to_path(installation_dir: &Path) -> Result<()> {
             let env = current_usr.open_subkey_with_flags("Environment", KEY_READ | KEY_WRITE)?;
             let usr_path: String = env.get_value("Path")?;
 
-            if usr_path.contains(installation_dir) {
+            if usr_path.to_lowercase().replace('/', "\\").contains(&installation_dir.to_lowercase()) {
                 return Ok(());
             }
 

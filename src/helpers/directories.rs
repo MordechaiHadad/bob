@@ -76,7 +76,7 @@ pub fn get_home_dir() -> Result<PathBuf> {
 pub fn get_local_data_dir() -> Result<PathBuf> {
     let mut home_dir = get_home_dir()?;
     if cfg!(windows) {
-        home_dir.push("AppData/Local");
+        home_dir.push("AppData\\Local");
         return Ok(home_dir);
     }
 
@@ -109,7 +109,7 @@ pub fn get_config_file() -> Result<PathBuf> {
     let mut home_dir = get_home_dir()?;
 
     if cfg!(windows) {
-        home_dir.push("AppData/Roaming");
+        home_dir.push("AppData\\Roaming");
     } else if cfg!(target_os = "macos") {
         home_dir.push("Library/Application Support");
     } else {
