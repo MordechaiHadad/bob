@@ -312,8 +312,11 @@ fn add_to_path(installation_dir: &Path) -> Result<()> {
             let current_usr = RegKey::predef(HKEY_CURRENT_USER);
             let env = current_usr.open_subkey_with_flags("Environment", KEY_READ | KEY_WRITE)?;
             let usr_path: String = env.get_value("Path")?;
+            let usr_path_lower = usr_path.replace('/', "\\").to_lowercase();
+            let installation_dir = installation_dir.replace('/', "\\");
+            let installation_dir_lower = installation_dir.to_lowercase();
 
-            if usr_path.contains(installation_dir) {
+            if usr_path_lower.contains(&installation_dir_lower) {
                 return Ok(());
             }
 
