@@ -26,7 +26,7 @@ clap_complete = "4.1"
 toml = "0.8.8"
 semver = "1.0.22"
 sha2 = "0.10.8"
-what-the-path = { git = "https://github.com/MordechaiHadad/what-the-path" }
+what-the-path = "^0.1.3" 
 
 [dependencies.chrono]
 version = "0.4.23"
