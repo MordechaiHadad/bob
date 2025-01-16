@@ -344,14 +344,18 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
             let env = current_usr.open_subkey_with_flags("Environment", KEY_READ | KEY_WRITE)?;
             let usr_path: String = env.get_value("Path")?;
             let usr_path_lower = usr_path.replace('/', "\\").to_lowercase();
-            let installation_dir = installation_dir.replace('/', "\\");
-            let installation_dir_lower = installation_dir.to_lowercase();
+            let installation_dir = installation_dir.replace('/', "\\").to_lowercase();
 
-            let new_path = if usr_path.ends_with(';') {
-                format!("{usr_path}{}", installation_dir)
+            if usr_path_lower.contains(&installation_dir) {
+                return Ok(());
+            }
+
+            let new_path = if usr_path_lower.ends_with(';') {
+                format!("{usr_path_lower}{}", installation_dir)
             } else {
-                format!("{usr_path};{}", installation_dir)
+                format!("{usr_path_lower};{}", installation_dir)
             };
+
             env.set_value("Path", &new_path)?;
         } else {
             use tokio::fs::File;
