@@ -333,11 +333,11 @@ bob complete powershell >> ${env:USERPROFILE}\Documents\WindowsPowerShell\Micros
 ## 🛠️ Troubleshooting
 
 `sudo: nvim: command not found`
-This error can be caused when `secure_path` is enabled in `/etc/sudoers` like in distros such as Fedora Workstation 37, possible workarounds:
+This error can be caused when `secure_path` is enabled in `/etc/sudoers` like in distros such as Fedora and Ubuntu. Possible workarounds:
 
-1. disable `secure_path`
-2. run `sudo env "PATH=$PATH" nvim`
-3. set `$SUDO_USER` to location of bob nvim binary: `SUDO_EDITOR='/home/user/.local/share/bob/nvim-bin/nvim`
+1. Set `$VISUAL` to location of bob nvim binary and use `sudoedit` instead of `sudo nvim` when running bob as sudo
+2. Run `sudo env "PATH=$PATH" nvim`
+3. Set `$SUDO_USER` to location of bob nvim binary: `SUDO_EDITOR='/home/user/.local/share/bob/nvim-bin/nvim`
 
 These workarounds were devised by @nfejzic, thanks to him.
 
