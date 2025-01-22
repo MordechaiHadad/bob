@@ -339,7 +339,7 @@ This error can be caused when `secure_path` is enabled in `/etc/sudoers` like in
 2. Run `sudo env "PATH=$PATH" nvim`
 3. Set `$SUDO_USER` to location of bob nvim binary: `SUDO_EDITOR='/home/user/.local/share/bob/nvim-bin/nvim`
 
-These workarounds were devised by @nfejzic, thanks to him.
+These workarounds were devised by @nfejzic and @s11s11, thanks to them.
 
 ## :heart: Credits And Inspiration
 
