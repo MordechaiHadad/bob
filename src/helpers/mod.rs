@@ -145,6 +145,9 @@ mod tests {
                 super::get_platform_name_download(&None),
                 "nvim-macos-x86_64"
             );
+        } else if cfg!(target_arch = "aarch64") {
+            assert_eq!(super::get_platform_name(&None), "nvim-linux-arm64");
+            assert_eq!(super::get_platform_name_download(&None), "nvim-linux-arm64");
         } else {
             assert_eq!(super::get_platform_name(&None), "nvim-linux-x86_64");
             assert_eq!(
