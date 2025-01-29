@@ -39,7 +39,7 @@ pub fn get_file_type() -> &'static str {
 /// It checks the target operating system and architecture using the `cfg!` macro and returns a string that corresponds to the appropriate Neovim binary for the platform.
 /// For Windows, it returns "nvim-win64".
 /// For macOS, it checks the version of Neovim. If the version is less than or equal to 0.9.5, it returns "nvim-macos". If the target architecture is "aarch64", it returns "nvim-macos-arm64". Otherwise, it returns "nvim-macos-x86_64".
-/// For other operating systems, it returns "nvim-linux64".
+/// For Linux, it checks the version of Neovim. If the version is less than or equal to 0.10.3, it returns "nvim-linux64". If the target architecture is "aarch64", it returns "nvim-linux-arm64". Otherwise, it returns "nvim-linux-x86_64".
 ///
 /// # Arguments
 ///
@@ -87,7 +87,7 @@ pub fn get_platform_name(version: &Option<Version>) -> &'static str {
 /// It checks the target operating system and architecture using the `cfg!` macro and returns a string that corresponds to the appropriate Neovim download for the platform.
 /// For Windows, it returns "nvim-win64".
 /// For macOS, it checks the version of Neovim. If the version is less than or equal to 0.9.5, it returns "nvim-macos". If the target architecture is "aarch64", it returns "nvim-macos-arm64". Otherwise, it returns "nvim-macos-x86_64".
-/// For other operating systems, it returns "nvim".
+/// For Linux, it checks the version of Neovim. If the version is less than or equal to 0.10.3, it returns "nvim". If the target architecture is "aarch64", it returns "nvim-linux-arm64". Otherwise, it returns "nvim-linux-x86_64".
 ///
 /// # Arguments
 ///
