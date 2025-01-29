@@ -61,7 +61,7 @@ pub fn get_platform_name(version: &Option<Version>) -> &'static str {
     } else if cfg!(target_os = "macos") {
         if version
             .as_ref()
-            .map_or(false, |x| x <= &Version::new(0, 9, 5))
+            .is_some_and(|x| x <= &Version::new(0, 9, 5))
         {
             "nvim-macos"
         } else if cfg!(target_arch = "aarch64") {
@@ -71,7 +71,7 @@ pub fn get_platform_name(version: &Option<Version>) -> &'static str {
         }
     } else if version
         .as_ref()
-        .map_or(false, |x| x <= &Version::new(0, 10, 3))
+        .is_some_and(|x| x <= &Version::new(0, 10, 3))
     {
         "nvim-linux64"
     } else if cfg!(target_arch = "aarch64") {
@@ -109,7 +109,7 @@ pub fn get_platform_name_download(version: &Option<Version>) -> &'static str {
     } else if cfg!(target_os = "macos") {
         if version
             .as_ref()
-            .map_or(false, |x| x <= &Version::new(0, 9, 5))
+            .is_some_and(|x| x <= &Version::new(0, 9, 5))
         {
             "nvim-macos"
         } else if cfg!(target_arch = "aarch64") {
@@ -119,7 +119,7 @@ pub fn get_platform_name_download(version: &Option<Version>) -> &'static str {
         }
     } else if version
         .as_ref()
-        .map_or(false, |x| x <= &Version::new(0, 10, 3))
+        .is_some_and(|x| x <= &Version::new(0, 10, 3))
     {
         "nvim"
     } else if cfg!(target_arch = "aarch64") {
