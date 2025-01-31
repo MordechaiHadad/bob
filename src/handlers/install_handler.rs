@@ -367,7 +367,7 @@ async fn download_version(
                         let file_type = helpers::get_file_type();
                         let file_type = if get_sha256sum {
                             if version.version_type == VersionType::Nightly
-                                || version.semver.as_ref().unwrap() < &Version::new(0, 10, 4)
+                                || version.semver.as_ref().unwrap() > &Version::new(0, 10, 4)
                             {
                                 "shasum.txt".to_string()
                             } else {
@@ -692,7 +692,7 @@ async fn send_request(
     let version_tag = &version.tag_name;
     let request_url = if get_sha256sum {
         if version.version_type == VersionType::Nightly
-            || version.semver.as_ref().unwrap() < &Version::new(0, 10, 4)
+            || version.semver.as_ref().unwrap() > &Version::new(0, 10, 4)
         {
             format!("{url}/neovim/neovim/releases/download/{version_tag}/shasum.txt")
         } else {
