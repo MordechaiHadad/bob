@@ -1,5 +1,6 @@
+use crate::cli::Update;
+use crate::config::ConfigFile;
 use crate::helpers::version::is_version_installed;
-use crate::{cli::Update, config::Config};
 use anyhow::Result;
 use reqwest::Client;
 use tracing::{info, warn};
@@ -48,12 +49,12 @@ use super::{install_handler, InstallResult};
 /// * [`crate::version::parse_version_type`](src/version.rs)
 /// * [`is_version_installed`](src/helpers/version.rs)
 /// * [`install_handler::start`](src/handlers/install_handler.rs)
-pub async fn start(data: Update, client: &Client, config: Config) -> Result<()> {
+pub async fn start(data: Update, client: &Client, config: ConfigFile) -> Result<()> {
     if data.version.is_none() || data.all {
         let mut did_update = false;
 
         let mut stable = crate::version::parse_version_type(client, "stable").await?;
-        if is_version_installed(&stable.tag_name, &config).await? {
+        if is_version_installed(&stable.tag_name, &config.config).await? {
             match install_handler::start(&mut stable, client, &config).await? {
                 InstallResult::InstallationSuccess(_) => did_update = true,
                 InstallResult::VersionAlreadyInstalled
@@ -62,7 +63,7 @@ pub async fn start(data: Update, client: &Client, config: Config) -> Result<()> 
             }
         }
 
-        if is_version_installed("nightly", &config).await? {
+        if is_version_installed("nightly", &config.config).await? {
             let mut nightly = crate::version::parse_version_type(client, "nightly").await?;
             match install_handler::start(&mut nightly, client, &config).await? {
                 InstallResult::InstallationSuccess(_) => did_update = true,
@@ -81,7 +82,7 @@ pub async fn start(data: Update, client: &Client, config: Config) -> Result<()> 
 
     let mut version = crate::version::parse_version_type(client, &data.version.unwrap()).await?;
 
-    if !is_version_installed(&version.tag_name, &config).await? {
+    if !is_version_installed(&version.tag_name, &config.config).await? {
         warn!("{} is not installed.", version.non_parsed_string);
         return Ok(());
     }
