@@ -28,7 +28,7 @@ jobs:
             matrix:
                 os:
                     - { NAME: linux, OS: ubuntu-latest, ARCH: x86_64, PATH: target/optimized/bob, TARGET: "" }
-                    - { NAME: linux-arm, OS: ubuntu-24.04-arm, ARCH: arm, PATH: target/optimized/bob, TARGET: "" }
+                    - { NAME: linux, OS: ubuntu-24.04-arm, ARCH: arm, PATH: target/optimized/bob, TARGET: "" }
                     - { NAME: macos, OS: macos-13, ARCH: x86_64, PATH: target/optimized/bob, TARGET: "" }
                     - { NAME: windows, OS: windows-latest, ARCH: x86_64, PATH: build, TARGET: "" }
                     - { NAME: macos, OS: macos-latest, ARCH: arm, PATH: target/optimized/bob, TARGET: "" }
