@@ -1,9 +1,6 @@
 use crate::config::Config;
 use anyhow::{anyhow, Result};
-use std::{
-    sync::{atomic::AtomicBool, Arc},
-    time::Duration,
-};
+use std::time::Duration;
 use tokio::{process::Command, time::sleep};
 
 use super::{
@@ -54,12 +51,13 @@ pub async fn handle_subprocess(process: &mut Command) -> Result<()> {
 ///
 /// This function takes a reference to a `Config` struct and a slice of `String` arguments.
 /// It retrieves the downloads directory and the currently used version of Neovim from the configuration.
-/// It then constructs the path to the Neovim binary and spawns a new process with the given arguments.
-/// The function then enters a loop where it continuously checks the status of the spawned process.
-/// If the process exits with a status code of `0`, the function returns `Ok(())`.
-/// If the process exits with a non-zero status code, the function returns an error with the status code as the error message.
-/// If the process is terminated by a signal, the function returns an error with the message "Process terminated by signal".
-/// If the function fails to wait on the child process, it returns an error with the message "Failed to wait on child process".
+/// It then constructs the path to the Neovim binary and executes it with the given arguments.
+///
+/// On Unix systems, this function uses `exec` to replace the current process with Neovim.
+/// On Windows, it spawns a new process and monitors its execution.
+///
+/// If running on Windows and the process exits with a non-zero status code, returns an error with the status code.
+/// If the process is terminated by a signal on Windows, returns an error with "Process terminated by signal".
 ///
 /// # Arguments
 ///
@@ -117,14 +115,18 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
         }
     }
 
-    let _term = Arc::new(AtomicBool::new(false));
-    #[cfg(unix)]
-    {
-        signal_hook::flag::register(signal_hook::consts::SIGUSR1, Arc::clone(&_term))?;
-    }
-
     let mut child = std::process::Command::new(location);
     child.args(args);
+
+    // On Unix, replace the current process with nvim
+    if cfg!(unix) {
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::CommandExt;
+            let err = child.exec();
+            return Err(anyhow!("Failed to exec neovim: {}", err));
+        }
+    }
 
     let mut spawned_child = child.spawn()?;
 
@@ -137,18 +139,7 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
                 None => return Err(anyhow!("Process terminated by signal")),
             },
             Ok(None) => {
-                #[cfg(unix)]
-                {
-                    use nix::sys::signal::{self, Signal};
-                    use nix::unistd::Pid;
-                    use std::sync::atomic::Ordering;
-                    if _term.load(Ordering::Relaxed) {
-                        let pid = spawned_child.id() as i32;
-                        signal::kill(Pid::from_raw(pid), Signal::SIGUSR1)?;
-                        _term.store(false, Ordering::Relaxed);
-                    }
-                }
-                // short delay to a void high cpu usage
+                // short delay to avoid high cpu usage
                 sleep(Duration::from_millis(200)).await;
             }
             Err(_) => return Err(anyhow!("Failed to wait on child process")),
