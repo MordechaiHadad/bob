@@ -108,8 +108,12 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                     semver: None,
                 });
             }
-
-            Err(anyhow!("Please provide a proper version string"))
+            Err(anyhow!(
+                "Please provide a proper version string. Valid options are:\n\
+                \t\t• stable | latest | nightly   -  Latest stable, most recent, or nightly build\n\
+                \t\t• [v]x.x.x                    -  Specific version (e.g., 0.6.0 or v0.6.0)\n\
+                \t\t• <commit-hash>               -  Specific commit hash"
+            ))
         }
     }
 }
