@@ -7,6 +7,7 @@ pub mod sync_handler;
 pub mod uninstall_handler;
 pub mod update_handler;
 pub mod use_handler;
+pub mod run_handler;
 
 use super::version::types::LocalVersion;
 

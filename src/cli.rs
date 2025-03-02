@@ -1,8 +1,7 @@
 use crate::{
     config::Config,
     handlers::{
-        self, erase_handler, list_handler, list_remote_handler, rollback_handler, sync_handler,
-        uninstall_handler, update_handler, InstallResult,
+        self, erase_handler, list_handler, list_remote_handler, rollback_handler, run_handler, sync_handler, uninstall_handler, update_handler, InstallResult
     },
 };
 use anyhow::Result;
@@ -105,6 +104,16 @@ enum Cli {
 
     /// Update existing version |nightly|stable|--all|
     Update(Update),
+
+    #[clap(trailing_var_arg = true)]
+    Run {
+        /// Optional version to run |nightly|stable|<version-string>|<commit-hash>|
+        version: String,
+
+        /// Arguments to pass to Neovim (flags, files, commands, etc.)
+        #[arg(allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
 }
 
 /// Represents an update command in the CLI.
@@ -203,6 +212,7 @@ pub async fn start(config: Config) -> Result<()> {
             update_handler::start(data, &client, config).await?;
         }
         Cli::ListRemote => list_remote_handler::start(config, client).await?,
+        Cli::Run { version, args } => run_handler::start(&version, &args, &client, &config).await?,
     }
 
     Ok(())
