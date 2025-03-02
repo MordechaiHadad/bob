@@ -20,12 +20,7 @@ use crate::helpers;
 /// # Returns
 ///
 /// * `Result<()>` - Returns a `Result` that indicates whether the operation was successful or not.
-pub async fn start(
-    version: &str,
-    args: &[String],
-    client: &Client,
-    config: &Config,
-) -> Result<()> {
+pub async fn start(version: &str, args: &[String], client: &Client, config: &Config) -> Result<()> {
     // Parse the specified version
     let version = crate::version::parse_version_type(client, version).await?;
     let downloads_dir = helpers::directories::get_downloads_directory(config).await?;
