@@ -1,5 +1,5 @@
 use crate::{
-    config::Config,
+    config::ConfigFile,
     handlers::{
         self, erase_handler, list_handler, list_remote_handler, rollback_handler, run_handler,
         sync_handler, uninstall_handler, update_handler, InstallResult,
@@ -57,6 +57,8 @@ enum Cli {
     /// install command if the version is not installed already
     Use {
         /// Version to switch to |nightly|stable|<version-string>|<commit-hash>|
+        ///
+        /// A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
         version: String,
 
         /// Whether not to auto-invoke install command
@@ -68,6 +70,8 @@ enum Cli {
     /// out-of-date nightly version
     Install {
         /// Version to be installed |nightly|stable|<version-string>|<commit-hash>|
+        ///
+        /// A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
         version: String,
     },
 
@@ -79,6 +83,9 @@ enum Cli {
     #[clap(alias = "remove", visible_alias = "rm")]
     Uninstall {
         /// Optional Version to be uninstalled |nightly|stable|<version-string>|<commit-hash>|
+        ///
+        /// A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
+        ///
         /// If no Version is provided a prompt is used to select the versions to be uninstalled
         version: Option<String>,
     },
@@ -163,7 +170,7 @@ pub struct Update {
 /// let config = Config::default();
 /// start(config).await.unwrap();
 /// ```
-pub async fn start(config: Config) -> Result<()> {
+pub async fn start(config: ConfigFile) -> Result<()> {
     let client = create_reqwest_client()?;
     let cli = Cli::parse();
 
@@ -201,19 +208,21 @@ pub async fn start(config: Config) -> Result<()> {
         }
         Cli::Uninstall { version } => {
             info!("Starting uninstallation process");
-            uninstall_handler::start(version.as_deref(), config).await?;
+            uninstall_handler::start(version.as_deref(), config.config).await?;
         }
-        Cli::Rollback => rollback_handler::start(config).await?,
-        Cli::Erase => erase_handler::start(config).await?,
-        Cli::List => list_handler::start(config).await?,
+        Cli::Rollback => rollback_handler::start(config.config).await?,
+        Cli::Erase => erase_handler::start(config.config).await?,
+        Cli::List => list_handler::start(config.config).await?,
         Cli::Complete { shell } => {
             clap_complete::generate(shell, &mut Cli::command(), "bob", &mut std::io::stdout())
         }
         Cli::Update(data) => {
             update_handler::start(data, &client, config).await?;
         }
-        Cli::ListRemote => list_remote_handler::start(config, client).await?,
-        Cli::Run { version, args } => run_handler::start(&version, &args, &client, &config).await?,
+        Cli::ListRemote => list_remote_handler::start(config.config, client).await?,
+        Cli::Run { version, args } => {
+            run_handler::start(&version, &args, &client, &config.config).await?
+        }
     }
 
     Ok(())

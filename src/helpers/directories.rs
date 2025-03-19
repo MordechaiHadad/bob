@@ -116,11 +116,11 @@ pub fn get_config_file() -> Result<PathBuf> {
         home_dir.push(".config");
     }
 
-    home_dir.push("bob/config.json");
+    home_dir.push("bob/config.toml");
 
     if fs::metadata(&home_dir).is_err() {
         home_dir.pop();
-        home_dir.push("config.toml");
+        home_dir.push("config.json");
     }
 
     Ok(home_dir)

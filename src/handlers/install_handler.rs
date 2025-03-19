@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::{Config, ConfigFile};
 use crate::github_requests::{get_commits_for_nightly, get_upstream_nightly, UpstreamVersion};
 use crate::helpers::checksum::sha256cmp;
 use crate::helpers::processes::handle_subprocess;
@@ -64,7 +64,7 @@ use super::{InstallResult, PostDownloadVersionType};
 pub async fn start(
     version: &mut ParsedVersion,
     client: &Client,
-    config: &Config,
+    config: &ConfigFile,
 ) -> Result<InstallResult> {
     if version.version_type == VersionType::NightlyRollback {
         return Ok(InstallResult::GivenNightlyRollback);
@@ -76,13 +76,13 @@ pub async fn start(
         }
     }
 
-    let root = directories::get_downloads_directory(config).await?;
+    let root = directories::get_downloads_directory(&config.config).await?;
 
     env::set_current_dir(&root)?;
     let root = root.as_path();
 
     let is_version_installed =
-        helpers::version::is_version_installed(&version.tag_name, config).await?;
+        helpers::version::is_version_installed(&version.tag_name, &config.config).await?;
 
     if is_version_installed && version.version_type != VersionType::Nightly {
         return Ok(InstallResult::VersionAlreadyInstalled);
@@ -98,15 +98,15 @@ pub async fn start(
         info!("Looking for nightly updates");
 
         let upstream_nightly = nightly_version.as_ref().unwrap();
-        let local_nightly = helpers::version::nightly::get_local_nightly(config).await?;
+        let local_nightly = helpers::version::nightly::get_local_nightly(&config.config).await?;
 
         if upstream_nightly.published_at == local_nightly.published_at {
             return Ok(InstallResult::NightlyIsUpdated);
         }
 
-        handle_rollback(config).await?;
+        handle_rollback(&config.config).await?;
 
-        match config.enable_nightly_info {
+        match config.config.enable_nightly_info {
             Some(boolean) if boolean => {
                 print_commits(client, &local_nightly, upstream_nightly).await?
             }
@@ -117,16 +117,16 @@ pub async fn start(
 
     let downloaded_archive = match version.version_type {
         VersionType::Normal | VersionType::Latest => {
-            download_version(client, version, root, config, false).await
+            download_version(client, version, root, &config.config, false).await
         }
         VersionType::Nightly => {
-            if config.enable_release_build == Some(true) {
-                handle_building_from_source(version, config).await
+            if config.config.enable_release_build == Some(true) {
+                handle_building_from_source(version, &config.config).await
             } else {
-                download_version(client, version, root, config, false).await
+                download_version(client, version, root, &config.config, false).await
             }
         }
-        VersionType::Hash => handle_building_from_source(version, config).await,
+        VersionType::Hash => handle_building_from_source(version, &config.config).await,
         VersionType::NightlyRollback => Ok(PostDownloadVersionType::None),
     }?;
 
@@ -134,7 +134,8 @@ pub async fn start(
         if version.semver.is_some() && version.semver.as_ref().unwrap() <= &Version::new(0, 4, 4) {
             unarchive::start(downloaded_archive).await?
         } else {
-            let downloaded_checksum = download_version(client, version, root, config, true).await?;
+            let downloaded_checksum =
+                download_version(client, version, root, &config.config, true).await?;
 
             if let PostDownloadVersionType::Standard(downloaded_checksum) = downloaded_checksum {
                 let archive_path = root.join(format!(

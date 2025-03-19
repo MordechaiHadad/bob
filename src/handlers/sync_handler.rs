@@ -3,7 +3,7 @@ use reqwest::Client;
 use tokio::fs;
 use tracing::info;
 
-use crate::{config::Config, helpers::version};
+use crate::{config::ConfigFile, helpers::version};
 
 use super::use_handler;
 
@@ -35,8 +35,8 @@ use super::use_handler;
 /// let config = Config::default();
 /// start(&client, config).await.unwrap();
 /// ```
-pub async fn start(client: &Client, config: Config) -> Result<()> {
-    let version_sync_file_location = version::get_version_sync_file_location(&config)
+pub async fn start(client: &Client, config: ConfigFile) -> Result<()> {
+    let version_sync_file_location = version::get_version_sync_file_location(&config.config)
         .await?
         .ok_or_else(|| anyhow!("version_sync_file_location needs to be set to use bob sync"))?;
 
