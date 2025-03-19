@@ -220,7 +220,9 @@ pub async fn start(config: ConfigFile) -> Result<()> {
             update_handler::start(data, &client, config).await?;
         }
         Cli::ListRemote => list_remote_handler::start(config.config, client).await?,
-        Cli::Run { version, args } => run_handler::start(&version, &args, &client, &config.config).await?,
+        Cli::Run { version, args } => {
+            run_handler::start(&version, &args, &client, &config.config).await?
+        }
     }
 
     Ok(())
