@@ -74,7 +74,7 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
         let version_installed = local_versions.iter().any(|v| {
             v.file_name()
                 .and_then(|str| str.to_str())
-                .map_or(false, |str| str.contains(&version.name))
+                .is_some_and(|str| str.contains(&version.name))
         });
 
         let stable_version_string = if stable_version == version.name {
@@ -99,7 +99,7 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
             local_versions.retain(|v| {
                 v.file_name()
                     .and_then(|str| str.to_str())
-                    .map_or(true, |str| !str.contains(&version.name))
+                    .is_none_or(|str| !str.contains(&version.name))
             });
         } else {
             println!("{padding}{}{}", version.name, stable_version_string);

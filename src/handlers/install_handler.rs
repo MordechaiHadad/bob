@@ -148,7 +148,13 @@ pub async fn start(
                     downloaded_checksum.file_name, downloaded_checksum.file_format
                 ));
 
-                if !sha256cmp(&archive_path, &checksum_path)? {
+                let platform = helpers::get_platform_name_download(&version.semver);
+
+                if !sha256cmp(
+                    &archive_path,
+                    &checksum_path,
+                    &format!("{}.{}", platform, downloaded_archive.file_format),
+                )? {
                     tokio::fs::remove_file(archive_path).await?;
                     tokio::fs::remove_file(checksum_path).await?;
                     return Err(anyhow!("Checksum mismatch!"));
@@ -361,7 +367,13 @@ async fn download_version(
 
                         let file_type = helpers::get_file_type();
                         let file_type = if get_sha256sum {
-                            format!("{file_type}.sha256sum")
+                            if version.version_type == VersionType::Nightly
+                                || version.semver.as_ref().unwrap() > &Version::new(0, 10, 4)
+                            {
+                                "shasum.txt".to_string()
+                            } else {
+                                format!("{file_type}.sha256sum")
+                            }
                         } else {
                             file_type.to_owned()
                         };
@@ -397,10 +409,17 @@ async fn download_version(
                             semver: version.semver.clone(),
                         }))
                     } else {
-                        Err(anyhow!(
-                            "Please provide an existing neovim version, {}",
-                            response.text().await?
-                        ))
+                        let error_text = response.text().await?;
+                        if error_text.contains("Not Found") {
+                            Err(anyhow!(
+                                "Version does not exist in Neovim releases. Please check available versions with 'bob list-remote'"
+                            ))
+                        } else {
+                            Err(anyhow!(
+                                "Please provide an existing neovim version, {}",
+                                error_text
+                            ))
+                        }
                     }
                 }
                 Err(error) => Err(anyhow!(error)),
@@ -666,18 +685,25 @@ async fn send_request(
 ) -> Result<reqwest::Response, reqwest::Error> {
     let platform = helpers::get_platform_name_download(&version.semver);
     let file_type = helpers::get_file_type();
-    let file_type = if get_sha256sum {
-        format!("{file_type}.sha256sum")
-    } else {
-        file_type.to_owned()
-    };
+
     let url = match &config.github_mirror {
         Some(val) => val.to_string(),
         None => "https://github.com".to_string(),
     };
-    let version = &version.tag_name;
-    let request_url =
-        format!("{url}/neovim/neovim/releases/download/{version}/{platform}.{file_type}");
+    let version_tag = &version.tag_name;
+    let request_url = if get_sha256sum {
+        if version.version_type == VersionType::Nightly
+            || version.semver.as_ref().unwrap() > &Version::new(0, 10, 4)
+        {
+            format!("{url}/neovim/neovim/releases/download/{version_tag}/shasum.txt")
+        } else {
+            format!(
+                "{url}/neovim/neovim/releases/download/{version_tag}/{platform}.{file_type}.sha256sum"
+            )
+        }
+    } else {
+        format!("{url}/neovim/neovim/releases/download/{version_tag}/{platform}.{file_type}")
+    };
 
     client
         .get(request_url)
