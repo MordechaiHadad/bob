@@ -123,3 +123,69 @@ jobs:
                   path: ${{ matrix.os.PATH }}
                   if-no-files-found: error
                   retention-days: 7
+    appimage:
+      needs: [build]
+      runs-on: ubuntu-latest
+      steps:
+          - name: Checkout
+            uses: actions/checkout@v4
+          
+          - name: Download Linux binary
+            uses: actions/download-artifact@v4
+            with:
+                name: "bob-linux-x86_64"
+                path: appdir/usr/bin
+              
+          - name: Make binary executable
+            run: chmod +x appdir/usr/bin/bob
+          
+          - name: Create AppDir structure
+            run: |
+              mkdir -p appdir/usr/share/applications
+              mkdir -p appdir/usr/share/icons/hicolor/256x256/apps
+              
+          - name: Create desktop file
+            run: |
+              cat > appdir/usr/share/applications/bob.desktop << EOF
+              [Desktop Entry]
+              Name=Bob
+              Exec=bob
+              Icon=bob
+              Type=Application
+              Categories=Development;
+              EOF
+              
+          - name: Copy icon
+            run: |
+              # Copy your icon file if you have one, or create a placeholder
+              # For example: cp assets/bob-logo.png appdir/usr/share/icons/hicolor/256x256/apps/bob.png
+              # Or create a placeholder:
+              convert -size 256x256 xc:transparent -fill "#3465A4" -draw "circle 128,128 128,64" appdir/usr/share/icons/hicolor/256x256/apps/bob.png
+          
+          - name: Create AppRun file
+            run: |
+              cat > appdir/AppRun << EOF
+              #!/bin/sh
+              SELF=\$(readlink -f "\$0")
+              HERE=\${SELF%/*}
+              export PATH="\${HERE}/usr/bin:\${PATH}"
+              exec "\${HERE}/usr/bin/bob" "\$@"
+              EOF
+              chmod +x appdir/AppRun
+              
+          - name: Install appimagetool
+            run: |
+              wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+              chmod +x appimagetool-x86_64.AppImage
+              
+          - name: Build AppImage
+            run: |
+              ./appimagetool-x86_64.AppImage appdir
+              
+          - name: Upload AppImage
+            uses: actions/upload-artifact@v4
+            with:
+              name: "bob-linux-x86_64.AppImage"
+              path: Bob*.AppImage
+              if-no-files-found: error
+              retention-days: 7
