@@ -49,7 +49,7 @@ fn create_reqwest_client() -> Result<Client, Error> {
     Ok(client)
 }
 
-/// The `Cli` enum represents the different commands that can be used in the command-line interface.
+// The `Cli` enum represents the different commands that can be used in the command-line interface.
 #[derive(Debug, Parser)]
 #[command(version)]
 enum Cli {
