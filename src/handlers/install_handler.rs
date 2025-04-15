@@ -149,6 +149,7 @@ pub async fn start(
                 ));
 
                 let platform = helpers::get_platform_name_download(&version.semver);
+                info!("Got platform name: {platform}");
 
                 if !sha256cmp(
                     &archive_path,
