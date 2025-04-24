@@ -160,7 +160,7 @@ mod tests {
             assert_eq!(super::get_platform_name(&version), "nvim-macos");
             assert_eq!(super::get_platform_name_download(&version), "nvim-macos");
         } else {
-            assert_eq!(super::get_platform_name(&version), "nvim");
+            assert_eq!(super::get_platform_name(&version), "nvim-linux64");
             assert_eq!(super::get_platform_name_download(&version), "nvim");
         }
     }
