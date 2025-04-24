@@ -56,23 +56,24 @@ pub fn get_file_type() -> &'static str {
 /// let platform_name = get_platform_name(&version);
 /// ```
 pub fn get_platform_name(version: &Option<Version>) -> &'static str {
+    let is_macos_legacy = version
+        .as_ref()
+        .is_some_and(|x| x <= &Version::new(0, 9, 5));
+    let is_linux_legacy = version // Keep the explicit linux legacy check
+        .as_ref()
+        .is_some_and(|x| x <= &Version::new(0, 10, 3));
+
     if cfg!(target_os = "windows") {
         "nvim-win64"
+    }
+    else if cfg!(target_os = "macos") && is_macos_legacy {
+        "nvim-macos"
+    } else if cfg!(target_os = "macos") && cfg!(target_arch = "aarch64") {
+        "nvim-macos-arm64"
     } else if cfg!(target_os = "macos") {
-        if version
-            .as_ref()
-            .is_some_and(|x| x <= &Version::new(0, 9, 5))
-        {
-            "nvim-macos"
-        } else if cfg!(target_arch = "aarch64") {
-            "nvim-macos-arm64"
-        } else {
-            "nvim-macos-x86_64"
-        }
-    } else if version
-        .as_ref()
-        .is_some_and(|x| x <= &Version::new(0, 10, 3))
-    {
+        "nvim-macos-x86_64"
+    }
+    else if is_linux_legacy {
         "nvim-linux64"
     } else if cfg!(target_arch = "aarch64") {
         "nvim-linux-arm64"
@@ -104,23 +105,24 @@ pub fn get_platform_name(version: &Option<Version>) -> &'static str {
 /// let platform_name = get_platform_name_download(&version);
 /// ```
 pub fn get_platform_name_download(version: &Option<Version>) -> &'static str {
+    let is_macos_legacy = version
+        .as_ref()
+        .is_some_and(|x| x <= &Version::new(0, 9, 5));
+    let is_linux_legacy = version
+        .as_ref()
+        .is_some_and(|x| x <= &Version::new(0, 10, 3));
+
     if cfg!(target_os = "windows") {
         "nvim-win64"
+    }
+    else if cfg!(target_os = "macos") && is_macos_legacy {
+        "nvim-macos"
+    } else if cfg!(target_os = "macos") && cfg!(target_arch = "aarch64") {
+        "nvim-macos-arm64"
     } else if cfg!(target_os = "macos") {
-        if version
-            .as_ref()
-            .is_some_and(|x| x <= &Version::new(0, 9, 5))
-        {
-            "nvim-macos"
-        } else if cfg!(target_arch = "aarch64") {
-            "nvim-macos-arm64"
-        } else {
-            "nvim-macos-x86_64"
-        }
-    } else if version
-        .as_ref()
-        .is_some_and(|x| x <= &Version::new(0, 10, 3))
-    {
+        "nvim-macos-x86_64"
+    }
+    else if is_linux_legacy {
         "nvim"
     } else if cfg!(target_arch = "aarch64") {
         "nvim-linux-arm64"
@@ -166,7 +168,7 @@ mod tests {
             assert_eq!(super::get_platform_name(&version), "nvim-macos");
             assert_eq!(super::get_platform_name_download(&version), "nvim-macos");
         } else {
-            assert_eq!(super::get_platform_name(&version), "nvim-linux64");
+            assert_eq!(super::get_platform_name(&version), "nvim");
             assert_eq!(super::get_platform_name_download(&version), "nvim");
         }
     }
