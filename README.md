@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="resources/bob-nvim-logo-2-transparent-bg.png" width=315>
+<img src="resources/bob.png" width=315>
 
 </div>
 

@@ -157,8 +157,8 @@ jobs:
               run: |
                   mkdir -p AppDir/usr/bin AppDir/usr/share/icons/hicolor/256x256/apps
                   cp target/optimized/bob AppDir/usr/bin/
-                  # Ensure you have an icon at resources/bob.png or adjust the path
-                  cp resources/bob.png AppDir/usr/share/icons/hicolor/256x256/apps/bob.png
+                 # Ensure you have an icon at resources/bob.png or adjust the path
+                  cp resources/bob.png AppDir/usr/share/icons/hicolor/256x256/apps/bob.png 
                   # Create .desktop file
                   cat <<EOF > AppDir/bob.desktop
                   [Desktop Entry]
