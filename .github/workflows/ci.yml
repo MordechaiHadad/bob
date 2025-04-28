@@ -155,6 +155,15 @@ jobs:
             - name: Prepare AppDir
               if: matrix.os.NAME == 'linux'
               run: |
+                  # Verify the executable exists before running linuxdeploy
+                  echo "Checking for executable at AppDir/usr/bin/bob:"
+                  ls -l AppDir/usr/bin/bob 
+                  
+                  export UPD_INFO="gh-releases-zsync|Matsuuu|bob|latest|bob-${{ matrix.os.ARCH }}.AppImage.zsync"
+                  export OUTPUT="bob-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}.AppImage"
+                  # The command itself looks correct, assuming the file exists
+                  ./linuxdeploy --appdir AppDir --executable usr/bin/bob --desktop-file AppDir/bob.desktop --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/bob.png --output appimage
+
                   mkdir -p AppDir/usr/bin AppDir/usr/share/icons/hicolor/256x256/apps AppDir/usr/share/applications
                   cp target/optimized/bob AppDir/usr/bin/
                   # Ensure you have an icon at resources/bob.png or adjust the path
