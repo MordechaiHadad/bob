@@ -162,7 +162,6 @@ jobs:
                   [Desktop Entry]
                   Name=Bob Neovim Manager
                   Exec=bob
-                  Icon=bob
                   Type=Application
                   Categories=Utility;Development;
                   Comment=A cross-platform Neovim version manager
