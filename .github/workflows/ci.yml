@@ -155,9 +155,22 @@ jobs:
             - name: Prepare AppDir
               if: matrix.os.NAME == 'linux'
               run: |
+                  echo "--- Preparing AppDir ---"
                   mkdir -p AppDir/usr/bin AppDir/usr/share/icons/hicolor/256x256/apps AppDir/usr/share/applications
+                  
+                  echo "Checking for source executable:"
+                  ls -l target/optimized/bob # Check if source exists
+                  
+                  echo "Copying executable..."
                   cp target/optimized/bob AppDir/usr/bin/
+                  
+                  echo "Checking for copied executable:"
+                  ls -l AppDir/usr/bin/bob # Check if destination exists
+                  
+                  echo "Copying icon..."
                   cp resources/bob.png AppDir/usr/share/icons/hicolor/256x256/apps/bob.png
+                  
+                  echo "Creating .desktop file..."
                   cat <<EOF > AppDir/bob.desktop
                   [Desktop Entry]
                   Name=Bob Neovim Manager
@@ -168,10 +181,12 @@ jobs:
                   Comment=A cross-platform Neovim version manager
                   EOF
                   cp AppDir/bob.desktop AppDir/usr/share/applications/
+
+                  echo "Running linuxdeploy..."
+                  pwd # Check current directory
                   export UPD_INFO="gh-releases-zsync|Matsuuu|bob|latest|bob-${{ matrix.os.ARCH }}.AppImage.zsync"
                   export OUTPUT="bob-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}.AppImage"
                   ./linuxdeploy --appdir AppDir --executable usr/bin/bob --desktop-file AppDir/bob.desktop --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/bob.png --output appimage
-
             - name: Setup Bob build directory
               run: |
                   mkdir build
