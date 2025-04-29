@@ -157,7 +157,7 @@ jobs:
               run: |
                   mkdir -p AppDir/usr/bin AppDir/usr/share/icons/hicolor/256x256/apps AppDir/usr/share/applications
                   cp target/optimized/bob AppDir/usr/bin/
-                  cp resources/bob.png AppDir/usr/share/icons/hicolor/256x256/apps/bob.png
+                  # cp resources/bob.png AppDir/usr/share/icons/hicolor/256x256/apps/bob.png
                   cat <<EOF > AppDir/bob.desktop
                   [Desktop Entry]
                   Name=Bob Neovim Manager
