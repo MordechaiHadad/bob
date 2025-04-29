@@ -176,7 +176,7 @@ jobs:
                   export OUTPUT="bob-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}.AppImage"
                   
                   # Change --executable path to be relative to CWD
-                  ./linuxdeploy --appdir AppDir --executable AppDir/usr/bin/bob --desktop-file AppDir/bob.desktop --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/bob.png --output appimage
+                  ./linuxdeploy --appdir AppDir --executable AppDir/usr/bin/bob --desktop-file AppDir/bob.desktop --output appimage
 
             - name: Setup Bob build directory
               run: |
