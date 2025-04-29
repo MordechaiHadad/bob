@@ -157,11 +157,12 @@ jobs:
               run: |
                   mkdir -p AppDir/usr/bin AppDir/usr/share/icons/hicolor/256x256/apps AppDir/usr/share/applications
                   cp target/optimized/bob AppDir/usr/bin/
-                  # cp resources/bob.png AppDir/usr/share/icons/hicolor/256x256/apps/bob.png
+                  cp resources/bob-icon.png AppDir/usr/share/icons/hicolor/256x256/apps/bob.png
                   cat <<EOF > AppDir/bob.desktop
                   [Desktop Entry]
                   Name=Bob Neovim Manager
                   Exec=bob
+                  Icon=bob
                   Type=Application
                   Categories=Utility;Development;
                   Comment=A cross-platform Neovim version manager
@@ -175,7 +176,7 @@ jobs:
                   export OUTPUT="bob-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}.AppImage"
                   
                   # Change --executable path to be relative to CWD
-                  ./linuxdeploy --appdir AppDir --executable AppDir/usr/bin/bob --desktop-file AppDir/bob.desktop --output appimage
+                  ./linuxdeploy --appdir AppDir --executable AppDir/usr/bin/bob --desktop-file AppDir/bob.desktop --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/bob.png --output appimage
 
             - name: Setup Bob build directory
               run: |
