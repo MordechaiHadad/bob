@@ -158,6 +158,7 @@ jobs:
                   echo "Downloading linuxdeploy tools for architecture: $DOWNLOAD_ARCH"
                   wget -c "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-$DOWNLOAD_ARCH.AppImage" -O linuxdeploy
                   wget -c "https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-$DOWNLOAD_ARCH.AppImage" -O linuxdeploy-plugin-appimage
+                  chmod +x linuxdeploy linuxdeploy-plugin-appimage
 
             - name: Prepare AppDir
               if: matrix.os.NAME == 'linux'
