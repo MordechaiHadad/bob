@@ -199,3 +199,11 @@ jobs:
                   path: ${{ matrix.os.PATH }}
                   if-no-files-found: error
                   retention-days: 7
+            - name: Upload Bob AppImage
+              if: matrix.os.NAME == 'linux'
+              uses: actions/upload-artifact@v4
+              with:
+                  name: "bob-${{ matrix.os.NAME }}-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}-appimage"
+                  path: "bob-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}.AppImage*" 
+                  if-no-files-found: error
+                  retention-days: 7
