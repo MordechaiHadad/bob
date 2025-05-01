@@ -148,9 +148,16 @@ jobs:
               if: matrix.os.NAME == 'linux'
               run: |
                   sudo apt update && sudo apt install -y libfuse2 # Needed by AppImage/linuxdeploy
-                  wget -c "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-${{ matrix.os.ARCH }}.AppImage" -O linuxdeploy
-                  wget -c "https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-${{ matrix.os.ARCH }}.AppImage" -O linuxdeploy-plugin-appimage
-                  chmod +x linuxdeploy linuxdeploy-plugin-appimage
+                  
+                  # Determine the correct architecture for linuxdeploy download
+                  DOWNLOAD_ARCH=${{ matrix.os.ARCH }}
+                  if [[ "${{ matrix.os.ARCH }}" == "arm" ]]; then
+                    DOWNLOAD_ARCH="aarch64"
+                  fi
+                  
+                  echo "Downloading linuxdeploy tools for architecture: $DOWNLOAD_ARCH"
+                  wget -c "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-$DOWNLOAD_ARCH.AppImage" -O linuxdeploy
+                  wget -c "https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-$DOWNLOAD_ARCH.AppImage" -O linuxdeploy-plugin-appimage
 
             - name: Prepare AppDir
               if: matrix.os.NAME == 'linux'
