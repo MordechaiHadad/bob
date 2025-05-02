@@ -116,6 +116,14 @@ Switch to the specified version, by default will auto-invoke install command if 
 
 ---
 
+- `bob run |nightly|stable|latest|<version-string>|<commit-hash>| [args...]`
+
+Run a specific installed Neovim version with the provided arguments. `[args...]` are passed directly to the Neovim instance.
+
+Example: `bob run nightly --clean my_file.txt`
+
+---
+
 - `bob install |nightly|stable|latest|<version-string>|<commit-hash>|`
 
 Install the specified version, can also be used to update out-of-date nightly version.

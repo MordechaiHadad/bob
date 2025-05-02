@@ -145,7 +145,7 @@ jobs:
                   command: build
                   args: --locked --profile optimized ${{ matrix.tls.ARGS }}
             - name: Install AppImage tools
-              if: matrix.os.NAME == 'linux'
+              if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
               run: |
                   sudo apt update && sudo apt install -y libfuse2 # Needed by AppImage/linuxdeploy
                   
@@ -161,7 +161,7 @@ jobs:
                   chmod +x linuxdeploy linuxdeploy-plugin-appimage
 
             - name: Prepare AppDir
-              if: matrix.os.NAME == 'linux'
+              if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
               run: |
                   mkdir -p AppDir/usr/bin AppDir/usr/share/icons/hicolor/256x256/apps AppDir/usr/share/applications
                   cp target/optimized/bob AppDir/usr/bin/
@@ -200,7 +200,7 @@ jobs:
                   if-no-files-found: error
                   retention-days: 7
             - name: Upload Bob AppImage
-              if: matrix.os.NAME == 'linux'
+              if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
               uses: actions/upload-artifact@v4
               with:
                   name: "bob-${{ matrix.os.NAME }}-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}-appimage"
