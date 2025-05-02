@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="resources/bob-nvim-logo-2-transparent-bg.png" width=315>
+<img src="resources/bob.png" width=315>
 
 </div>
 
@@ -113,6 +113,14 @@ A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0
 `--no-install` flag will prevent bob from auto invoking install command when using `use`
 
 Switch to the specified version, by default will auto-invoke install command if the version is not installed already
+
+---
+
+- `bob run |nightly|stable|latest|<version-string>|<commit-hash>| [args...]`
+
+Run a specific installed Neovim version with the provided arguments. `[args...]` are passed directly to the Neovim instance.
+
+Example: `bob run nightly --clean my_file.txt`
 
 ---
 
