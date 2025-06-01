@@ -67,17 +67,20 @@ pub async fn start(config: Config) -> Result<()> {
 
             match shell {
                 Shell::Fish(fish) => {
-                    let files = fish.get_rcfiles()?;
-                    let fish_file = files[0].join("bob.fish");
-                    if !fish_file.exists() { return Ok(()) }
-                    fs::remove_file(fish_file).await?;
+                   if let Ok(files) = fish.get_rcfiles() {
+                       let fish_file = files[0].join("bob.fish");
+                       if !fish_file.exists() { return Ok(()) }
+                       fs::remove_file(fish_file).await?;
+                   }
                 },
                 shell => {
-                    let files = shell.get_rcfiles()?;
-                    let env_path = downloads.join("env/env.sh");
-                    let source_string = format!(". \"{}\"", env_path.display());
-                    for file in files {
-                        what_the_path::shell::remove_from_rcfile(file, &source_string)?;
+                    if let Ok(files) = shell.get_rcfiles() {
+                        let env_path = downloads.join("env/env.sh");
+                        let source_string = format!(". \"{}\"", env_path.display());
+                        for file in files {
+                            what_the_path::shell::remove_from_rcfile(file, &source_string)?;
+                        }
+
                     }
                 }
             }
