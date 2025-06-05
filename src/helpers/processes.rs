@@ -150,7 +150,7 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
 
 pub fn is_neovim_running() -> bool {
     let sys = System::new_all();
-    
+
     for (_pid, process) in sys.processes() {
         let name = process.name().to_string_lossy().to_lowercase();
         if name.contains("nvim") {
