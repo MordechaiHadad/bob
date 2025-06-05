@@ -114,7 +114,7 @@ pub struct LocalNightly {
 /// };
 /// println!("The local version is {:?}", local_version);
 /// ```
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct LocalVersion {
     pub file_name: String,
     pub file_format: String,

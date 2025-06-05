@@ -33,7 +33,7 @@ pub enum InstallResult {
 /// * `None` - No specific version type is assigned.
 /// * `Standard(LocalVersion)` - The version is a standard version. The `LocalVersion` contains the details of the version.
 /// * `Hash` - The version is identified by a hash.
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum PostDownloadVersionType {
     None,
     Standard(LocalVersion),

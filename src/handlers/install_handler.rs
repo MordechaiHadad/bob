@@ -17,7 +17,7 @@ use std::process::Stdio;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::{fs, process::Command};
-use tracing::info;
+use tracing::{info, warn};
 use yansi::Paint;
 
 use super::{InstallResult, PostDownloadVersionType};
@@ -136,13 +136,12 @@ pub async fn start(
         } else {
             let downloaded_checksum =
                 download_version(client, version, root, &config.config, true).await?;
+            let archive_path = root.join(format!(
+                "{}.{}",
+                downloaded_archive.file_name, downloaded_archive.file_format
+            ));
 
             if let PostDownloadVersionType::Standard(downloaded_checksum) = downloaded_checksum {
-                let archive_path = root.join(format!(
-                    "{}.{}",
-                    downloaded_archive.file_name, downloaded_archive.file_format
-                ));
-
                 let checksum_path = root.join(format!(
                     "{}.{}",
                     downloaded_checksum.file_name, downloaded_checksum.file_format
@@ -162,6 +161,9 @@ pub async fn start(
 
                 info!("Checksum matched!");
                 tokio::fs::remove_file(checksum_path).await?;
+                unarchive::start(downloaded_archive).await?
+            } else if let PostDownloadVersionType::None = downloaded_checksum {
+                warn!("No checksum provided, skipping checksum verification");
                 unarchive::start(downloaded_archive).await?
             }
         }
@@ -409,6 +411,9 @@ async fn download_version(
                             semver: version.semver.clone(),
                         }))
                     } else {
+                        if get_sha256sum {
+                            return Ok(PostDownloadVersionType::None);
+                        }
                         let error_text = response.text().await?;
                         if error_text.contains("Not Found") {
                             Err(anyhow!(
