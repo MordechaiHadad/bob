@@ -4,6 +4,7 @@ use crate::{
         self, erase_handler, list_handler, list_remote_handler, rollback_handler, run_handler,
         sync_handler, uninstall_handler, update_handler, InstallResult,
     },
+    helpers::processes::is_neovim_running,
 };
 use anyhow::Result;
 use clap::{Args, CommandFactory, Parser};
@@ -179,11 +180,21 @@ pub async fn start(config: ConfigFile) -> Result<()> {
             version,
             no_install,
         } => {
+            if is_neovim_running() {
+                return Err(anyhow::anyhow!(
+                    "Neovim is currently running. Please close it before switching versions."
+                ));
+            }
             let version = super::version::parse_version_type(&client, &version).await?;
 
             handlers::use_handler::start(version, !no_install, &client, config).await?;
         }
         Cli::Install { version } => {
+            if is_neovim_running() {
+                return Err(anyhow::anyhow!(
+                    "Neovim is currently running. Please close it before installing."
+                ));
+            }
             let mut version = super::version::parse_version_type(&client, &version).await?;
 
             match handlers::install_handler::start(&mut version, &client, &config).await? {
@@ -203,20 +214,50 @@ pub async fn start(config: ConfigFile) -> Result<()> {
             }
         }
         Cli::Sync => {
+            if is_neovim_running() {
+                return Err(anyhow::anyhow!(
+                    "Neovim is currently running. Please close it before syncing."
+                ));
+            }
             info!("Starting sync process");
             sync_handler::start(&client, config).await?;
         }
         Cli::Uninstall { version } => {
+            if is_neovim_running() {
+                return Err(anyhow::anyhow!(
+                    "Neovim is currently running. Please close it before uninstalling."
+                ));
+            }
             info!("Starting uninstallation process");
             uninstall_handler::start(version.as_deref(), config.config).await?;
         }
-        Cli::Rollback => rollback_handler::start(config.config).await?,
-        Cli::Erase => erase_handler::start(config.config).await?,
+        Cli::Rollback => {
+            if is_neovim_running() {
+                return Err(anyhow::anyhow!(
+                    "Neovim is currently running. Please close it before rolling back."
+                ));
+            }
+            rollback_handler::start(config.config).await?
+        }
+        Cli::Erase => {
+            if is_neovim_running() {
+                return Err(anyhow::anyhow!(
+                    "Neovim is currently running. Please close it before erasing."
+                ));
+            }
+
+            erase_handler::start(config.config).await?
+        }
         Cli::List => list_handler::start(config.config).await?,
         Cli::Complete { shell } => {
             clap_complete::generate(shell, &mut Cli::command(), "bob", &mut std::io::stdout())
         }
         Cli::Update(data) => {
+            if is_neovim_running() {
+                return Err(anyhow::anyhow!(
+                    "Neovim is currently running. Please close it before updating."
+                ));
+            }
             update_handler::start(data, &client, config).await?;
         }
         Cli::ListRemote => list_remote_handler::start(config.config, client).await?,
