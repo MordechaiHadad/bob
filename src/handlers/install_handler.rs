@@ -17,7 +17,7 @@ use std::process::Stdio;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::{fs, process::Command};
-use tracing::{error, info};
+use tracing::info;
 use yansi::Paint;
 
 use super::{InstallResult, PostDownloadVersionType};
@@ -136,6 +136,7 @@ pub async fn start(
         } else {
             let downloaded_checksum =
                 download_version(client, version, root, &config.config, true).await?;
+            info!("{:?}", downloaded_checksum);
 
             if let PostDownloadVersionType::Standard(downloaded_checksum) = downloaded_checksum {
                 let archive_path = root.join(format!(
