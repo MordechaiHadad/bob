@@ -1,6 +1,7 @@
 use crate::config::Config;
 use anyhow::{anyhow, Result};
 use std::time::Duration;
+use sysinfo::System;
 use tokio::{process::Command, time::sleep};
 
 use super::{
@@ -145,4 +146,16 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
             Err(_) => return Err(anyhow!("Failed to wait on child process")),
         }
     }
+}
+
+pub fn is_neovim_running() -> bool {
+    let sys = System::new_all();
+
+    for process in sys.processes().values() {
+        let name = process.name().to_string_lossy().to_lowercase();
+        if name.contains("nvim") {
+            return true;
+        }
+    }
+    false
 }
