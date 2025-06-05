@@ -409,8 +409,10 @@ async fn download_version(
                             semver: version.semver.clone(),
                         }))
                     } else {
+                        if get_sha256sum {
+                            return Ok(PostDownloadVersionType::None);
+                        }
                         let error_text = response.text().await?;
-                        error!("Error downloading version: {}", error_text);
                         if error_text.contains("Not Found") {
                             Err(anyhow!(
                                 "Version does not exist in Neovim releases. Please check available versions with 'bob list-remote'"
@@ -705,8 +707,6 @@ async fn send_request(
     } else {
         format!("{url}/neovim/neovim/releases/download/{version_tag}/{platform}.{file_type}")
     };
-
-    info!("Downloading {} from {}", version.tag_name, request_url);
 
     client
         .get(request_url)
