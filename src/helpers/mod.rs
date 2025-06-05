@@ -26,10 +26,8 @@ use semver::Version;
 pub fn get_file_type() -> &'static str {
     if cfg!(target_family = "windows") {
         "zip"
-    } else if cfg!(target_os = "macos") {
-        "tar.gz"
     } else {
-        "appimage"
+        "tar.gz"
     }
 }
 

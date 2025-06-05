@@ -60,82 +60,6 @@ pub async fn start(file: LocalVersion) -> Result<()> {
     .await?;
     Ok(())
 }
-
-/// Expands a downloaded file on Linux.
-///
-/// This function is specific to Linux due to the use of certain features like `os::unix::fs::PermissionsExt`.
-/// It takes a `LocalVersion` struct which contains information about the downloaded file, such as its name and format.
-/// The function then checks if a directory with the same name as the downloaded file exists, and if so, removes it.
-/// It then sets the permissions of the downloaded file to `0o551` and extracts its contents using the `--appimage-extract` command.
-/// After extraction, the function renames the `squashfs-root` directory to the name of the downloaded file and changes the current directory to the renamed directory.
-/// It then removes certain files and renames the `usr` directory to `nvim-linux64`.
-/// Finally, it changes the current directory back to the parent directory.
-///
-/// # Arguments
-///
-/// * `downloaded_file` - A `LocalVersion` struct representing the downloaded file.
-///
-/// # Returns
-///
-/// This function returns a `Result` that indicates whether the operation was successful.
-/// If the operation was successful, the function returns `Ok(())`.
-/// If the operation failed, the function returns `Err` with a description of the error.
-///
-/// # Errors
-///
-/// This function will return an error if:
-///
-/// * A directory with the same name as the downloaded file could not be removed.
-/// * The permissions of the downloaded file could not be set.
-/// * The downloaded file could not be extracted.
-/// * The `squashfs-root` directory could not be renamed.
-/// * The current directory could not be changed.
-/// * Certain files could not be removed.
-/// * The `usr` directory could not be renamed.
-///
-/// # Example
-///
-/// ```rust
-/// let downloaded_file = LocalVersion {
-///     file_name: "nvim-linux",
-///     file_format: "AppImage",
-///     semver: semver::Version::parse("0.5.0").unwrap(),
-///     path: "/path/to/downloaded/file",
-/// };
-/// expand(downloaded_file);
-/// ```
-#[cfg(target_os = "linux")]
-fn expand(downloaded_file: LocalVersion) -> Result<()> {
-    use crate::helpers::filesystem::copy_dir;
-
-    use super::sync;
-    use std::fs::remove_dir_all;
-    use std::os::unix::fs::PermissionsExt;
-    use std::process::Command;
-
-    if fs::metadata(&downloaded_file.file_name).is_ok() {
-        fs::remove_dir_all(&downloaded_file.file_name)?;
-    }
-
-    let file = &format!(
-        "./{}.{}",
-        downloaded_file.file_name, downloaded_file.file_format
-    );
-    let mut perms = fs::metadata(file)?.permissions();
-    perms.set_mode(0o551);
-    fs::set_permissions(file, perms)?;
-
-    sync::handle_subprocess(Command::new(file).arg("--appimage-extract"))?;
-
-    let src_root = "squashfs-root";
-    let dest = downloaded_file.file_name;
-
-    copy_dir(Path::new(src_root).join("usr"), Path::new(&dest))?;
-    remove_dir_all(src_root)?;
-
-    Ok(())
-}
-
 /// Expands a downloaded file on Windows.
 ///
 /// This function is specific to Windows due to the use of certain features like `zip::ZipArchive`.
@@ -236,9 +160,9 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
     Ok(())
 }
 
-/// Expands a downloaded file on macOS.
+/// Expands a downloaded file on Unix systems (macOS and Linux).
 ///
-/// This function is specific to macOS due to the use of certain features like `os::unix::fs::PermissionsExt`.
+/// This function is specific to Unix systems due to the use of certain features like `os::unix::fs::PermissionsExt`.
 /// It takes a `LocalVersion` struct which contains information about the downloaded file, such as its name and format.
 /// The function then opens the file, decompresses it using `GzDecoder`, and extracts its contents using `tar::Archive`.
 /// During the extraction process, a progress bar is displayed to the user.
@@ -268,14 +192,14 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
 ///
 /// ```rust
 /// let downloaded_file = LocalVersion {
-///     file_name: "nvim-macos",
+///     file_name: "nvim-linux",
 ///     file_format: "tar.gz",
 ///     semver: semver::Version::parse("0.5.0").unwrap(),
 ///     path: "/path/to/downloaded/file",
 /// };
 /// expand(downloaded_file);
 /// ```
-#[cfg(target_os = "macos")] // I don't know if its worth making both expand functions into one function, but the API difference will cause so much if statements
+#[cfg(unix)]
 fn expand(downloaded_file: LocalVersion) -> Result<()> {
     use flate2::read::GzDecoder;
     use indicatif::{ProgressBar, ProgressStyle};
