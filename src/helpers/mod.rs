@@ -2,7 +2,6 @@ pub mod checksum;
 pub mod directories;
 pub mod filesystem;
 pub mod processes;
-pub mod sync;
 pub mod unarchive;
 pub mod version;
 use semver::Version;
@@ -11,8 +10,7 @@ use semver::Version;
 ///
 /// This function checks the target operating system using the `cfg!` macro and returns a string that corresponds to the appropriate file type for the Neovim binary download.
 /// For Windows, it returns "zip".
-/// For macOS, it returns "tar.gz".
-/// For other operating systems, it returns "appimage".
+/// For unix, it returns "tar.gz".
 ///
 /// # Returns
 ///
@@ -26,10 +24,8 @@ use semver::Version;
 pub fn get_file_type() -> &'static str {
     if cfg!(target_family = "windows") {
         "zip"
-    } else if cfg!(target_os = "macos") {
-        "tar.gz"
     } else {
-        "appimage"
+        "tar.gz"
     }
 }
 
