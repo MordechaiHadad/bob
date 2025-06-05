@@ -17,7 +17,7 @@ use std::process::Stdio;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::{fs, process::Command};
-use tracing::info;
+use tracing::{error, info};
 use yansi::Paint;
 
 use super::{InstallResult, PostDownloadVersionType};
@@ -410,6 +410,7 @@ async fn download_version(
                         }))
                     } else {
                         let error_text = response.text().await?;
+                        error!("Error downloading version: {}", error_text);
                         if error_text.contains("Not Found") {
                             Err(anyhow!(
                                 "Version does not exist in Neovim releases. Please check available versions with 'bob list-remote'"
