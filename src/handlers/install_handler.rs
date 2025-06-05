@@ -706,6 +706,8 @@ async fn send_request(
         format!("{url}/neovim/neovim/releases/download/{version_tag}/{platform}.{file_type}")
     };
 
+    info!("Downloading {} from {}", version.tag_name, request_url);
+
     client
         .get(request_url)
         .header("user-agent", "bob")
