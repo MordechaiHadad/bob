@@ -10,8 +10,7 @@ use semver::Version;
 ///
 /// This function checks the target operating system using the `cfg!` macro and returns a string that corresponds to the appropriate file type for the Neovim binary download.
 /// For Windows, it returns "zip".
-/// For macOS, it returns "tar.gz".
-/// For other operating systems, it returns "appimage".
+/// For unix, it returns "tar.gz".
 ///
 /// # Returns
 ///

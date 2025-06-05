@@ -36,7 +36,7 @@ use super::version::types::LocalVersion;
 /// ```rust
 /// let downloaded_file = LocalVersion {
 ///     file_name: "nvim-linux",
-///     file_format: "AppImage",
+///     file_format: "tar.gz",
 ///     semver: semver::Version::parse("0.5.0").unwrap(),
 ///     path: "/path/to/downloaded/file",
 /// };
