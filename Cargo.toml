@@ -97,7 +97,6 @@ zip = "2.2.0"
 [[bin]]
 path = "src/main.rs"
 name = "bob"
-plugin = false
 proc-macro = false
 required-features = []
 
