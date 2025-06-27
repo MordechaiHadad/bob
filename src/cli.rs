@@ -39,7 +39,7 @@ fn create_reqwest_client() -> Result<Client, Error> {
     if let Ok(github_token) = github_token {
         headers.insert(
             AUTHORIZATION,
-            HeaderValue::from_str(&format!("Bearer {}", github_token)).unwrap(),
+            HeaderValue::from_str(&format!("Bearer {github_token}")).unwrap(),
         );
     }
 
@@ -76,7 +76,7 @@ enum Cli {
         version: String,
     },
 
-    /// If Config::version_sync_file_location is set, the version in that file
+    /// If `Config::version_sync_file_location` is set, the version in that file
     /// will be parsed and installed
     Sync,
 

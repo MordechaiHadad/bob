@@ -351,9 +351,9 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
             }
 
             let new_path = if usr_path_lower.ends_with(';') {
-                format!("{usr_path_lower}{}", installation_dir)
+                format!("{usr_path_lower}{installation_dir}")
             } else {
-                format!("{usr_path_lower};{}", installation_dir)
+                format!("{usr_path_lower};{installation_dir}")
             };
 
             env.set_value("Path", &new_path)?;
