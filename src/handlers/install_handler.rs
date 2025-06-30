@@ -617,7 +617,7 @@ async fn handle_building_from_source(
         _ => "RelWithDebInfo",
     };
 
-    let build_arg = format!("CMAKE_BUILD_TYPE={}", build_type);
+    let build_arg = format!("CMAKE_BUILD_TYPE={build_type}");
 
     cfg_if::cfg_if! {
         if #[cfg(windows)] {

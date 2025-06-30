@@ -27,7 +27,7 @@ pub fn sha256cmp(a: &Path, b: &Path, filename: &str) -> Result<bool> {
     io::copy(&mut file, &mut hasher)?;
 
     let hash = hasher.finalize();
-    let hash = format!("{:x}", hash);
+    let hash = format!("{hash:x}");
 
     Ok(hash == checksum)
 }
