@@ -123,7 +123,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
         ProgressStyle::default_bar()
             .template(
                 "{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len}",
-            )
+            )?
             .progress_chars("█  "),
     );
     pb.set_message("Expanding archive");
@@ -235,7 +235,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
         ProgressStyle::default_bar()
             .template(
                 "{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len}",
-            )
+            )?
             .progress_chars("█  "),
     );
     pb.set_message("Expanding archive");
