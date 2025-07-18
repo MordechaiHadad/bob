@@ -361,23 +361,50 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
             use tokio::fs::File;
             use tokio::io::AsyncWriteExt;
             use what_the_path::shell::Shell;
+            use tracing::warn;
 
-            let shell = Shell::detect_by_shell_var()?;
+            let shell = match Shell::detect_by_shell_var() {
+                Ok(shell) => shell,
+                Err(error) => {
+                    warn!("Failed to detect shell: {error}");
+                    return Ok(());
+                }
+            };
             let env_paths = copy_env_files_if_not_exist(&config.config, installation_dir).await?;
 
             match shell {
                 Shell::Fish(fish) => {
-                    let files = fish.get_rcfiles()?;
+                    let files = match fish.get_rcfiles() {
+                        Ok(files) => files,
+                        Err(error) => {
+                            warn!("Failed to get fish rc files: {error}");
+                            return Ok(());
+                        }
+                    };
                     let fish_file = files[0].join("bob.fish");
-                    if fish_file.exists() { return Ok(()) }
+                    if fish_file.exists() {
+                        warn!("Fish rc file already exists: {}", fish_file.display());
+                        return Ok(());
+                    }
+
                     let mut opened_file = File::create(fish_file).await?;
                     opened_file.write_all(format!("source \"{}\"\n", env_paths[1].to_str().unwrap()).as_bytes()).await?;
                     opened_file.flush().await?;
                 },
                 shell => {
-                    let files = shell.get_rcfiles()?;
+                    let files = match shell.get_rcfiles() {
+                        Ok(files) => files,
+                        Err(error) => {
+                            warn!("Failed to get shell rc files: {error}");
+                            return Ok(());
+                        }
+                    };
+                    let line = format!(". \"{}\"", env_paths[0].to_str().unwrap());
                     for file in files {
-                        what_the_path::shell::append_to_rcfile(file, &format!(". \"{}\"", env_paths[0].to_str().unwrap()))?;
+                        if let Err(error) = what_the_path::shell::append_to_rcfile(file, &line) {
+                            warn!("Failed to append to rc file: {error}");
+                            return Ok(());
+                        }
                     }
                 }
             }
