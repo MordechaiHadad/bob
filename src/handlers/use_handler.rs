@@ -5,7 +5,7 @@ use std::env;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tokio::fs::{self};
-use tracing::{info, warn};
+use tracing::info;
 
 use crate::config::{Config, ConfigFile};
 use crate::handlers::{install_handler, InstallResult};
@@ -361,6 +361,7 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
             use tokio::fs::File;
             use tokio::io::AsyncWriteExt;
             use what_the_path::shell::Shell;
+            use tracing::warn;
 
             let shell = match Shell::detect_by_shell_var() {
                 Ok(shell) => shell,
