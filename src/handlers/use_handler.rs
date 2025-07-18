@@ -385,7 +385,7 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
                         warn!("Fish rc file already exists: {}", fish_file.display());
                         return Ok(());
                     }
-                
+
                     let mut opened_file = File::create(fish_file).await?;
                     opened_file.write_all(format!("source \"{}\"\n", env_paths[1].to_str().unwrap()).as_bytes()).await?;
                     opened_file.flush().await?;
