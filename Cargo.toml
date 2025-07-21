@@ -8,6 +8,7 @@ keywords = ["neovim", "version-manager"]
 categories = ["command-line-utilities"]
 license = "MIT"
 repository = "https://github.com/MordechaiHadad/bob"
+rust-version = "1.82"
 
 [features]
 default = ["rustls-tls"]
