@@ -10,7 +10,7 @@ use anyhow::Result;
 use config::ConfigFile;
 use helpers::{processes::handle_nvim_process, version};
 use std::{env, path::Path, process::exit};
-use tracing::{error, Level};
+use tracing::{error, warn, Level};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -45,6 +45,11 @@ async fn run() -> Result<()> {
         handle_nvim_process(&config.config, rest_args).await?;
 
         return Ok(());
+    }
+
+    if cfg!(target_os = "freebsd") {
+        let fbsd_linux_url = "https://docs.freebsd.org/en/books/handbook/linuxemu/";
+        warn!("Using Bob on FreeBSD requires the Linux compat; see {fbsd_linux_url}");
     }
 
     cli::start(config).await?;
