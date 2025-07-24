@@ -41,7 +41,7 @@ features = ["derive"]
 optional = false
 
 [dependencies.dialoguer]
-version = "0.10.3"
+version = "0.11.0"
 features = []
 optional = false
 default-features = false
