@@ -16,6 +16,7 @@ native-tls = ["reqwest/default-tls"]
 rustls-tls = ["reqwest/rustls-tls-native-roots"]
 
 [dependencies]
+console = "0.15.11"
 anyhow = "1.0.52"
 cfg-if = "1.0"
 indicatif = "0.16.2"
