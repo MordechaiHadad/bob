@@ -361,8 +361,8 @@ async fn download_version(
 
                         // Progress Bar Setup
                         let pb = ProgressBar::new(total_size);
-                        pb.set_style(ProgressStyle::default_bar()
-                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
+                        pb.set_style(ProgressStyle::with_template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
+                    .unwrap()
                     .progress_chars("█  "));
                         let dl = if get_sha256sum { "checksum" } else { "version" };
                         pb.set_message(format!("Downloading {dl}: {}", version.tag_name));
