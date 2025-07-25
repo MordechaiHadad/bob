@@ -1,4 +1,8 @@
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    io::{self, Write},
+    path::PathBuf,
+};
 
 use anyhow::Result;
 use reqwest::Client;
@@ -70,6 +74,8 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
     let stable_version = search_stable_version(&client).await?;
     let padding = " ".repeat(12);
 
+    let mut stdout = io::stdout().lock();
+
     for version in filtered_versions {
         let version_installed = local_versions.iter().any(|v| {
             v.file_name()
@@ -83,28 +89,46 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
             ""
         };
 
-        if helpers::version::is_version_used(&version.name, &config).await {
-            println!(
+        let write_result = if helpers::version::is_version_used(&version.name, &config).await {
+            writeln!(
+                stdout,
                 "{padding}{}{}",
-                Paint::green(version.name),
+                Paint::green(&version.name),
                 stable_version_string
-            );
+            )
         } else if version_installed {
-            println!(
+            writeln!(
+                stdout,
                 "{padding}{}{}",
                 Paint::yellow(&version.name),
                 stable_version_string
-            );
+            )
+        } else {
+            writeln!(
+                stdout,
+                "{padding}{}{}",
+                &version.name, stable_version_string
+            )
+        };
 
+        if let Err(e) = write_result {
+            if e.kind() == io::ErrorKind::BrokenPipe {
+                return Ok(());
+            } else {
+                return Err(e.into());
+            }
+        }
+
+        if version_installed {
             local_versions.retain(|v| {
                 v.file_name()
                     .and_then(|str| str.to_str())
                     .is_none_or(|str| !str.contains(&version.name))
             });
-        } else {
-            println!("{padding}{}{}", version.name, stable_version_string);
         }
     }
+
+    stdout.flush()?;
 
     Ok(())
 }
