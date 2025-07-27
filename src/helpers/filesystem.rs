@@ -34,8 +34,8 @@ pub async fn remove_dir(directory: &str) -> Result<()> {
     let read_dir = path.read_dir()?;
 
     let pb = ProgressBar::new(size.try_into()?);
-    pb.set_style(ProgressStyle::default_bar()
-                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len} ({per_sec}, {eta})")
+    pb.set_style(ProgressStyle::with_template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len} ({per_sec}, {eta})")
+                    .unwrap()
                     .progress_chars("█  "));
     pb.set_message(format!("Deleting {}", path.display()));
 
