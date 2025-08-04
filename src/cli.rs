@@ -1,15 +1,15 @@
 use crate::{
     config::ConfigFile,
     handlers::{
-        self, erase_handler, list_handler, list_remote_handler, rollback_handler, run_handler,
-        sync_handler, uninstall_handler, update_handler, InstallResult,
+        self, InstallResult, erase_handler, list_handler, list_remote_handler, rollback_handler,
+        run_handler, sync_handler, uninstall_handler, update_handler,
     },
     helpers::processes::is_neovim_running,
 };
 use anyhow::Result;
 use clap::{Args, CommandFactory, Parser};
 use clap_complete::Shell;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
+use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
 use reqwest::{Client, Error};
 use tracing::info;
 

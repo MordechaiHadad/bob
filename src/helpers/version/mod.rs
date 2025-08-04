@@ -5,9 +5,9 @@ use self::types::{ParsedVersion, VersionType};
 use super::directories;
 use crate::{
     config::Config,
-    github_requests::{deserialize_response, RepoCommit, UpstreamVersion},
+    github_requests::{RepoCommit, UpstreamVersion, deserialize_response},
 };
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use regex::Regex;
 use reqwest::Client;
 use semver::Version;
