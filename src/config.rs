@@ -133,9 +133,48 @@ pub struct Config {
     pub ignore_running_instances: Option<bool>,
 }
 
+
+/// Private trait for processing environment variables in configuration fields.
+/// Allowss creating a list and using polymorphism to handle different types of fields that may
+/// contain environment variables.
+trait EnvVarProcessor {
+    fn process(&mut self) -> Result<()>;
+}
+
+impl EnvVarProcessor for Option<String> {
+    /// `process` method for `Option<String>`.
+    /// This is a method for structs that implement the `EnvVarProcessor` trait.
+    ///
+    /// It's deigned to process the `Option<String>` type, checking if it contains a value that
+    /// matches the `ENVIRONMENT_VAR_REGEX`.
+    ///
+    /// # Arguments
+    ///
+    /// * `&mut self` - A mutable reference to the `Option<String>` instance.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<()>` - Returns `Ok(())` if the processing is successful. Error cases include when the environment variable cannot be found or if the regex fails to match.
+    fn process(&mut self) -> Result<()> {
+        if let Some(value) = self {
+            if ENVIRONMENT_VAR_REGEX.is_match(value) {
+                let extract = ENVIRONMENT_VAR_REGEX.find(value).map_or("", |m| m.as_str());
+
+                let var = env::var(extract).expect("Failed to get environment variable");
+
+                *value = value.replace(&format!("${extract}"), &var);
+            }
+        }
+        Ok(())
+    }
+}
+
 /// Handles environment variables in the configuration.
 ///
-/// This function takes a mutable reference to a `Config` object. It creates a `Regex` to match environment variables in the format `$VARIABLE_NAME`. It then calls the `handle_envar` function for each field in the `Config` object that may contain an environment variable.
+/// This function takes a mutable reference to a `Config` object. It uses a `Regex` to match environment variables in the format `$VARIABLE_NAME`.
+/// It then calls the the EnvVarProcessor Trait's `process` method on each field in the `Config`
+/// object that may contain an environment variable.
+///
 ///
 /// # Arguments
 ///
@@ -161,54 +200,12 @@ pub struct Config {
 /// assert_eq!(config.version_sync_file_location, Some(format!("SYNC={}", env::var("SYNC").unwrap())));
 /// ```
 fn handle_envars(config: &mut Config) -> Result<()> {
-    let re = Regex::new(r"\$([A-Z_]+)").unwrap();
+    let mut fields = [
+        &mut config.downloads_location,
+        &mut config.github_mirror,
+        &mut config.installation_location,
+        &mut config.version_sync_file_location,
+    ];
 
-    handle_envar(&mut config.downloads_location, &re)?;
-
-    handle_envar(&mut config.github_mirror, &re)?;
-
-    handle_envar(&mut config.installation_location, &re)?;
-
-    handle_envar(&mut config.version_sync_file_location, &re)?;
-
-    Ok(())
-}
-
-/// Handles environment variables in the configuration.
-///
-/// This function takes a mutable reference to an `Option<String>` and a reference to a `Regex`. If the `Option<String>` is `None`, the function returns `Ok(())`. If the `Option<String>` is `Some(value)`, the function checks if the `value` matches the `Regex`. If it does, the function extracts the environment variable from the `value`, replaces the environment variable in the `value` with its value from the environment, and updates the `Option<String>` with the new `value`.
-///
-/// # Arguments
-///
-/// * `item: &mut Option<String>` - A mutable reference to an `Option<String>` that may contain an environment variable.
-/// * `re: &Regex` - A reference to a `Regex` to match the environment variable in the `Option<String>`.
-///
-/// # Returns
-///
-/// * `Result<()>` - Returns `Ok(())` if the function completes successfully. If an error occurs, it returns `Err`.
-///
-/// # Example
-///
-/// ```rust
-/// let mut item = Some("HOME=${HOME}".to_string());
-/// let re = Regex::new(r"\$\{(.+?)\}").unwrap();
-/// handle_envar(&mut item, &re).unwrap();
-/// assert_eq!(item, Some(format!("HOME={}", env::var("HOME").unwrap())));
-/// ```
-fn handle_envar(item: &mut Option<String>, re: &Regex) -> Result<()> {
-    let value = if let Some(value) = item.as_ref() {
-        value
-    } else {
-        return Ok(());
-    };
-
-    if re.is_match(value) {
-        let extract = re.captures(value).unwrap().get(1).unwrap().as_str();
-        let var =
-            env::var(extract).unwrap_or(format!("Couldn't find {extract} environment variable"));
-
-        *item = Some(value.replace(&format!("${extract}"), &var))
-    }
-
-    Ok(())
+    fields.iter_mut().try_for_each(|field| field.process())
 }
