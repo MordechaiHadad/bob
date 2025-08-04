@@ -76,8 +76,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
             })
         }
         _ => {
-            let version_regex = Regex::new(r"^v?[0-9]+\.[0-9]+\.[0-9]+$")?;
-            if version_regex.is_match(version) {
+            if crate::VERSION_REGEX.is_match(version) {
                 let mut returned_version = version.to_string();
                 if !version.contains('v') {
                     returned_version.insert(0, 'v');
