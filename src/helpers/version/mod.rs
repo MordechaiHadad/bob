@@ -2,7 +2,7 @@ pub mod nightly;
 pub mod types;
 
 use self::types::{ParsedVersion, VersionType};
-use super::directories;
+use crate::helpers::directories;
 use crate::{
     config::Config,
     github_requests::{RepoCommit, UpstreamVersion, deserialize_response},
