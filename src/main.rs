@@ -1,5 +1,6 @@
 mod cli;
 mod config;
+mod consts;
 pub mod github_requests;
 mod handlers;
 mod helpers;
@@ -9,6 +10,8 @@ use config::ConfigFile;
 use helpers::{processes::handle_nvim_process, version};
 use std::{env, path::Path, process::exit};
 use tracing::{Level, error, warn};
+
+pub(crate) use crate::consts::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
