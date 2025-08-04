@@ -363,56 +363,52 @@ async fn download_version(
                 response?
             };
 
-            match response.status() {
-                reqwest::StatusCode::OK => {
-                    let total_size = response.content_length().unwrap_or(0);
-                    let mut response_bytes = response.bytes_stream();
+            if let reqwest::StatusCode::OK = response.status() {
+                let total_size = response.content_length().unwrap_or(0);
+                let mut response_bytes = response.bytes_stream();
 
-                    let pbw = PbWrapper::new(total_size, &version.tag_name, get_sha256sum);
+                let pbw = PbWrapper::new(total_size, &version.tag_name, get_sha256sum);
 
-                    let file_type = file_type_ext(version, get_sha256sum);
+                let file_type = file_type_ext(version, get_sha256sum);
 
-                    let mut file =
-                        tokio::fs::File::create(format!("{}.{file_type}", version.tag_name))
-                            .await?;
-                    let mut downloaded: u64 = 0;
+                let mut file =
+                    tokio::fs::File::create(format!("{}.{file_type}", version.tag_name)).await?;
+                let mut downloaded: u64 = 0;
 
-                    while let Some(item) = response_bytes.next().await {
-                        let chunk = item.map_err(|_| anyhow!("hello"))?;
-                        file.write_all(&chunk).await?;
-                        let new = min(downloaded + (chunk.len() as u64), total_size);
-                        downloaded = new;
-                        pbw.set_position(new);
-                    }
-
-                    file.flush().await?;
-                    file.sync_all().await?;
-
-                    pbw.finish(root, file_type.clone().into());
-
-                    Ok(PostDownloadVersionType::Standard(LocalVersion {
-                        file_name: version.tag_name.to_owned(),
-                        file_format: file_type.to_string(),
-                        path: root.display().to_string(),
-                        semver: version.semver.clone(),
-                    }))
+                while let Some(item) = response_bytes.next().await {
+                    let chunk = item.map_err(|_| anyhow!("hello"))?;
+                    file.write_all(&chunk).await?;
+                    let new = min(downloaded + (chunk.len() as u64), total_size);
+                    downloaded = new;
+                    pbw.set_position(new);
                 }
-                _ => {
-                    if get_sha256sum {
-                        return Ok(PostDownloadVersionType::None);
-                    }
-                    let error_text = response.text().await?;
-                    if error_text.contains("Not Found") {
-                        Err(anyhow!(
-                            "Version does not exist in Neovim releases. Please check available versions with 'bob list-remote'"
-                        ))
-                    } else {
-                        Err(anyhow!(
-                            "Failed to download version {}: {}",
-                            version.tag_name,
-                            error_text
-                        ))
-                    }
+
+                file.flush().await?;
+                file.sync_all().await?;
+
+                pbw.finish(root, file_type.clone().into());
+
+                Ok(PostDownloadVersionType::Standard(LocalVersion {
+                    file_name: version.tag_name.to_owned(),
+                    file_format: file_type.to_string(),
+                    path: root.display().to_string(),
+                    semver: version.semver.clone(),
+                }))
+            } else {
+                if get_sha256sum {
+                    return Ok(PostDownloadVersionType::None);
+                }
+                let error_text = response.text().await?;
+                if error_text.contains("Not Found") {
+                    Err(anyhow!(
+                        "Version does not exist in Neovim releases. Please check available versions with 'bob list-remote'"
+                    ))
+                } else {
+                    Err(anyhow!(
+                        "Failed to download version {}: {}",
+                        version.tag_name,
+                        error_text
+                    ))
                 }
             }
         }
@@ -630,12 +626,9 @@ async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -
 
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
-            windows_deps(
-                build_arg.to_string(),
-                build_type.to_string(),
-                folder_name.to_string_lossy().to_string(),
-            )
-                .await?;
+
+            windows_deps(build_arg.to_string(), build_type.to_string(), folder_name.to_string_lossy().to_string()).await?;
+
         } else {
             let location_arg = format!("CMAKE_INSTALL_PREFIX={}", folder_name.to_string_lossy());
             handle_subprocess(Command::new("make").arg(&location_arg).arg(&build_arg)).await?;
