@@ -39,6 +39,11 @@ impl ConfigFile {
 }
 
 impl ConfigFile {
+    /// Does what it says on the tin, get's the config file
+    ///
+    /// # Returns
+    /// * `ConfigFile` - A struct containing the path to the config file, the format of the config
+    ///   file, and the parsed configuration.
     pub async fn get() -> Result<ConfigFile> {
         let config_file = crate::helpers::directories::get_config_file()?;
         let (config, format) = match fs::read_to_string(&config_file).await {
