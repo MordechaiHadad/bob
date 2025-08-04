@@ -2,11 +2,11 @@ use crate::{
     config::Config,
     helpers::{self, directories},
 };
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use dialoguer::{
-    console::{style, Term},
-    theme::ColorfulTheme,
     Confirm, MultiSelect,
+    console::{Term, style},
+    theme::ColorfulTheme,
 };
 use regex::Regex;
 use reqwest::Client;

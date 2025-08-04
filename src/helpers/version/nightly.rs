@@ -1,5 +1,4 @@
-use anyhow::{anyhow, Result};
-use regex::Regex;
+use anyhow::{Result, anyhow};
 use tokio::fs;
 
 use super::types::LocalNightly;

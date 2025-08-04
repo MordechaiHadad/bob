@@ -4,13 +4,11 @@ pub mod github_requests;
 mod handlers;
 mod helpers;
 
-extern crate core;
-
 use anyhow::Result;
 use config::ConfigFile;
 use helpers::{processes::handle_nvim_process, version};
 use std::{env, path::Path, process::exit};
-use tracing::{error, warn, Level};
+use tracing::{Level, error, warn};
 
 #[tokio::main]
 async fn main() -> Result<()> {

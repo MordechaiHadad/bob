@@ -5,7 +5,7 @@ use anyhow::Result;
 use reqwest::Client;
 use tracing::{info, warn};
 
-use super::{install_handler, InstallResult};
+use super::{InstallResult, install_handler};
 
 /// Starts the update process based on the provided `Update` data, `Client`, and `Config`.
 ///

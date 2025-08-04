@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use dialoguer::Confirm;
 use reqwest::Client;
 use std::env;
@@ -8,7 +8,7 @@ use tokio::fs::{self};
 use tracing::info;
 
 use crate::config::{Config, ConfigFile};
-use crate::handlers::{install_handler, InstallResult};
+use crate::handlers::{InstallResult, install_handler};
 use crate::helpers;
 use crate::helpers::directories::get_installation_directory;
 use crate::helpers::version::types::{ParsedVersion, VersionType};
@@ -411,7 +411,9 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
         }
     }
 
-    info!("Added {installation_dir} to system PATH. Please start a new terminal session for changes to take effect.");
+    info!(
+        "Added {installation_dir} to system PATH. Please start a new terminal session for changes to take effect."
+    );
 
     Ok(())
 }

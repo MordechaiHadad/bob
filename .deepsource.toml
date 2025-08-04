@@ -3,5 +3,5 @@ version = 1
 [[analyzers]]
 name = "rust"
 
-  [analyzers.meta]
-  msrv = "stable"
+[analyzers.meta]
+msrv = "stable"
