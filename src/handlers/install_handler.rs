@@ -1,11 +1,11 @@
 use crate::config::{Config, ConfigFile};
-use crate::github_requests::{get_commits_for_nightly, get_upstream_nightly, UpstreamVersion};
+use crate::github_requests::{UpstreamVersion, get_commits_for_nightly, get_upstream_nightly};
 use crate::helpers::checksum::sha256cmp;
 use crate::helpers::processes::handle_subprocess;
 use crate::helpers::version::nightly::produce_nightly_vec;
 use crate::helpers::version::types::{LocalVersion, ParsedVersion, VersionType};
 use crate::helpers::{self, directories, filesystem, unarchive};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
@@ -353,85 +353,127 @@ async fn download_version(
         VersionType::Normal | VersionType::Nightly | VersionType::Latest => {
             let response = send_request(client, config, version, get_sha256sum).await;
 
-            match response {
-                Ok(response) => {
-                    if response.status() == 200 {
-                        let total_size = response.content_length().unwrap_or(0);
-                        let mut response_bytes = response.bytes_stream();
+            // Handle error case first so we don't need a match statement
+            let response = if let Err(error) = response {
+                return Err(anyhow!(
+                    "Failed to download version {}: {error}",
+                    version.tag_name
+                ));
+            } else {
+                response?
+            };
 
-                        // Progress Bar Setup
-                        let pb = ProgressBar::new(total_size);
-                        pb.set_style(ProgressStyle::with_template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
-                    .unwrap()
-                    .progress_chars("█  "));
-                        let dl = if get_sha256sum { "checksum" } else { "version" };
-                        pb.set_message(format!("Downloading {dl}: {}", version.tag_name));
+            match response.status() {
+                reqwest::StatusCode::OK => {
+                    let total_size = response.content_length().unwrap_or(0);
+                    let mut response_bytes = response.bytes_stream();
 
-                        let file_type = helpers::get_file_type();
-                        let file_type = if get_sha256sum {
-                            if version.version_type == VersionType::Nightly
-                                || version.semver.as_ref().unwrap() > &Version::new(0, 10, 4)
-                            {
-                                "shasum.txt".to_string()
-                            } else {
-                                format!("{file_type}.sha256sum")
-                            }
-                        } else {
-                            file_type.to_owned()
-                        };
+                    let pbw = PbWrapper::new(total_size, &version.tag_name, get_sha256sum);
 
-                        let mut file =
-                            tokio::fs::File::create(format!("{}.{file_type}", version.tag_name))
-                                .await?;
+                    let file_type = file_type_ext(version, get_sha256sum);
 
-                        let mut downloaded: u64 = 0;
+                    let mut file =
+                        tokio::fs::File::create(format!("{}.{file_type}", version.tag_name))
+                            .await?;
+                    let mut downloaded: u64 = 0;
 
-                        while let Some(item) = response_bytes.next().await {
-                            let chunk = item.map_err(|_| anyhow!("hello"))?;
-                            file.write_all(&chunk).await?;
-                            let new = min(downloaded + (chunk.len() as u64), total_size);
-                            downloaded = new;
-                            pb.set_position(new);
-                        }
+                    while let Some(item) = response_bytes.next().await {
+                        let chunk = item.map_err(|_| anyhow!("hello"))?;
+                        file.write_all(&chunk).await?;
+                        let new = min(downloaded + (chunk.len() as u64), total_size);
+                        downloaded = new;
+                        pbw.set_position(new);
+                    }
 
-                        file.flush().await?;
-                        file.sync_all().await?;
+                    file.flush().await?;
+                    file.sync_all().await?;
 
-                        pb.finish_with_message(format!(
-                            "Downloaded {dl} {} to {}/{}.{file_type}",
-                            version.tag_name,
-                            root.display(),
-                            version.tag_name
-                        ));
+                    pbw.finish(root, file_type.clone().into());
 
-                        Ok(PostDownloadVersionType::Standard(LocalVersion {
-                            file_name: version.tag_name.to_owned(),
-                            file_format: file_type.to_string(),
-                            path: root.display().to_string(),
-                            semver: version.semver.clone(),
-                        }))
+                    Ok(PostDownloadVersionType::Standard(LocalVersion {
+                        file_name: version.tag_name.to_owned(),
+                        file_format: file_type.to_string(),
+                        path: root.display().to_string(),
+                        semver: version.semver.clone(),
+                    }))
+                }
+                _ => {
+                    if get_sha256sum {
+                        return Ok(PostDownloadVersionType::None);
+                    }
+                    let error_text = response.text().await?;
+                    if error_text.contains("Not Found") {
+                        Err(anyhow!(
+                            "Version does not exist in Neovim releases. Please check available versions with 'bob list-remote'"
+                        ))
                     } else {
-                        if get_sha256sum {
-                            return Ok(PostDownloadVersionType::None);
-                        }
-                        let error_text = response.text().await?;
-                        if error_text.contains("Not Found") {
-                            Err(anyhow!(
-                                "Version does not exist in Neovim releases. Please check available versions with 'bob list-remote'"
-                            ))
-                        } else {
-                            Err(anyhow!(
-                                "Please provide an existing neovim version, {}",
-                                error_text
-                            ))
-                        }
+                        Err(anyhow!(
+                            "Failed to download version {}: {}",
+                            version.tag_name,
+                            error_text
+                        ))
                     }
                 }
-                Err(error) => Err(anyhow!(error)),
             }
         }
         VersionType::Hash => handle_building_from_source(version, config).await,
         VersionType::NightlyRollback => Ok(PostDownloadVersionType::None),
+    }
+}
+
+struct PbWrapper<'a, S> {
+    pb: ProgressBar,
+    tag_name: &'a S,
+    download_type: &'static str,
+}
+
+impl<'a, S> PbWrapper<'_, S>
+where
+    S: AsRef<str>,
+{
+    fn new(total_size: u64, tag_name: &'a S, get_sha256sum: bool) -> PbWrapper<'a, S> {
+        let pb = ProgressBar::new(total_size);
+        pb.set_style(ProgressStyle::with_template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
+        .map_err(|_| anyhow!("Failed to set progress bar style")).unwrap()
+        .progress_chars("█  "));
+        let dl = if get_sha256sum { "checksum" } else { "version" };
+        PbWrapper {
+            pb,
+            tag_name,
+            download_type: dl,
+        }
+    }
+
+    fn finish<P>(&self, root: P, file_type: S)
+    where
+        P: AsRef<Path>,
+    {
+        self.pb.finish_with_message(format!(
+            "Downloaded {} {} to {}/{}.{}",
+            self.download_type,
+            self.tag_name.as_ref(),
+            root.as_ref().display(),
+            self.tag_name.as_ref(),
+            file_type.as_ref()
+        ));
+    }
+
+    fn set_position(&self, position: u64) {
+        self.pb.set_position(position);
+    }
+}
+
+fn file_type_ext(version: &ParsedVersion, get_sha256sum: bool) -> std::borrow::Cow<'static, str> {
+    if get_sha256sum {
+        if version.version_type == VersionType::Nightly
+            || version.semver.as_ref().unwrap() > &Version::new(0, 10, 4)
+        {
+            std::borrow::Cow::Owned("shasum.txt".to_string())
+        } else {
+            std::borrow::Cow::Owned(format!("{}.sha256sum", crate::FILETYPE_EXT))
+        }
+    } else {
+        std::borrow::Cow::Owned(crate::FILETYPE_EXT.to_string())
     }
 }
 
@@ -470,10 +512,8 @@ async fn download_version(
 /// let config = Config::default();
 /// let result = handle_building_from_source(&version, &config).await;
 /// ```
-async fn handle_building_from_source(
-    version: &ParsedVersion,
-    config: &Config,
-) -> Result<PostDownloadVersionType> {
+#[rustfmt::skip]
+async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -> Result<PostDownloadVersionType> {
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
             if env::var("VisualStudioVersion").is_err() {
@@ -496,8 +536,8 @@ async fn handle_building_from_source(
             }
 
         }
-
     }
+
     match Command::new("cmake").output().await {
         Ok(_) => (),
         Err(error) => {
@@ -534,11 +574,8 @@ async fn handle_building_from_source(
     if let Err(error) = fs::metadata(".git").await {
         match error.kind() {
             std::io::ErrorKind::NotFound => {
-                Command::new("git")
-                    .arg("init")
-                    .stdout(Stdio::null())
-                    .spawn()?
-                    .wait()
+                Command::new("git").arg("init").stdout(Stdio::null())
+                    .spawn()?.wait()
                     .await?;
             }
 
@@ -546,63 +583,35 @@ async fn handle_building_from_source(
         }
     };
 
-    // check if repo has a remote
-    let remote = Command::new("git")
-        .arg("remote")
-        .arg("get-url")
-        .arg("origin")
-        .stdout(Stdio::null())
-        .spawn()?
-        .wait()
-        .await?;
+    {
 
+    // check if repo has a remote
+    let remote = Command::new("git").arg("remote").arg("get-url").arg("origin").stdout(Stdio::null())
+        .spawn()?.wait().await?;
     if !remote.success() {
         // add neovim's remote
-        Command::new("git")
-            .arg("remote")
-            .arg("add")
-            .arg("origin")
-            .arg("https://github.com/neovim/neovim.git")
-            .spawn()?
-            .wait()
-            .await?;
+        Command::new("git").arg("remote").arg("add").arg("origin").arg("https://github.com/neovim/neovim.git")
+            .spawn()?.wait().await?;
     } else {
         // set neovim's remote otherwise
-        Command::new("git")
-            .arg("remote")
-            .arg("set-url")
-            .arg("origin")
-            .arg("https://github.com/neovim/neovim.git")
-            .spawn()?
-            .wait()
-            .await?;
+        Command::new("git").arg("remote").arg("set-url").arg("origin").arg("https://github.com/neovim/neovim.git")
+            .spawn()?.wait().await?;
     };
     // fetch version from origin
-    let fetch_successful = Command::new("git")
-        .arg("fetch")
-        .arg("--depth")
-        .arg("1")
-        .arg("origin")
-        .arg(&version.non_parsed_string)
-        .spawn()?
-        .wait()
-        .await?
-        .success();
+    let fetch_successful = Command::new("git").arg("fetch").arg("--depth").arg("1").arg("origin").arg(&version.non_parsed_string)
+        .spawn()?.wait().await?.success();
 
     if !fetch_successful {
-        return Err(anyhow!(
-            "fetching remote failed, try providing the full commit hash"
-        ));
+        return Err(anyhow!("fetching remote failed, try providing the full commit hash"));
     }
 
     // checkout fetched files
-    Command::new("git")
-        .arg("checkout")
-        .arg("FETCH_HEAD")
-        .stdout(Stdio::null())
+    Command::new("git").arg("checkout").arg("FETCH_HEAD").stdout(Stdio::null())
         .spawn()?
         .wait()
         .await?;
+
+    }
 
     if fs::metadata("build").await.is_ok() {
         filesystem::remove_dir("build").await?;
@@ -621,20 +630,14 @@ async fn handle_building_from_source(
 
     cfg_if::cfg_if! {
         if #[cfg(windows)] {
-            if fs::metadata(".deps").await.is_ok() {
-                helpers::filesystem::remove_dir(".deps").await?;
-            }
-            handle_subprocess(Command::new("cmake").arg("-S").arg("cmake.deps").arg("-B").arg(".deps").arg("-D").arg(&build_arg)).await?;
-            handle_subprocess(Command::new("cmake").arg("--build").arg(".deps").arg("--config").arg(build_type)).await?;
-            handle_subprocess(Command::new("cmake").arg("-B").arg("build").arg("-D").arg(&build_arg)).await?;
-            handle_subprocess(Command::new("cmake").arg("--build").arg("build").arg("--config").arg(build_type)).await?;
-            handle_subprocess(Command::new("cmake").arg("--install").arg("build").arg("--prefix").arg(&folder_name)).await?;
+            windows_deps(
+                build_arg.to_string(),
+                build_type.to_string(),
+                folder_name.to_string_lossy().to_string(),
+            )
+                .await?;
         } else {
-            let location_arg = format!(
-                "CMAKE_INSTALL_PREFIX={}",
-                folder_name.to_string_lossy()
-            );
-
+            let location_arg = format!("CMAKE_INSTALL_PREFIX={}", folder_name.to_string_lossy());
             handle_subprocess(Command::new("make").arg(&location_arg).arg(&build_arg)).await?;
             handle_subprocess(Command::new("make").arg("install")).await?;
         }
@@ -644,6 +647,25 @@ async fn handle_building_from_source(
     file.write_all(version.non_parsed_string.as_bytes()).await?;
 
     Ok(PostDownloadVersionType::Hash)
+}
+
+#[cfg(target_os = "windows")]
+#[rustfmt::skip]
+async fn windows_deps<S>(build_arg: S, build_type: S, folder_name: S) -> Result<()>
+where
+    S: AsRef<std::ffi::OsStr>
+{
+    if fs::metadata(".deps").await.is_ok() {
+        helpers::filesystem::remove_dir(".deps").await?;
+    }
+
+    handle_subprocess(Command::new("cmake").arg("-S").arg("cmake.deps").arg("-B").arg(".deps").arg("-D").arg(&build_arg)).await?;
+    handle_subprocess(Command::new("cmake").arg("--build").arg(".deps").arg("--config").arg(&build_type)).await?;
+    handle_subprocess(Command::new("cmake").arg("-B").arg("build").arg("-D").arg(&build_arg)).await?;
+    handle_subprocess(Command::new("cmake").arg("--build").arg("build").arg("--config").arg(build_type)).await?;
+    handle_subprocess(Command::new("cmake").arg("--install").arg("build").arg("--prefix").arg(&folder_name)).await?;
+    Ok(())
+
 }
 
 /// Sends a GET request to the specified URL to download a specific version of Neovim.
@@ -689,12 +711,13 @@ async fn send_request(
     get_sha256sum: bool,
 ) -> Result<reqwest::Response, reqwest::Error> {
     let platform = helpers::get_platform_name_download(&version.semver);
-    let file_type = helpers::get_file_type();
+    let file_type = crate::FILETYPE_EXT;
 
-    let url = match &config.github_mirror {
-        Some(val) => val.to_string(),
-        None => "https://github.com".to_string(),
-    };
+    let url = config
+        .github_mirror
+        .as_ref()
+        .map_or_else(|| "https://github.com".to_string(), |val| val.to_string());
+
     let version_tag = &version.tag_name;
     let request_url = if get_sha256sum {
         if version.version_type == VersionType::Nightly
