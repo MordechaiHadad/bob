@@ -1,11 +1,12 @@
 use anyhow::Result;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{env, path::PathBuf};
 use tokio::{
     fs::{self, File},
     io::AsyncWriteExt,
 };
+
+use crate::ENVIRONMENT_VAR_REGEX;
 
 #[derive(Debug, Clone)]
 pub struct ConfigFile {
