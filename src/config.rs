@@ -40,36 +40,30 @@ impl ConfigFile {
 impl ConfigFile {
     pub async fn get() -> Result<ConfigFile> {
         let config_file = crate::helpers::directories::get_config_file()?;
-        let mut config_format = ConfigFormat::Json;
-        let config = match fs::read_to_string(&config_file).await {
-            Ok(config) => {
-                if config_file.extension().unwrap() == "toml" {
-                    let mut config: Config = toml::from_str(&config)?;
-                    handle_envars(&mut config)?;
-                    config_format = ConfigFormat::Toml;
-                    config
-                } else {
-                    let mut config: Config = serde_json::from_str(&config)?;
-                    handle_envars(&mut config)?;
-                    config
-                }
+        let (config, format) = match fs::read_to_string(&config_file).await {
+            Ok(content) => {
+                let ext = config_file
+                    .extension()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("json");
+
+                let mut config = match ext {
+                    "toml" => (toml::from_str::<Config>(&content)?, ConfigFormat::Toml),
+                    _ => (
+                        serde_json::from_str::<Config>(&content)?,
+                        ConfigFormat::Json,
+                    ),
+                };
+
+                handle_envars(&mut config.0)?;
+                config
             }
-            Err(_) => Config {
-                enable_nightly_info: None,
-                enable_release_build: None,
-                downloads_location: None,
-                installation_location: None,
-                version_sync_file_location: None,
-                github_mirror: None,
-                rollback_limit: None,
-                add_neovim_binary_to_path: None,
-                ignore_running_instances: None,
-            },
+            Err(_) => (Config::default(), ConfigFormat::Json),
         };
 
         Ok(ConfigFile {
             path: config_file,
-            format: config_format,
+            format,
             config,
         })
     }
@@ -133,6 +127,23 @@ pub struct Config {
     pub ignore_running_instances: Option<bool>,
 }
 
+// Going to leave this as a manual implementation for now, unless I can
+// confirm with author on how they wish to handle serialization going forward.
+#[allow(clippy::derivable_impls)]
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            enable_nightly_info: None,
+            enable_release_build: None,
+            downloads_location: None,
+            installation_location: None,
+            version_sync_file_location: None,
+            github_mirror: None,
+            rollback_limit: None,
+            add_neovim_binary_to_path: None,
+        }
+    }
+}
 
 /// Private trait for processing environment variables in configuration fields.
 /// Allowss creating a list and using polymorphism to handle different types of fields that may
