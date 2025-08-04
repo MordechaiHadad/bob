@@ -6,29 +6,6 @@ pub mod unarchive;
 pub mod version;
 use semver::Version;
 
-/// Returns the file type for the Neovim binary download based on the target operating system.
-///
-/// This function checks the target operating system using the `cfg!` macro and returns a string that corresponds to the appropriate file type for the Neovim binary download.
-/// For Windows, it returns "zip".
-/// For unix, it returns "tar.gz".
-///
-/// # Returns
-///
-/// This function returns a `&'static str` that corresponds to the file type for the Neovim binary download.
-///
-/// # Example
-///
-/// ```rust
-/// let file_type = get_file_type();
-/// ```
-pub fn get_file_type() -> &'static str {
-    if cfg!(target_family = "windows") {
-        "zip"
-    } else {
-        "tar.gz"
-    }
-}
-
 /// Returns the platform-specific name for the Neovim binary.
 ///
 /// This function takes an `Option<Version>` as an argument, which represents the version of Neovim.
