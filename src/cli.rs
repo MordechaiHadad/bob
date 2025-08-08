@@ -1,15 +1,16 @@
 use crate::{
     config::ConfigFile,
     handlers::{
-        self, erase_handler, list_handler, list_remote_handler, rollback_handler, run_handler,
-        sync_handler, uninstall_handler, update_handler, InstallResult,
+        self, InstallResult, erase_handler, list_handler, list_remote_handler, rollback_handler,
+        run_handler, sync_handler, uninstall_handler, update_handler,
     },
     helpers::processes::is_neovim_running,
+    version::parse_version_type,
 };
 use anyhow::Result;
 use clap::{Args, CommandFactory, Parser};
 use clap_complete::Shell;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
+use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
 use reqwest::{Client, Error};
 use tracing::info;
 
@@ -185,7 +186,7 @@ pub async fn start(config: ConfigFile) -> Result<()> {
                     "Neovim is currently running. Please close it before switching versions."
                 ));
             }
-            let version = super::version::parse_version_type(&client, &version).await?;
+            let version = parse_version_type(&client, &version).await?;
 
             handlers::use_handler::start(version, !no_install, &client, config).await?;
         }
@@ -195,7 +196,7 @@ pub async fn start(config: ConfigFile) -> Result<()> {
                     "Neovim is currently running. Please close it before installing."
                 ));
             }
-            let mut version = super::version::parse_version_type(&client, &version).await?;
+            let mut version = parse_version_type(&client, &version).await?;
 
             match handlers::install_handler::start(&mut version, &client, &config).await? {
                 InstallResult::InstallationSuccess(location) => {
