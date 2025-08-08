@@ -234,6 +234,7 @@ Example: `export BOB_CONFIG=/path/to/config/config.json|toml`
 | **version_sync_file_location** | The path to a file that will hold the neovim version string, useful for config version tracking, bob will error if the specified file is not a valid file path | `Disabled by default`                                                                                         |
 | **rollback_limit**             | The amount of rollbacks before bob starts to delete older ones, can be up to 255                                                                               | `3`                                                                                                           |
 | **github_mirror**              | Specify the github mirror to use instead of `https://github.com`, example: `https://mirror.ghproxy.com`                                                                                 | `Disabled by default`                                                                                         |
+| **add_neovim_binary_to_path**  | Whether bob should automatically add the neovim proxy to the system PATH. If disabled, you'll need to manually add it                                         | `Prompts user on first use`                                                                                   |
 
 ### Example 
 
@@ -246,7 +247,8 @@ Example: `export BOB_CONFIG=/path/to/config/config.json|toml`
   "installation_location": "/home/user/.local/share/bob/nvim-bin", // The path in which the used neovim version will be located in
   "version_sync_file_location": "/home/user/.config/nvim/nvim.version", // The path to a file that will hold the neovim version string, useful for config version tracking, bob will error if the specified file is not a valid file path
   "rollback_limit": 3, // The amount of rollbacks before bob starts to delete older ones, can be up to 225
-  "github_mirror": "https://github.com" // github or github mirror
+  "github_mirror": "https://github.com", // github or github mirror
+  "add_neovim_binary_to_path": true // Whether bob should automatically add the neovim proxy to the system PATH
 }
 
 ```
