@@ -79,8 +79,33 @@ jobs:
                   command: fmt
                   args: --all -- --check --verbose
 
+    security_audit:
+        strategy:
+            matrix:
+                os: [macos-latest, windows-latest, ubuntu-latest, ubuntu-24.04-arm, macos-13]
+        runs-on: ${{matrix.os}}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            - name: Install toolchain
+              uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: stable
+                  profile: minimal
+                  override: true
+            - name: Install cargo-audit
+              uses: actions-rs/cargo@v1
+              with:
+                  command: install
+                  args: cargo-audit
+            - name: Run security audit
+              uses: actions-rs/cargo@v1
+              with:
+                  command: audit
+                  args: --deny warnings
+
     build:
-        needs: [clippy, formatting, check, test]
+        needs: [clippy, formatting, check, test, security_audit]
         strategy:
             matrix:
                 os:
