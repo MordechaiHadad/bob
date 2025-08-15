@@ -180,7 +180,7 @@ pub async fn start(config: ConfigFile) -> Result<()> {
             version,
             no_install,
         } => {
-            if is_neovim_running() {
+            if !config.config.ignore_running_instances.unwrap_or(true) && is_neovim_running() {
                 return Err(anyhow::anyhow!(
                     "Neovim is currently running. Please close it before switching versions."
                 ));
@@ -190,7 +190,7 @@ pub async fn start(config: ConfigFile) -> Result<()> {
             handlers::use_handler::start(version, !no_install, &client, config).await?;
         }
         Cli::Install { version } => {
-            if is_neovim_running() {
+            if !config.config.ignore_running_instances.unwrap_or(true) && is_neovim_running() {
                 return Err(anyhow::anyhow!(
                     "Neovim is currently running. Please close it before installing."
                 ));
@@ -214,7 +214,7 @@ pub async fn start(config: ConfigFile) -> Result<()> {
             }
         }
         Cli::Sync => {
-            if is_neovim_running() {
+            if !config.config.ignore_running_instances.unwrap_or(true) && is_neovim_running() {
                 return Err(anyhow::anyhow!(
                     "Neovim is currently running. Please close it before syncing."
                 ));
@@ -223,7 +223,7 @@ pub async fn start(config: ConfigFile) -> Result<()> {
             sync_handler::start(&client, config).await?;
         }
         Cli::Uninstall { version } => {
-            if is_neovim_running() {
+            if !config.config.ignore_running_instances.unwrap_or(true) && is_neovim_running() {
                 return Err(anyhow::anyhow!(
                     "Neovim is currently running. Please close it before uninstalling."
                 ));
@@ -232,7 +232,7 @@ pub async fn start(config: ConfigFile) -> Result<()> {
             uninstall_handler::start(version.as_deref(), config.config).await?;
         }
         Cli::Rollback => {
-            if is_neovim_running() {
+            if !config.config.ignore_running_instances.unwrap_or(true) && is_neovim_running() {
                 return Err(anyhow::anyhow!(
                     "Neovim is currently running. Please close it before rolling back."
                 ));
@@ -240,7 +240,7 @@ pub async fn start(config: ConfigFile) -> Result<()> {
             rollback_handler::start(config.config).await?
         }
         Cli::Erase => {
-            if is_neovim_running() {
+            if !config.config.ignore_running_instances.unwrap_or(true) && is_neovim_running() {
                 return Err(anyhow::anyhow!(
                     "Neovim is currently running. Please close it before erasing."
                 ));
@@ -253,7 +253,7 @@ pub async fn start(config: ConfigFile) -> Result<()> {
             clap_complete::generate(shell, &mut Cli::command(), "bob", &mut std::io::stdout())
         }
         Cli::Update(data) => {
-            if is_neovim_running() {
+            if !config.config.ignore_running_instances.unwrap_or(true) && is_neovim_running() {
                 return Err(anyhow::anyhow!(
                     "Neovim is currently running. Please close it before updating."
                 ));

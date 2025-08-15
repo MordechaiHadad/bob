@@ -235,6 +235,7 @@ Example: `export BOB_CONFIG=/path/to/config/config.json|toml`
 | **rollback_limit**             | The amount of rollbacks before bob starts to delete older ones, can be up to 255                                                                               | `3`                                                                                                           |
 | **github_mirror**              | Specify the github mirror to use instead of `https://github.com`, example: `https://mirror.ghproxy.com`                                                                                 | `Disabled by default`                                                                                         |
 | **add_neovim_binary_to_path**  | Whether bob should automatically add the neovim proxy to the system PATH. If disabled, you'll need to manually add it                                         | `Prompts user on first use`                                                                                   |
+| **ignore_running_instances**    | If true, bob will block install, update, sync, uninstall, erase, rollback, and use commands while Neovim is running. If false, these actions are allowed even if Neovim is running. | `false` |
 
 ### Example 
 
@@ -248,7 +249,8 @@ Example: `export BOB_CONFIG=/path/to/config/config.json|toml`
   "version_sync_file_location": "/home/user/.config/nvim/nvim.version", // The path to a file that will hold the neovim version string, useful for config version tracking, bob will error if the specified file is not a valid file path
   "rollback_limit": 3, // The amount of rollbacks before bob starts to delete older ones, can be up to 225
   "github_mirror": "https://github.com", // github or github mirror
-  "add_neovim_binary_to_path": true // Whether bob should automatically add the neovim proxy to the system PATH
+  "add_neovim_binary_to_path": true, // Whether bob should automatically add the neovim proxy to the system PATH
+  "ignore_running_instances": false // If true, bob will block certain actions while Neovim is running
 }
 
 ```
