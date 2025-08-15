@@ -63,6 +63,7 @@ impl ConfigFile {
                 github_mirror: None,
                 rollback_limit: None,
                 add_neovim_binary_to_path: None,
+                ignore_running_instances: None,
             },
         };
 
@@ -128,6 +129,8 @@ pub struct Config {
     pub rollback_limit: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub add_neovim_binary_to_path: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ignore_running_instances: Option<bool>,
 }
 
 /// Handles environment variables in the configuration.
