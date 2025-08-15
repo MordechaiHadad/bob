@@ -69,9 +69,9 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
             info!("Fetching latest commit");
             let latest_commit = get_latest_commit(client).await?;
             Ok(ParsedVersion {
-                tag_name: latest_commit.chars().take(7).collect(),
+                tag_name: latest_commit.to_string(),
                 version_type: VersionType::Hash,
-                non_parsed_string: latest_commit,
+                non_parsed_string: latest_commit.to_string(),
                 semver: None,
             })
         }
@@ -91,7 +91,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                 });
             } else if is_hash(version) {
                 return Ok(ParsedVersion {
-                    tag_name: version.to_string().chars().take(7).collect(),
+                    tag_name: version.to_string(),
                     version_type: VersionType::Hash,
                     non_parsed_string: version.to_string(),
                     semver: None,
