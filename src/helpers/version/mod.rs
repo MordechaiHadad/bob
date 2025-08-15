@@ -2,12 +2,12 @@ pub mod nightly;
 pub mod types;
 
 use self::types::{ParsedVersion, VersionType};
-use super::directories;
+use crate::helpers::directories;
 use crate::{
     config::Config,
-    github_requests::{deserialize_response, RepoCommit, UpstreamVersion},
+    github_requests::{RepoCommit, UpstreamVersion, deserialize_response},
 };
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use regex::Regex;
 use reqwest::Client;
 use semver::Version;
@@ -76,8 +76,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
             })
         }
         _ => {
-            let version_regex = Regex::new(r"^v?[0-9]+\.[0-9]+\.[0-9]+$")?;
-            if version_regex.is_match(version) {
+            if crate::VERSION_REGEX.is_match(version) {
                 let mut returned_version = version.to_string();
                 if !version.contains('v') {
                     returned_version.insert(0, 'v');

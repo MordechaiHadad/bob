@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -223,7 +223,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
                 "Failed to open file {}.{}, file doesn't exist. additional info: {error}",
                 downloaded_file.file_name,
                 downloaded_file.file_format
-            ))
+            ));
         }
     };
     let decompress_stream = GzDecoder::new(file);
