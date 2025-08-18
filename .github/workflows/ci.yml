@@ -4,6 +4,7 @@ on: [push, pull_request]
 jobs:
     check:
         strategy:
+
             matrix:
                 os: [macos-latest, windows-latest, ubuntu-latest, ubuntu-24.04-arm, macos-13]
         runs-on: ${{matrix.os}}
@@ -80,11 +81,8 @@ jobs:
                   args: --all -- --check --verbose
 
     security_audit:
-        strategy:
-            matrix:
-                os: [macos-latest, windows-latest, ubuntu-latest, ubuntu-24.04-arm, macos-13]
-        runs-on: ${{matrix.os}}
-        steps:
+      runs-on: ubuntu-latest
+      steps:
             - name: Checkout
               uses: actions/checkout@v4
             - name: Install toolchain
