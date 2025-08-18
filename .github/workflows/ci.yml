@@ -2,27 +2,6 @@ name: Continuous Integration
 on: [push, pull_request]
 
 jobs:
-    check:
-        strategy:
-
-            matrix:
-                os: [macos-latest, windows-latest, ubuntu-latest, ubuntu-24.04-arm, macos-13]
-        runs-on: ${{matrix.os}}
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-            - name: Install toolchain
-              uses: actions-rs/toolchain@v1
-              with:
-                  toolchain: stable
-                  profile: minimal
-                  override: true
-            - name: Check
-              uses: actions-rs/cargo@v1
-              with:
-                  command: check
-                  args: --locked --verbose
-
     clippy:
         strategy:
             matrix:
@@ -103,7 +82,7 @@ jobs:
                   args: --deny warnings
 
     build:
-        needs: [clippy, formatting, check, test, security_audit]
+        needs: [clippy, formatting, test, security_audit]
         strategy:
             matrix:
                 os:
