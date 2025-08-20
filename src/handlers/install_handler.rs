@@ -363,7 +363,7 @@ async fn download_version(
                 response?
             };
 
-            if let reqwest::StatusCode::OK = response.status() {
+            if matches!(response.status(), reqwest::StatusCode::OK) {
                 let total_size = response.content_length().unwrap_or(0);
                 let mut response_bytes = response.bytes_stream();
 

@@ -75,9 +75,30 @@ impl ConfigFile {
     }
 }
 
+/// This enum represents the format of the configuration file.
+///
+/// `bob` provides support for both TOML and JSON formats.
+///
+/// # Fields
+///
+/// `Toml` - Represents the TOML format.
+/// `Json` - Represents the JSON format.
+///
+/// # Example
+///
+/// ```rust
+/// let config_format_toml = ConfigFormat::Toml;
+/// assert_eq!(config_format_toml, ConfigFormat::Toml);
+///
+/// let config_format_json = ConfigFormat::Json;
+/// assert_eq!(config_format_json, ConfigFormat::Json);
+///
+/// ```
 #[derive(Debug, Clone)]
 pub enum ConfigFormat {
+    /// Represents the config file being in TOML format.
     Toml,
+    /// Represents the config file being in JSON format.
     Json,
 }
 
@@ -147,6 +168,7 @@ impl Default for Config {
             github_mirror: None,
             rollback_limit: None,
             add_neovim_binary_to_path: None,
+            ignore_running_instances: None,
         }
     }
 }
