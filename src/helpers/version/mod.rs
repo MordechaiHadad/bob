@@ -116,31 +116,6 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
     }
 }
 
-/// Checks if a version string is a hash.
-///
-/// This function takes a reference to a `str` as an argument and checks if it matches the regular expression `\b[0-9a-f]{5,40}\b`.
-/// This regular expression matches a string that contains 5 to 40 hexadecimal characters.
-/// The function returns `true` if the version string is a hash and `false` otherwise.
-///
-/// # Arguments
-///
-/// * `version` - A reference to a `str` that represents the version string to check.
-///
-/// # Returns
-///
-/// This function returns a `bool` that indicates whether the version string is a hash.
-///
-/// # Example
-///
-/// ```rust
-/// let version = "abc123";
-/// let is_hash = is_hash(version);
-/// ```
-pub fn is_hash(version: &str) -> bool {
-    let hash_regex = Regex::new(r"\b[0-9a-f]{5,40}\b").unwrap();
-    hash_regex.is_match(version)
-}
-
 /// Retrieves the location of the version sync file.
 ///
 /// This function checks the `version_sync_file_location` field of the provided configuration. If the field is `Some`, it checks if a file exists at the specified path. If the file does not exist, it creates a new file at the path. If the field is `None`, it returns `None`.
