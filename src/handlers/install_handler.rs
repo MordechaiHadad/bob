@@ -394,22 +394,20 @@ async fn download_version(
                     path: root.display().to_string(),
                     semver: version.semver.clone(),
                 }))
+            } else if get_sha256sum {
+                Ok(PostDownloadVersionType::None)
             } else {
-                if get_sha256sum {
-                    return Ok(PostDownloadVersionType::None);
-                }
                 let error_text = response.text().await?;
                 if error_text.contains("Not Found") {
-                    Err(anyhow!(
+                    return Err(anyhow!(
                         "Version does not exist in Neovim releases. Please check available versions with 'bob list-remote'"
-                    ))
-                } else {
-                    Err(anyhow!(
-                        "Failed to download version {}: {}",
-                        version.tag_name,
-                        error_text
-                    ))
+                    ));
                 }
+                Err(anyhow!(
+                    "Failed to download version {}: {}",
+                    version.tag_name,
+                    error_text
+                ))
             }
         }
         VersionType::Hash => handle_building_from_source(version, config).await,
