@@ -8,7 +8,6 @@ use crate::{
     github_requests::{RepoCommit, UpstreamVersion, deserialize_response},
 };
 use anyhow::{Context, Result, anyhow};
-use regex::Regex;
 use reqwest::Client;
 use semver::Version;
 use std::path::{Path, PathBuf};
@@ -88,7 +87,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                     non_parsed_string: version.to_string(),
                     semver: Some(Version::parse(&cloned_version.replace('v', ""))?),
                 });
-            } else if is_hash(version) {
+            } else if crate::HASH_REGEX.is_match(version) {
                 return Ok(ParsedVersion {
                     tag_name: version.to_string().chars().take(7).collect(),
                     version_type: VersionType::Hash,
@@ -97,9 +96,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                 });
             }
 
-            let rollback_regex = Regex::new(r"nightly-[a-zA-Z0-9]{7,8}")?;
-
-            if rollback_regex.is_match(version) {
+            if crate::ROLLBACK_REGEX.is_match(version) {
                 return Ok(ParsedVersion {
                     tag_name: version.to_string(),
                     version_type: VersionType::NightlyRollback,

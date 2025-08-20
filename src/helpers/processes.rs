@@ -6,7 +6,7 @@ use tokio::{process::Command, time::sleep};
 
 use crate::helpers::{
     directories, get_platform_name,
-    version::{self, is_hash},
+    version::{self},
 };
 
 /// Handles the execution of a subprocess.
@@ -92,7 +92,7 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
     let version = semver::Version::parse(&used_version.replace('v', "")).ok();
     let platform = get_platform_name(&version);
 
-    let new_version: String = if is_hash(&used_version) {
+    let new_version: String = if crate::HASH_REGEX.is_match(&used_version) {
         used_version.chars().take(7).collect()
     } else {
         used_version

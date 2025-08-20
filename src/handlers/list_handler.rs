@@ -1,5 +1,4 @@
 use anyhow::{Result, anyhow};
-use regex::Regex;
 use std::{fs, path::PathBuf};
 use yansi::Paint;
 
@@ -154,14 +153,10 @@ fn is_version(name: &str) -> bool {
         "stable" => true,
         nightly_name if nightly_name.contains("nightly") => true,
         name => {
-            let version_regex = Regex::new(r"^v?[0-9]+\.[0-9]+\.[0-9]+$").unwrap();
-            let hash_regex = Regex::new(r"\b[0-9a-f]{5,40}\b").unwrap();
-
-            if version_regex.is_match(name) {
+            if crate::VERSION_REGEX.is_match(name) {
                 return true;
             }
-
-            hash_regex.is_match(name)
+            crate::HASH_REGEX.is_match(name)
         }
     }
 }
