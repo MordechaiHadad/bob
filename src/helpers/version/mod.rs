@@ -346,46 +346,69 @@ async fn get_latest_commit(client: &Client) -> Result<String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
+mod version_is_hash_tests {
 
-    mod is_hash_tests {
-        use super::*;
+    pub(crate) fn is_hash(version: &str) -> bool {
+        crate::HASH_REGEX.is_match(version)
+    }
 
-        #[test]
-        fn test_is_hash_with_valid_hash() {
-            let version = "abc123";
-            assert!(is_hash(version));
-        }
+    #[test]
+    fn test_is_hash() {
+        let version_expected = [
+            ("abc123", true),
+            ("abc1", false),
+            ("", false),
+            ("xyz123", false),
+            ("abc1", false),
+            ("abc123abc123abc123abc123abc123abc123abc123", false),
+        ];
 
-        #[test]
-        fn test_is_hash_with_invalid_hash() {
-            let version = "abc1";
-            assert!(!is_hash(version));
-        }
+        version_expected
+            .iter()
+            .for_each(|(case, expected)| match expected {
+                true => assert!(is_hash(case)),
+                false => assert!(!is_hash(case)),
+            });
 
-        #[test]
-        fn test_is_hash_with_empty_string() {
-            let version = "";
-            assert!(!is_hash(version));
-        }
+        version_expected.iter().for_each(|(version, expected)| {
+            // dbg!(&version);
+            assert_eq!(is_hash(version), *expected);
+        });
+    }
 
-        #[test]
-        fn test_is_hash_with_non_hexadecimal_characters() {
-            let version = "xyz123";
-            assert!(!is_hash(version));
-        }
+    #[test]
+    fn test_is_hash_with_valid_hash() {
+        let version = "abc123";
+        assert!(is_hash(version));
+    }
 
-        #[test]
-        fn test_is_hash_with_short_hash() {
-            let version = "abc1";
-            assert!(!is_hash(version));
-        }
+    #[test]
+    fn test_is_hash_with_invalid_hash() {
+        let version = "abc1";
+        assert!(!is_hash(version));
+    }
 
-        #[test]
-        fn test_is_hash_with_long_hash() {
-            let version = "abc123abc123abc123abc123abc123abc123abc123";
-            assert!(!is_hash(version));
-        }
+    #[test]
+    fn test_is_hash_with_empty_string() {
+        let version = "";
+        assert!(!is_hash(version));
+    }
+
+    #[test]
+    fn test_is_hash_with_non_hexadecimal_characters() {
+        let version = "xyz123";
+        assert!(!is_hash(version));
+    }
+
+    #[test]
+    fn test_is_hash_with_short_hash() {
+        let version = "abc1";
+        assert!(!is_hash(version));
+    }
+
+    #[test]
+    fn test_is_hash_with_long_hash() {
+        let version = "abc123abc123abc123abc123abc123abc123abc123";
+        assert!(!is_hash(version));
     }
 }
