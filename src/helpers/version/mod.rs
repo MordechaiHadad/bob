@@ -96,7 +96,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                 });
             }
 
-            if crate::ROLLBACK_REGEX.is_match(version) {
+            if crate::NIGHTLY_REGEX.is_match(version) {
                 return Ok(ParsedVersion {
                     tag_name: version.to_string(),
                     version_type: VersionType::NightlyRollback,

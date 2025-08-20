@@ -29,17 +29,6 @@ pub static HASH_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\b[0-9a-f]{5,40}\b").expect("Failed to compile static HASH_REGEX")
 });
 
-/// Rollback regex to match nightly versions with a specific format.
-///
-/// # Example
-/// ```rust
-/// let var = "nightly-abcdefg";
-/// assert!(ROLLBACK_REGEX.is_match(var));
-/// ```
-pub static ROLLBACK_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"nightly-[a-zA-Z0-9]{7,8}").expect("Failed to compile static ROLLBACK_REGEX")
-});
-
 /// Nightly regex to match nightly versions with a specific format.
 ///
 /// # Example
