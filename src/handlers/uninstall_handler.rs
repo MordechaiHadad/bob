@@ -2,13 +2,12 @@ use crate::{
     config::Config,
     helpers::{self, directories},
 };
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use dialoguer::{
-    console::{style, Term},
-    theme::ColorfulTheme,
     Confirm, MultiSelect,
+    console::{Term, style},
+    theme::ColorfulTheme,
 };
-use regex::Regex;
 use reqwest::Client;
 use tokio::fs;
 use tracing::{info, warn};
@@ -60,8 +59,7 @@ pub async fn start(version: Option<&str>, config: Config) -> Result<()> {
         Err(error) => return Err(anyhow!(error)),
     };
 
-    let version_regex = Regex::new(r"^[0-9]+\.[0-9]+\.[0-9]+$")?;
-    let path = if version_regex.is_match(&version.non_parsed_string) {
+    let path = if crate::VERSION_REGEX.is_match(&version.non_parsed_string) {
         let intermediate = format!("v{}", &version.non_parsed_string);
         downloads_dir.join(intermediate)
     } else {

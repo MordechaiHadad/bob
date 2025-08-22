@@ -1,7 +1,7 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
 use reqwest::Client;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 /// Represents the version of the upstream software in the GitHub API.
 ///
@@ -257,7 +257,9 @@ pub fn deserialize_response<T: DeserializeOwned>(response: String) -> Result<T> 
         let result: ErrorResponse = serde_json::from_value(value)?;
 
         if result.documentation_url.contains("rate-limiting") {
-            return Err(anyhow!("Github API rate limit has been reach, either wait an hour or checkout https://github.com/MordechaiHadad/bob#increasing-github-rate-limit"));
+            return Err(anyhow!(
+                "Github API rate limit has been reach, either wait an hour or checkout https://github.com/MordechaiHadad/bob#increasing-github-rate-limit"
+            ));
         }
 
         return Err(anyhow!(result.message));

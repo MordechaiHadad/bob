@@ -2,13 +2,12 @@ pub mod nightly;
 pub mod types;
 
 use self::types::{ParsedVersion, VersionType};
-use super::directories;
+use crate::helpers::directories;
 use crate::{
     config::Config,
-    github_requests::{deserialize_response, RepoCommit, UpstreamVersion},
+    github_requests::{RepoCommit, UpstreamVersion, deserialize_response},
 };
-use anyhow::{anyhow, Context, Result};
-use regex::Regex;
+use anyhow::{Context, Result, anyhow};
 use reqwest::Client;
 use semver::Version;
 use std::path::{Path, PathBuf};
@@ -76,8 +75,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
             })
         }
         _ => {
-            let version_regex = Regex::new(r"^v?[0-9]+\.[0-9]+\.[0-9]+$")?;
-            if version_regex.is_match(version) {
+            if crate::VERSION_REGEX.is_match(version) {
                 let mut returned_version = version.to_string();
                 if !version.contains('v') {
                     returned_version.insert(0, 'v');
@@ -89,7 +87,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                     non_parsed_string: version.to_string(),
                     semver: Some(Version::parse(&cloned_version.replace('v', ""))?),
                 });
-            } else if is_hash(version) {
+            } else if crate::HASH_REGEX.is_match(version) {
                 return Ok(ParsedVersion {
                     tag_name: version.to_string().chars().take(7).collect(),
                     version_type: VersionType::Hash,
@@ -98,9 +96,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                 });
             }
 
-            let rollback_regex = Regex::new(r"nightly-[a-zA-Z0-9]{7,8}")?;
-
-            if rollback_regex.is_match(version) {
+            if crate::NIGHTLY_REGEX.is_match(version) {
                 return Ok(ParsedVersion {
                     tag_name: version.to_string(),
                     version_type: VersionType::NightlyRollback,
@@ -118,31 +114,6 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
             ))
         }
     }
-}
-
-/// Checks if a version string is a hash.
-///
-/// This function takes a reference to a `str` as an argument and checks if it matches the regular expression `\b[0-9a-f]{5,40}\b`.
-/// This regular expression matches a string that contains 5 to 40 hexadecimal characters.
-/// The function returns `true` if the version string is a hash and `false` otherwise.
-///
-/// # Arguments
-///
-/// * `version` - A reference to a `str` that represents the version string to check.
-///
-/// # Returns
-///
-/// This function returns a `bool` that indicates whether the version string is a hash.
-///
-/// # Example
-///
-/// ```rust
-/// let version = "abc123";
-/// let is_hash = is_hash(version);
-/// ```
-pub fn is_hash(version: &str) -> bool {
-    let hash_regex = Regex::new(r"\b[0-9a-f]{5,40}\b").unwrap();
-    hash_regex.is_match(version)
 }
 
 /// Retrieves the location of the version sync file.
@@ -375,46 +346,69 @@ async fn get_latest_commit(client: &Client) -> Result<String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
+mod version_is_hash_tests {
 
-    mod is_hash_tests {
-        use super::*;
+    pub(crate) fn is_hash(version: &str) -> bool {
+        crate::HASH_REGEX.is_match(version)
+    }
 
-        #[test]
-        fn test_is_hash_with_valid_hash() {
-            let version = "abc123";
-            assert!(is_hash(version));
-        }
+    #[test]
+    fn test_is_hash() {
+        let version_expected = [
+            ("abc123", true),
+            ("abc1", false),
+            ("", false),
+            ("xyz123", false),
+            ("abc1", false),
+            ("abc123abc123abc123abc123abc123abc123abc123", false),
+        ];
 
-        #[test]
-        fn test_is_hash_with_invalid_hash() {
-            let version = "abc1";
-            assert!(!is_hash(version));
-        }
+        version_expected
+            .iter()
+            .for_each(|(case, expected)| match expected {
+                true => assert!(is_hash(case)),
+                false => assert!(!is_hash(case)),
+            });
 
-        #[test]
-        fn test_is_hash_with_empty_string() {
-            let version = "";
-            assert!(!is_hash(version));
-        }
+        version_expected.iter().for_each(|(version, expected)| {
+            // dbg!(&version);
+            assert_eq!(is_hash(version), *expected);
+        });
+    }
 
-        #[test]
-        fn test_is_hash_with_non_hexadecimal_characters() {
-            let version = "xyz123";
-            assert!(!is_hash(version));
-        }
+    #[test]
+    fn test_is_hash_with_valid_hash() {
+        let version = "abc123";
+        assert!(is_hash(version));
+    }
 
-        #[test]
-        fn test_is_hash_with_short_hash() {
-            let version = "abc1";
-            assert!(!is_hash(version));
-        }
+    #[test]
+    fn test_is_hash_with_invalid_hash() {
+        let version = "abc1";
+        assert!(!is_hash(version));
+    }
 
-        #[test]
-        fn test_is_hash_with_long_hash() {
-            let version = "abc123abc123abc123abc123abc123abc123abc123";
-            assert!(!is_hash(version));
-        }
+    #[test]
+    fn test_is_hash_with_empty_string() {
+        let version = "";
+        assert!(!is_hash(version));
+    }
+
+    #[test]
+    fn test_is_hash_with_non_hexadecimal_characters() {
+        let version = "xyz123";
+        assert!(!is_hash(version));
+    }
+
+    #[test]
+    fn test_is_hash_with_short_hash() {
+        let version = "abc1";
+        assert!(!is_hash(version));
+    }
+
+    #[test]
+    fn test_is_hash_with_long_hash() {
+        let version = "abc123abc123abc123abc123abc123abc123abc123";
+        assert!(!is_hash(version));
     }
 }

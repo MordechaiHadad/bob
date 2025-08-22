@@ -1,8 +1,7 @@
-use anyhow::{anyhow, Result};
-use regex::Regex;
+use anyhow::{Result, anyhow};
 use tokio::fs;
 
-use super::types::LocalNightly;
+use crate::helpers::version::types::LocalNightly;
 use crate::{config::Config, github_requests::UpstreamVersion, helpers::directories};
 
 /// Retrieves the local nightly version.
@@ -77,14 +76,12 @@ pub async fn produce_nightly_vec(config: &Config) -> Result<Vec<LocalNightly>> {
     let downloads_dir = directories::get_downloads_directory(config).await?;
     let mut paths = fs::read_dir(&downloads_dir).await?;
 
-    let regex = Regex::new(r"nightly-[a-zA-Z0-9]{7,8}")?;
-
     let mut nightly_vec: Vec<LocalNightly> = Vec::new();
 
     while let Some(path) = paths.next_entry().await? {
         let name = path.file_name().into_string().unwrap();
 
-        if !regex.is_match(&name) {
+        if !crate::NIGHTLY_REGEX.is_match(&name) {
             continue;
         }
 

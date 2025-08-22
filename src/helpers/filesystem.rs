@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use async_recursion::async_recursion;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::path::Path;

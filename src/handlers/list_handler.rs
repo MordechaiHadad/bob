@@ -1,5 +1,4 @@
-use anyhow::{anyhow, Result};
-use regex::Regex;
+use anyhow::{Result, anyhow};
 use std::{fs, path::PathBuf};
 use yansi::Paint;
 
@@ -154,14 +153,99 @@ fn is_version(name: &str) -> bool {
         "stable" => true,
         nightly_name if nightly_name.contains("nightly") => true,
         name => {
-            let version_regex = Regex::new(r"^v?[0-9]+\.[0-9]+\.[0-9]+$").unwrap();
-            let hash_regex = Regex::new(r"\b[0-9a-f]{5,40}\b").unwrap();
-
-            if version_regex.is_match(name) {
+            if crate::VERSION_REGEX.is_match(name) {
                 return true;
             }
-
-            hash_regex.is_match(name)
+            crate::HASH_REGEX.is_match(name)
         }
+    }
+}
+
+#[cfg(test)]
+mod list_handler_is_version_tests {
+    use super::*;
+
+    #[test]
+    fn test_is_version() {
+        let cases_expected = [
+            ("v1.0.0", true),
+            ("stable", true),
+            ("nightly-2023-10-01", true),
+            ("invalid-version", false),
+            ("", false),
+        ];
+
+        cases_expected
+            .iter()
+            .for_each(|(case, expected)| match expected {
+                true => assert!(is_version(case)),
+                false => assert!(!is_version(case)),
+            });
+
+        cases_expected.iter().for_each(|(case, expected)| {
+            assert_eq!(is_version(case), *expected);
+        });
+    }
+
+    #[test]
+    fn test_with_v_semvar() {
+        let version = "v1.2.3";
+        assert!(
+            is_version(version),
+            "Expected '{}' to be a valid version",
+            version
+        );
+    }
+
+    #[test]
+    fn test_as_stable() {
+        let version = "stable";
+        assert!(
+            is_version(version),
+            "Expected '{}' to be a valid version",
+            version
+        );
+    }
+
+    #[test]
+    fn test_with_nightly_and_date() {
+        let version = "nightly-2023-10-01";
+        assert!(
+            is_version(version),
+            "Expected '{}' to be a valid version",
+            version
+        );
+    }
+
+    #[test]
+    fn test_with_invalid_version() {
+        let version = "invalid-version";
+        // let res = is_version(version);
+        assert!(
+            !is_version(version),
+            "Expected '{}' to not be a valid version",
+            version
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_with_invalid_version_panic() {
+        let version = "invalid-version-wow";
+        assert!(
+            is_version(version),
+            "Expected '{}' to not be a valid version",
+            version
+        );
+    }
+
+    #[test]
+    fn test_with_empty_string() {
+        let version = "";
+        assert!(
+            !is_version(version),
+            "Expected '{}' to not be a valid version",
+            version
+        );
     }
 }

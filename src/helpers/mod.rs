@@ -6,29 +6,6 @@ pub mod unarchive;
 pub mod version;
 use semver::Version;
 
-/// Returns the file type for the Neovim binary download based on the target operating system.
-///
-/// This function checks the target operating system using the `cfg!` macro and returns a string that corresponds to the appropriate file type for the Neovim binary download.
-/// For Windows, it returns "zip".
-/// For unix, it returns "tar.gz".
-///
-/// # Returns
-///
-/// This function returns a `&'static str` that corresponds to the file type for the Neovim binary download.
-///
-/// # Example
-///
-/// ```rust
-/// let file_type = get_file_type();
-/// ```
-pub fn get_file_type() -> &'static str {
-    if cfg!(target_family = "windows") {
-        "zip"
-    } else {
-        "tar.gz"
-    }
-}
-
 /// Returns the platform-specific name for the Neovim binary.
 ///
 /// This function takes an `Option<Version>` as an argument, which represents the version of Neovim.
@@ -122,28 +99,24 @@ pub fn get_platform_name_download(version: &Option<Version>) -> &'static str {
 #[cfg(test)]
 mod tests {
 
+    use super::*;
+
     #[test]
     fn get_platform_name_none() {
         if cfg!(target_os = "windows") {
-            assert_eq!(super::get_platform_name(&None), "nvim-win64");
+            assert_eq!(get_platform_name(&None), "nvim-win64");
         } else if cfg!(target_os = "macos") && cfg!(target_arch = "aarch64") {
-            assert_eq!(super::get_platform_name(&None), "nvim-macos-arm64");
-            assert_eq!(super::get_platform_name_download(&None), "nvim-macos-arm64");
+            assert_eq!(get_platform_name(&None), "nvim-macos-arm64");
+            assert_eq!(get_platform_name_download(&None), "nvim-macos-arm64");
         } else if cfg!(target_os = "macos") && cfg!(target_arch = "x86_64") {
-            assert_eq!(super::get_platform_name(&None), "nvim-macos-x86_64");
-            assert_eq!(
-                super::get_platform_name_download(&None),
-                "nvim-macos-x86_64"
-            );
+            assert_eq!(get_platform_name(&None), "nvim-macos-x86_64");
+            assert_eq!(get_platform_name_download(&None), "nvim-macos-x86_64");
         } else if cfg!(target_arch = "aarch64") {
-            assert_eq!(super::get_platform_name(&None), "nvim-linux-arm64");
-            assert_eq!(super::get_platform_name_download(&None), "nvim-linux-arm64");
+            assert_eq!(get_platform_name(&None), "nvim-linux-arm64");
+            assert_eq!(get_platform_name_download(&None), "nvim-linux-arm64");
         } else {
-            assert_eq!(super::get_platform_name(&None), "nvim-linux-x86_64");
-            assert_eq!(
-                super::get_platform_name_download(&None),
-                "nvim-linux-x86_64"
-            );
+            assert_eq!(get_platform_name(&None), "nvim-linux-x86_64");
+            assert_eq!(get_platform_name_download(&None), "nvim-linux-x86_64");
         }
     }
 
@@ -151,13 +124,13 @@ mod tests {
     fn get_platform_name_lower() {
         let version = Some(semver::Version::new(0, 9, 5));
         if cfg!(target_os = "windows") {
-            assert_eq!(super::get_platform_name(&version), "nvim-win64");
+            assert_eq!(get_platform_name(&version), "nvim-win64");
         } else if cfg!(target_os = "macos") {
-            assert_eq!(super::get_platform_name(&version), "nvim-macos");
-            assert_eq!(super::get_platform_name_download(&version), "nvim-macos");
+            assert_eq!(get_platform_name(&version), "nvim-macos");
+            assert_eq!(get_platform_name_download(&version), "nvim-macos");
         } else {
-            assert_eq!(super::get_platform_name(&version), "nvim-linux64");
-            assert_eq!(super::get_platform_name_download(&version), "nvim");
+            assert_eq!(get_platform_name(&version), "nvim-linux64");
+            assert_eq!(get_platform_name_download(&version), "nvim");
         }
     }
 
@@ -165,31 +138,19 @@ mod tests {
     fn get_platform_name_higher() {
         let version = Some(semver::Version::new(0, 10, 5));
         if cfg!(target_os = "windows") {
-            assert_eq!(super::get_platform_name(&version), "nvim-win64");
+            assert_eq!(get_platform_name(&version), "nvim-win64");
         } else if cfg!(target_os = "macos") && cfg!(target_arch = "aarch64") {
-            assert_eq!(super::get_platform_name(&version), "nvim-macos-arm64");
-            assert_eq!(
-                super::get_platform_name_download(&version),
-                "nvim-macos-arm64"
-            );
+            assert_eq!(get_platform_name(&version), "nvim-macos-arm64");
+            assert_eq!(get_platform_name_download(&version), "nvim-macos-arm64");
         } else if cfg!(target_os = "macos") && cfg!(target_arch = "x86_64") {
-            assert_eq!(super::get_platform_name(&version), "nvim-macos-x86_64");
-            assert_eq!(
-                super::get_platform_name_download(&version),
-                "nvim-macos-x86_64"
-            );
+            assert_eq!(get_platform_name(&version), "nvim-macos-x86_64");
+            assert_eq!(get_platform_name_download(&version), "nvim-macos-x86_64");
         } else if cfg!(target_arch = "aarch64") {
-            assert_eq!(super::get_platform_name(&version), "nvim-linux-arm64");
-            assert_eq!(
-                super::get_platform_name_download(&version),
-                "nvim-linux-arm64"
-            );
+            assert_eq!(get_platform_name(&version), "nvim-linux-arm64");
+            assert_eq!(get_platform_name_download(&version), "nvim-linux-arm64");
         } else {
-            assert_eq!(super::get_platform_name(&version), "nvim-linux-x86_64");
-            assert_eq!(
-                super::get_platform_name_download(&version),
-                "nvim-linux-x86_64"
-            );
+            assert_eq!(get_platform_name(&version), "nvim-linux-x86_64");
+            assert_eq!(get_platform_name_download(&version), "nvim-linux-x86_64");
         }
     }
 }
