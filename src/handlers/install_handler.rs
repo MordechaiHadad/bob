@@ -189,7 +189,7 @@ pub async fn start(
     ))
 }
 
-/// Asynchronously handles the rollback of the nightly version of Neovim.
+/// Asynchronously handles the rollback for the nightly version(s) of Neovim.
 ///
 /// This function checks if the nightly version is used and if the rollback limit is not zero.
 /// If these conditions are met, it produces a vector of nightly versions and removes the oldest version if the vector's length is greater than or equal to the rollback limit.
@@ -310,7 +310,7 @@ async fn print_commits(
 ///
 /// This function sends a request to download the specified version of Neovim based on the version type.
 /// If the version type is Normal, Nightly, or Latest, it sends a request to download the version.
-/// If the version type is Hash, it handles building from source.
+/// If the version type is Hash, it handles building from the source.
 /// If the version type is NightlyRollback, it does nothing.
 ///
 /// # Arguments
@@ -474,10 +474,12 @@ fn file_type_ext(version: &ParsedVersion, get_sha256sum: bool) -> std::borrow::C
 /// Asynchronously handles the building of a specified version from source.
 ///
 /// This function checks for the presence of necessary tools (like Clang, GCC, Cmake, and Git) in the system.
-/// It then proceeds to create a directory named "neovim-git" if it doesn't exist, and sets the current directory to it.
-/// It initializes a Git repository if one doesn't exist, and sets the remote to Neovim's GitHub repository.
-/// It fetches the specified version from the remote repository and checks out the fetched files.
-/// It then builds the fetched files and installs them to a specified location.
+///
+/// It then:
+/// 1. Proceeds to create a directory named "neovim-git" if it doesn't exist; and sets the current directory to it.
+/// 2. Initializes a Git repository if one doesn't exist; and sets the remote to Neovim's GitHub repository.
+/// 3. Fetches the specified version from the remote repository and checks out the fetched files.
+/// 4. Builds the fetched files and installs them to a specified location.
 ///
 /// # Arguments
 ///

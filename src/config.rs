@@ -31,7 +31,7 @@ impl ConfigFile {
         file.write_all(data.as_bytes()).await?;
         file.flush().await?;
 
-        // atomic operation i guess
+        // atomic operation I guess
         tokio::fs::rename(tmp_path, &self.path).await?;
 
         Ok(())
@@ -211,7 +211,7 @@ impl EnvVarProcessor for Option<String> {
 /// Handles environment variables in the configuration.
 ///
 /// This function takes a mutable reference to a `Config` object. It uses a `Regex` to match environment variables in the format `$VARIABLE_NAME`.
-/// It then calls the the EnvVarProcessor Trait's `process` method on each field in the `Config`
+/// It then calls the the `EnvVarProcessor` Trait's `process` method on each field in the `Config`
 /// object that may contain an environment variable.
 ///
 ///
