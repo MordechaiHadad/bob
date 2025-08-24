@@ -32,7 +32,7 @@ pub struct ParsedVersion {
     pub semver: Option<Version>,
 }
 
-/// Represents the type of a software version.
+/// Represents the type of (a) software version.
 ///
 /// This enum is used to distinguish between different types of software versions, such as normal versions, the latest version, nightly versions, versions identified by a hash, and nightly versions that have been rolled back.
 ///

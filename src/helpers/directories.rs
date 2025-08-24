@@ -126,7 +126,7 @@ pub fn get_config_file() -> Result<PathBuf> {
     Ok(home_dir)
 }
 
-/// Asynchronously returns the downloads directory path based on the application configuration.
+/// Asynchronously returns the 'downloads' directory path based on the application configuration.
 ///
 /// This function takes a reference to a `Config` as an argument, which contains the application configuration.
 /// It first checks if the `downloads_location` field in the `Config` is set. If it is, it checks if the directory exists. If the directory does not exist, it returns an error.
