@@ -284,7 +284,7 @@ pub async fn get_current_version(config: &Config) -> Result<String> {
 /// ```
 pub async fn is_version_used(version: &str, config: &Config) -> bool {
     match get_current_version(config).await {
-        Ok(value) => value.eq(version),
+        Ok(value) => value.starts_with(version),
         Err(_) => false,
     }
 }
