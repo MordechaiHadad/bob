@@ -39,7 +39,7 @@ pub async fn start(config: Config) -> Result<()> {
         return Err(anyhow!("There are no versions installed"));
     }
 
-    let version_max_len = if has_rollbacks(&config).await? { 16 } else { 40 };
+    let version_max_len = if has_rollbacks(&config).await? { 16 } else { 7 };
     let status_max_len = 9;
     let padding = 2;
 
