@@ -610,7 +610,7 @@ async fn handle_building_from_source(
     fs::create_dir("build").await?;
 
     let downloads_location = directories::get_downloads_directory(config).await?;
-    let folder_name = downloads_location.join(&version.tag_name);
+    let folder_name = downloads_location.join(&version.tag_name[0..7]);
 
     let build_type = match config.enable_release_build {
         Some(true) => "Release",
