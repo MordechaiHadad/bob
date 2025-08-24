@@ -54,11 +54,15 @@ jobs:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           profile: ${{ env.RUST_PROFILE }}
           override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
-      - name: Check the formatting
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check --verbose
+      - name: "Ensure nightly rustfmt installed"
+        run: rustup component add rustfmt --toolchain nightly
+      - name: "Run Cargo fmt"
+        run: cargo +nightly fmt --all -- --check --verbose
+        # - name: Check the formatting
+        #   uses: actions-rs/cargo@v1
+        #   with:
+        #     command: fmt
+        #     args: --all -- --check --verbose
   security_audit:
     runs-on: ubuntu-latest
     steps:
