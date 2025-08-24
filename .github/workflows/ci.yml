@@ -1,6 +1,11 @@
 name: Continuous Integration
 on: [push, pull_request]
 
+env:
+  RUST_TOOLCHAIN: nightly
+  RUST_PROFILE: minimal
+  RUST_TOOLCHAIN_OVERRIDE: true
+
 jobs:
     clippy:
         strategy:
@@ -13,9 +18,9 @@ jobs:
             - name: Install toolchain
               uses: actions-rs/toolchain@v1
               with:
-                  toolchain: stable
-                  profile: minimal
-                  override: true
+                  toolchain: ${{ env.RUST_TOOLCHAIN }}
+                  profile: ${{ env.RUST_PROFILE }}
+                  override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
             - name: Check the lints
               uses: actions-rs/cargo@v1
               with:
@@ -33,9 +38,9 @@ jobs:
             - name: Install toolchain
               uses: actions-rs/toolchain@v1
               with:
-                  toolchain: stable
-                  profile: minimal
-                  override: true
+                  toolchain: ${{ env.RUST_TOOLCHAIN }}
+                  profile: ${{ env.RUST_PROFILE }}
+                  override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
             - name: Run the tests
               uses: actions-rs/cargo@v1
               with:
@@ -50,9 +55,9 @@ jobs:
             - name: Install toolchain
               uses: actions-rs/toolchain@v1
               with:
-                  toolchain: stable
-                  profile: minimal
-                  override: true
+                  toolchain: ${{ env.RUST_TOOLCHAIN }}
+                  profile: ${{ env.RUST_PROFILE }}
+                  override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
             - name: Check the formatting
               uses: actions-rs/cargo@v1
               with:
@@ -67,9 +72,9 @@ jobs:
             - name: Install toolchain
               uses: actions-rs/toolchain@v1
               with:
-                  toolchain: stable
-                  profile: minimal
-                  override: true
+                  toolchain: ${{ env.RUST_TOOLCHAIN }}
+                  profile: ${{ env.RUST_PROFILE }}
+                  override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
             - name: Install cargo-audit
               uses: actions-rs/cargo@v1
               with:
@@ -134,9 +139,9 @@ jobs:
             - name: Install Rust
               uses: actions-rs/toolchain@v1
               with:
-                  toolchain: stable
-                  profile: minimal
-                  override: true
+                  toolchain: ${{ env.RUST_TOOLCHAIN }}
+                  profile: ${{ env.RUST_PROFILE }}
+                  override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
             - name: Add Rust target for cross-compilation
               if: matrix.os.TARGET != ''
               run: rustup target add ${{ matrix.os.TARGET }}
