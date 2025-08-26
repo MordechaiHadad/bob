@@ -195,6 +195,7 @@ dependencies = [
  "chrono",
  "clap",
  "clap_complete",
+ "clap_complete_nushell",
  "dialoguer",
  "flate2",
  "futures-util",
@@ -333,6 +334,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1a554639e42d0c838336fc4fbedb9e2df3ad1fa4acda149f9126b4ccfcd7900f"
 dependencies = [
  "clap",
+]
+
+[[package]]
+name = "clap_complete_nushell"
+version = "4.5.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0a0c951694691e65bf9d421d597d68416c22de9632e884c28412cb8cd8b73dce"
+dependencies = [
+ "clap",
+ "clap_complete",
 ]
 
 [[package]]
