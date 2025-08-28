@@ -367,20 +367,14 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
     }
 
     #[cfg(target_family = "windows")]
-    modify_path(&config, installation_dir).await?;
+    return modify_path(installation_dir).await;
 
     #[cfg(not(target_family = "windows"))]
-    modify_path(&config, installation_dir).await?;
-
-    info!(
-        "Added {installation_dir} to system PATH. Please start a new terminal session for changes to take effect."
-    );
-
-    Ok(())
+    return modify_path(&config, installation_dir).await;
 }
 
 #[cfg(target_family = "windows")]
-async fn modify_path(config: &ConfigFile, installation_dir: &str) -> Result<()> {
+async fn modify_path(installation_dir: &str) -> Result<()> {
     use winreg::RegKey;
     use winreg::enums::*;
 
@@ -401,6 +395,11 @@ async fn modify_path(config: &ConfigFile, installation_dir: &str) -> Result<()> 
     };
 
     env.set_value("Path", &new_path)?;
+
+    info!(
+        "Added {installation_dir} to system PATH. Please start a new terminal session for changes to take effect."
+    );
+
     Ok(())
 }
 
@@ -420,6 +419,10 @@ async fn modify_path(config: &ConfigFile, installation_dir: &str) -> Result<()> 
     };
     // We won't have to guard this anymore as this fn body is behind a comp flag
     let env_paths = copy_env_files_if_not_exist(&config.config, installation_dir).await?;
+
+    let msg = format!(
+        "Added {installation_dir} to system PATH. Please start a new terminal session for changes to take effect."
+    );
 
     match shell {
         Shell::Fish(fish) => {
@@ -442,6 +445,7 @@ async fn modify_path(config: &ConfigFile, installation_dir: &str) -> Result<()> 
                 .write_all(format!("source \"{}\"\n", env_paths[1].to_str().unwrap()).as_bytes())
                 .await?;
             opened_file.flush().await?;
+            info!(msg);
             Ok(())
         }
         shell => {
@@ -459,6 +463,7 @@ async fn modify_path(config: &ConfigFile, installation_dir: &str) -> Result<()> 
                     return Ok(());
                 }
             }
+            info!(msg);
             Ok(())
         }
     }
