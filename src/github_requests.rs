@@ -154,6 +154,11 @@ pub struct ErrorResponse {
 /// This function returns a `Result` that contains a `String` representing the response body if the operation was successful.
 /// If the operation failed, the function returns `Err` with a description of the error.
 ///
+/// # Errors
+///
+/// * `reqwest::Error` - If an error occurs while making the request.
+/// * `anyhow::Error` - If an error occurs while creating the `Client` or if the URL is invalid.
+///
 /// # Example
 ///
 /// ```rust
@@ -177,6 +182,29 @@ pub async fn make_github_request<T: AsRef<str> + reqwest::IntoUrl>(
     Ok(response)
 }
 
+/// Fetches the upstream nightly version from the GitHub API.
+///
+/// # Parameters
+///
+/// * `Client` - A reference to a `reqwest::Client` used to make the request.
+///
+/// # Returns
+///
+///  * `Result<UpstreamVersion>` - A `Result` that contains the `UpstreamVersion` if the request was successful, or an error if it failed.
+///
+/// # Errors
+///
+///  This function will return an error if the request to the GitHub API fails or if the response cannot be deserialized into an `UpstreamVersion`.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use reqwest::Client;
+/// use bob::github_requests::get_upstream_nightly;
+///
+/// let upstream_version = get_upstream_nightly(&Client::new());
+/// assert!(upstream_version.is_ok());
+/// ```
 pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
     let response = make_github_request(
         client,
@@ -200,6 +228,10 @@ pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
 /// # Returns
 ///
 /// * `Result<Vec<RepoCommit>>` - A vector of `RepoCommit` objects representing the commits for the nightly version, or an error if the request failed.
+///
+/// # Errors
+///
+/// This function will return an error if the request to the GitHub API fails or if the response cannot be deserialized into a vector of `RepoCommit` objects.
 ///
 /// # Example
 ///
@@ -226,7 +258,7 @@ pub async fn get_commits_for_nightly(
 
 /// Deserializes a JSON response from the GitHub API.
 ///
-/// This function takes a JSON response as a string and attempts to deserialize it into a specified type `T`. If the response contains a "message" field, it is treated as an error response and the function will return an error with the message from the response. If the error is related to rate limiting, a specific error message is returned.
+/// This function takes a JSON response as a string and attempts to deserialize it into a specified type `T`. If the response contains a "message" field, it is treated as an error response, and the function will return an error with the message from the response. If the error is related to rate limiting, a specific error message is returned.
 ///
 /// # Parameters
 ///
