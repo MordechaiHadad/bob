@@ -480,6 +480,7 @@ async fn modify_path(config: &ConfigFile, installation_dir: &str) -> Result<()> 
 // This is a change in the 2024 edition and up-
 // Read more in the `use` docs under `precise capturing`.
 //
+#[cfg(not(target_family = "windows"))]
 fn get_rc_files_from_shell(
     shell: &what_the_path::shell::Shell,
 ) -> Result<Vec<impl AsRef<Path> + use<>>> {
@@ -491,6 +492,7 @@ fn get_rc_files_from_shell(
     })
 }
 
+#[cfg(not(target_family = "windows"))]
 async fn create_if_not_exist<P>(file_path: P, env_path: &str) -> Result<()>
 where
     P: AsRef<Path>,
@@ -516,11 +518,15 @@ where
     Ok(())
 }
 
+#[cfg(not(target_family = "windows"))]
 #[derive(Debug)]
 struct FishScriptPath<F>(F);
+
+#[cfg(not(target_family = "windows"))]
 #[derive(Debug)]
 struct ShScriptPath<S>(S);
 
+#[cfg(not(target_family = "windows"))]
 impl<F> std::ops::Deref for FishScriptPath<F> {
     type Target = F;
 
@@ -529,6 +535,7 @@ impl<F> std::ops::Deref for FishScriptPath<F> {
     }
 }
 
+#[cfg(not(target_family = "windows"))]
 impl<S> std::ops::Deref for ShScriptPath<S> {
     type Target = S;
 
@@ -537,12 +544,14 @@ impl<S> std::ops::Deref for ShScriptPath<S> {
     }
 }
 
+#[cfg(not(target_family = "windows"))]
 #[derive(Debug)]
 struct EnvPaths<F, S> {
     fish_script: F,
     sh_script: S,
 }
 
+#[cfg(not(target_family = "windows"))]
 impl<F, S> From<(F, S)> for EnvPaths<F, S> {
     fn from(paths: (F, S)) -> Self {
         EnvPaths {
@@ -552,6 +561,7 @@ impl<F, S> From<(F, S)> for EnvPaths<F, S> {
     }
 }
 
+#[cfg(not(target_family = "windows"))]
 type EnvPathsBufs = EnvPaths<FishScriptPath<PathBuf>, ShScriptPath<PathBuf>>;
 
 #[cfg(not(target_family = "windows"))]
@@ -593,6 +603,7 @@ async fn copy_env_files_if_not_exist(
     )))
 }
 
+#[cfg(not(target_family = "windows"))]
 #[cfg(test)]
 mod use_handler_tests {
     use super::*;
