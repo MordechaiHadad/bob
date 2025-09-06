@@ -592,3 +592,117 @@ async fn copy_env_files_if_not_exist(
         ShScriptPath(posix_env_path),
     )))
 }
+
+#[cfg(test)]
+mod use_handler_tests {
+    use super::*;
+    // Debug using the `dbg!()` macros via:
+    //                                         V- to binary
+    // `cargo test --bin bob use_handler_tests -- --no-capture`
+
+    #[tokio::test]
+    async fn copy_env_files_test() {
+        let config = ConfigFile::get().await.unwrap();
+        let installation_dir = get_installation_directory(&config.config).await.unwrap();
+        let env_paths =
+            copy_env_files_if_not_exist(&config.config, installation_dir.to_str().unwrap())
+                .await
+                .unwrap();
+
+        dbg!(&env_paths.fish_script);
+        dbg!(&env_paths.sh_script);
+
+        assert!(env_paths.fish_script.exists());
+        assert!(env_paths.sh_script.exists());
+    }
+
+    #[test]
+    fn fish_get_rc_files_test() {
+        use what_the_path::shell::Shell;
+
+        let fish_shell = what_the_path::shell::Fish;
+        let fish_type = Shell::Fish(fish_shell);
+
+        let fish_files = get_rc_files_from_shell(&fish_type).unwrap();
+
+        let printable = fish_files
+            .iter()
+            .map(|p| p.as_ref().to_string_lossy())
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        dbg!(&printable);
+
+        let fish_file = fish_files
+            .first()
+            .ok_or_else(|| anyhow::anyhow!("No fish rc files found"))
+            .unwrap()
+            .as_ref()
+            .join("bob.fish");
+
+        dbg!(&fish_file);
+
+        assert!(fish_file.ends_with("bob.fish"));
+
+        assert_ne!(fish_files.len(), 0);
+    }
+
+    #[test]
+    fn sh_get_rc_files_test() {
+        use what_the_path::shell::Shell;
+
+        let bash_shell = what_the_path::shell::Bash;
+        let bash_type = Shell::Bash(bash_shell);
+
+        let bash_files = get_rc_files_from_shell(&bash_type).unwrap();
+
+        let printable = bash_files
+            .iter()
+            .map(|p| p.as_ref().to_string_lossy())
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        dbg!(&printable);
+
+        assert_ne!(bash_files.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn sh_get_rc_with_env_test() {
+        let config = ConfigFile::get().await.unwrap();
+        let installation_dir = get_installation_directory(&config.config).await.unwrap();
+        let env_paths =
+            copy_env_files_if_not_exist(&config.config, installation_dir.to_str().unwrap())
+                .await
+                .unwrap();
+
+        let env_path: &str = env_paths.sh_script.to_str().unwrap();
+
+        let inner_shell = what_the_path::shell::Bash;
+        let shell = what_the_path::shell::Shell::Bash(inner_shell);
+
+        let files = match get_rc_files_from_shell(&shell) {
+            Ok(files) => std::rc::Rc::new(files),
+            Err(error) => {
+                panic!("Failed to get POSIX rc files: {error}");
+            }
+        };
+
+        // Inside the match arm for _shell (aka: non-Fish)
+        let line = format!(". \"{}\"", env_path);
+        for file in files.iter() {
+            let file = file.as_ref().to_path_buf();
+            if let Err(error) = what_the_path::shell::append_to_rcfile(file.clone(), &line) {
+                dbg!(&file);
+                dbg!(&line);
+                dbg!(&env_path);
+                eprintln!("Failed to append to rc file: {error}");
+                return;
+            }
+            // otherwise we should be calling the error branch above
+            // Can be dubugged by running:
+            // `cargo test --bin bob sh_get_rc_with_env_test -- --no-capture`
+            assert!(file.exists());
+        }
+    }
+}
