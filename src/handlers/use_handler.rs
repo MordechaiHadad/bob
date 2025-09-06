@@ -405,8 +405,6 @@ async fn modify_path(installation_dir: &str) -> Result<()> {
 
 #[cfg(not(target_family = "windows"))]
 async fn modify_path(config: &ConfigFile, installation_dir: &str) -> Result<()> {
-    use tokio::fs::File;
-    use tokio::io::AsyncWriteExt;
     use tracing::warn;
     use what_the_path::shell::Shell;
 
@@ -417,47 +415,51 @@ async fn modify_path(config: &ConfigFile, installation_dir: &str) -> Result<()> 
             return Ok(());
         }
     };
-    // We won't have to guard this anymore as this fn body is behind a comp flag
     let env_paths = copy_env_files_if_not_exist(&config.config, installation_dir).await?;
 
     let msg = format!(
         "Added {installation_dir} to system PATH. Please start a new terminal session for changes to take effect."
     );
 
-    match shell {
-        Shell::Fish(fish) => {
-            let files = match fish.get_rcfiles() {
-                Ok(files) => files,
-                Err(error) => {
-                    warn!("Failed to get fish rc files: {error}");
-                    return Ok(());
-                }
-            };
-            let fish_file = files[0].join("bob.fish");
-
-            if fish_file.exists() {
-                warn!("Fish rc file already exists: {}", fish_file.display());
-                return Ok(());
-            }
-
-            let mut opened_file = File::create(fish_file).await?;
-            opened_file
-                .write_all(format!("source \"{}\"\n", env_paths[1].to_str().unwrap()).as_bytes())
-                .await?;
-            opened_file.flush().await?;
-            info!(msg);
-            Ok(())
+    let files = match get_rc_files_from_shell(&shell) {
+        Ok(files) => std::rc::Rc::new(files),
+        Err(error) => {
+            let kind_str = format!("{shell:?}");
+            warn!("Failed to get {kind_str} rc files: {error}");
+            return Ok(());
         }
-        shell => {
-            let files = match shell.get_rcfiles() {
-                Ok(files) => files,
-                Err(error) => {
-                    warn!("Failed to get shell rc files: {error}");
-                    return Ok(());
-                }
-            };
-            let line = format!(". \"{}\"", env_paths[0].to_str().unwrap());
-            for file in files {
+    };
+
+    match shell {
+        Shell::Fish(_fish) => {
+            let fish_file = files
+                .first()
+                .ok_or_else(|| {
+                    warn!("No fish rc files found");
+                    anyhow!("No fish rc files found")
+                })?
+                .as_ref()
+                .join("bob.fish");
+
+            let env_path = env_paths.fish_script.to_str().unwrap();
+
+            create_if_not_exist(&fish_file, env_path).await.map_or_else(
+                |error| {
+                    warn!("Failed to create fish config file: {error}");
+                    Ok(())
+                },
+                |_| {
+                    info!(msg);
+                    Ok(())
+                },
+            )
+        }
+        _shell => {
+            let env_path: &str = env_paths.sh_script.to_str().unwrap();
+
+            let line = format!(". \"{}\"", env_path);
+            for file in files.iter() {
+                let file = file.as_ref().to_path_buf();
                 if let Err(error) = what_the_path::shell::append_to_rcfile(file, &line) {
                     warn!("Failed to append to rc file: {error}");
                     return Ok(());
@@ -469,11 +471,94 @@ async fn modify_path(config: &ConfigFile, installation_dir: &str) -> Result<()> 
     }
 }
 
-#[cfg(target_family = "unix")]
+// Developer note:
+// The `+ use<>` here (without anything in it)
+// indicates we want to opt-out of the
+// RPIT (return-position `impl Trait` (RPIT) types)
+// lifetime capturing.
+//
+// This is a change in the 2024 edition and up-
+// Read more in the `use` docs under `precise capturing`.
+//
+fn get_rc_files_from_shell(
+    shell: &what_the_path::shell::Shell,
+) -> Result<Vec<impl AsRef<Path> + use<>>> {
+    Ok(match shell.get_rcfiles() {
+        Ok(files) => files,
+        Err(error) => {
+            return Err(anyhow::anyhow!(error).context("Failed to get rc files"));
+        }
+    })
+}
+
+async fn create_if_not_exist<P>(file_path: P, env_path: &str) -> Result<()>
+where
+    P: AsRef<Path>,
+{
+    use tokio::fs::File;
+    use tokio::io::AsyncWriteExt;
+
+    if file_path.as_ref().exists() {
+        tracing::warn!(
+            "Fish rc file already exists: {}",
+            file_path.as_ref().display()
+        );
+        return Ok(());
+    }
+
+    let mut opened_file = File::create(file_path).await?;
+
+    opened_file
+        .write_all(format!("source \"{}\"\n", &env_path).as_bytes())
+        .await?;
+    opened_file.flush().await?;
+
+    Ok(())
+}
+
+#[derive(Debug)]
+struct FishScriptPath<F>(F);
+#[derive(Debug)]
+struct ShScriptPath<S>(S);
+
+impl<F> std::ops::Deref for FishScriptPath<F> {
+    type Target = F;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<S> std::ops::Deref for ShScriptPath<S> {
+    type Target = S;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[derive(Debug)]
+struct EnvPaths<F, S> {
+    fish_script: F,
+    sh_script: S,
+}
+
+impl<F, S> From<(F, S)> for EnvPaths<F, S> {
+    fn from(paths: (F, S)) -> Self {
+        EnvPaths {
+            fish_script: paths.0,
+            sh_script: paths.1,
+        }
+    }
+}
+
+type EnvPathsBufs = EnvPaths<FishScriptPath<PathBuf>, ShScriptPath<PathBuf>>;
+
+#[cfg(not(target_family = "windows"))]
 async fn copy_env_files_if_not_exist(
     config: &Config,
     installation_dir: &str,
-) -> Result<Vec<PathBuf>> {
+) -> Result<EnvPathsBufs> {
     use crate::helpers::directories::get_downloads_directory;
     use tokio::io::AsyncWriteExt;
 
@@ -502,5 +587,8 @@ async fn copy_env_files_if_not_exist(
         file.flush().await?;
     }
 
-    Ok(vec![posix_env_path, fish_env_path])
+    Ok(EnvPaths::from((
+        FishScriptPath(fish_env_path),
+        ShScriptPath(posix_env_path),
+    )))
 }
