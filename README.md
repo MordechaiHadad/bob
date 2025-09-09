@@ -161,7 +161,7 @@ List all installed and used versions.
 
 ---
 
-- `bob complete bash|elvish|fish|powershell|zsh`
+- `bob complete bash|elvish|fish|powershell|zsh|nushell`
 
 Generate shell completion.
 
