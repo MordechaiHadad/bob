@@ -8,8 +8,8 @@ use crate::{
     version::parse_version_type,
 };
 use anyhow::Result;
-use clap::{Args, CommandFactory, Parser};
-use clap_complete::Shell;
+use clap::{Args, CommandFactory, Parser, ValueEnum};
+use clap_complete::shells;
 use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
 use reqwest::{Client, Error};
 use tracing::info;
@@ -152,6 +152,50 @@ pub struct Update {
     /// Apply the update to all versions
     #[arg(short, long)]
     pub all: bool,
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+#[allow(clippy::enum_variant_names)]
+enum Shell {
+    Bash,
+    Elvish,
+    Fish,
+    Nushell,
+    PowerShell,
+    Zsh,
+}
+
+impl clap_complete::Generator for Shell {
+    fn file_name(&self, name: &str) -> String {
+        match self {
+            Shell::Bash => shells::Bash.file_name(name),
+            Shell::Elvish => shells::Elvish.file_name(name),
+            Shell::Fish => shells::Fish.file_name(name),
+            Shell::Nushell => clap_complete_nushell::Nushell.file_name(name),
+            Shell::PowerShell => shells::PowerShell.file_name(name),
+            Shell::Zsh => shells::Zsh.file_name(name),
+        }
+    }
+
+    fn generate(&self, cmd: &clap::Command, buf: &mut dyn std::io::Write) {
+        self.try_generate(cmd, buf)
+            .expect("failed to write completion file");
+    }
+
+    fn try_generate(
+        &self,
+        cmd: &clap::Command,
+        buf: &mut dyn std::io::Write,
+    ) -> Result<(), std::io::Error> {
+        match self {
+            Shell::Bash => shells::Bash.try_generate(cmd, buf),
+            Shell::Elvish => shells::Elvish.try_generate(cmd, buf),
+            Shell::Fish => shells::Fish.try_generate(cmd, buf),
+            Shell::Nushell => clap_complete_nushell::Nushell.try_generate(cmd, buf),
+            Shell::PowerShell => shells::PowerShell.try_generate(cmd, buf),
+            Shell::Zsh => shells::Zsh.try_generate(cmd, buf),
+        }
+    }
 }
 
 /// Starts the CLI application.
