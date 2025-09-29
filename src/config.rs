@@ -197,7 +197,11 @@ impl EnvVarProcessor for Option<String> {
     fn process(&mut self) -> Result<()> {
         if let Some(value) = self {
             if ENVIRONMENT_VAR_REGEX.is_match(value) {
-                let extract = ENVIRONMENT_VAR_REGEX.find(value).map_or("", |m| m.as_str());
+                let mut extract = ENVIRONMENT_VAR_REGEX.find(value).map_or("", |m| m.as_str());
+
+                if extract.chars().count() >= 2 && extract.starts_with('$') {
+                    extract = &extract[1..];
+                }
 
                 let var = env::var(extract).expect("Failed to get environment variable");
 
