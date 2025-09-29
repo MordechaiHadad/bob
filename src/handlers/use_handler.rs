@@ -319,97 +319,82 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
         return Ok(());
     }
 
-    if config.config.add_neovim_binary_to_path.is_none() {
-        let confirmation = Confirm::new()
-            .with_prompt("Add bob-managed Neovim binary to your $PATH automatically?")
-            .interact()?;
-        let mut temp_confg = config.clone();
+    let temp_config = std::cell::RefCell::new(&config);
+    let temp_path = std::cell::RefCell::new(temp_config.borrow().config.add_neovim_binary_to_path);
 
-        temp_confg.config.add_neovim_binary_to_path = Some(confirmation);
-        temp_confg.save_to_file().await?;
-
-        if !confirmation {
-            return Ok(());
-        }
-
-        drop(temp_confg);
+    if !(dialoguer::console::user_attended() && dialoguer::console::user_attended_stderr())
+        && config.config.add_neovim_binary_to_path.is_none()
+    {
+        info!(
+            "You're running in a non-interactive shell. Automatically adding {installation_dir} to system PATH"
+        );
+        let _ = temp_path.replace(Some(true));
+        let tc = temp_config.into_inner(); // use into_inner to gain ownerhsip + original for saving
+        tc.save_to_file().await?;
+        return Ok(());
     }
 
-    cfg_if::cfg_if! {
-        if #[cfg(windows)] {
-            use winreg::enums::*;
-            use winreg::RegKey;
+    if config.config.add_neovim_binary_to_path.is_none() {
+        let timeout = tokio::time::timeout(tokio::time::Duration::from_secs(120), async {
+            Confirm::new()
+                .with_prompt("Add bob-managed Neovim binary to your $PATH automatically?")
+                .interact()
+        })
+        .await
+        .ok();
 
-            let current_usr = RegKey::predef(HKEY_CURRENT_USER);
-            let env = current_usr.open_subkey_with_flags("Environment", KEY_READ | KEY_WRITE)?;
-            let usr_path: String = env.get_value("Path")?;
-            let usr_path_lower = usr_path.replace('/', "\\").to_lowercase();
-            let installation_dir = installation_dir.replace('/', "\\").to_lowercase();
+        match timeout {
+            Some(Ok(confirmation)) => {
+                // valid confirmation + within time
+                let _ = temp_path.replace(Some(confirmation));
+                let tc = temp_config.into_inner(); // use into_inner to gain ownerhsip + original for saving
+                tc.save_to_file().await?;
 
-            if usr_path_lower.contains(&installation_dir) {
-                return Ok(());
-            }
-
-            let new_path = if usr_path_lower.ends_with(';') {
-                format!("{usr_path_lower}{installation_dir}")
-            } else {
-                format!("{usr_path_lower};{installation_dir}")
-            };
-
-            env.set_value("Path", &new_path)?;
-        } else {
-            use tokio::fs::File;
-            use tokio::io::AsyncWriteExt;
-            use what_the_path::shell::Shell;
-            use tracing::warn;
-
-            let shell = match Shell::detect_by_shell_var() {
-                Ok(shell) => shell,
-                Err(error) => {
-                    warn!("Failed to detect shell: {error}");
+                if !confirmation {
                     return Ok(());
                 }
-            };
-            let env_paths = copy_env_files_if_not_exist(&config.config, installation_dir).await?;
-
-            match shell {
-                Shell::Fish(fish) => {
-                    let files = match fish.get_rcfiles() {
-                        Ok(files) => files,
-                        Err(error) => {
-                            warn!("Failed to get fish rc files: {error}");
-                            return Ok(());
-                        }
-                    };
-                    let fish_file = files[0].join("bob.fish");
-                    if fish_file.exists() {
-                        warn!("Fish rc file already exists: {}", fish_file.display());
-                        return Ok(());
-                    }
-
-                    let mut opened_file = File::create(fish_file).await?;
-                    opened_file.write_all(format!("source \"{}\"\n", env_paths[1].to_str().unwrap()).as_bytes()).await?;
-                    opened_file.flush().await?;
-                },
-                shell => {
-                    let files = match shell.get_rcfiles() {
-                        Ok(files) => files,
-                        Err(error) => {
-                            warn!("Failed to get shell rc files: {error}");
-                            return Ok(());
-                        }
-                    };
-                    let line = format!(". \"{}\"", env_paths[0].to_str().unwrap());
-                    for file in files {
-                        if let Err(error) = what_the_path::shell::append_to_rcfile(file, &line) {
-                            warn!("Failed to append to rc file: {error}");
-                            return Ok(());
-                        }
-                    }
-                }
+            }
+            Some(Err(e)) => {
+                // non valid due to some error
+                return Err(anyhow::anyhow!(e).context("Failed to read user input"));
+            }
+            None => {
+                // none due to timeout elapsing
+                info!("No input received within 120 seconds. Skipping adding to PATH.");
+                return Ok(());
             }
         }
     }
+
+    #[cfg(target_family = "windows")]
+    return modify_path(installation_dir).await;
+
+    #[cfg(not(target_family = "windows"))]
+    return modify_path(&config, installation_dir).await;
+}
+
+#[cfg(target_family = "windows")]
+async fn modify_path(installation_dir: &str) -> Result<()> {
+    use winreg::RegKey;
+    use winreg::enums::*;
+
+    let current_usr = RegKey::predef(HKEY_CURRENT_USER);
+    let env = current_usr.open_subkey_with_flags("Environment", KEY_READ | KEY_WRITE)?;
+    let usr_path: String = env.get_value("Path")?;
+    let usr_path_lower = usr_path.replace('/', "\\").to_lowercase();
+    let installation_dir = installation_dir.replace('/', "\\").to_lowercase();
+
+    if usr_path_lower.contains(&installation_dir) {
+        return Ok(());
+    }
+
+    let new_path = if usr_path_lower.ends_with(';') {
+        format!("{usr_path_lower}{installation_dir}")
+    } else {
+        format!("{usr_path_lower};{installation_dir}")
+    };
+
+    env.set_value("Path", &new_path)?;
 
     info!(
         "Added {installation_dir} to system PATH. Please start a new terminal session for changes to take effect."
@@ -418,11 +403,172 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
     Ok(())
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(not(target_family = "windows"))]
+async fn modify_path(config: &ConfigFile, installation_dir: &str) -> Result<()> {
+    use tracing::warn;
+    use what_the_path::shell::Shell;
+
+    let shell = match Shell::detect_by_shell_var() {
+        Ok(shell) => shell,
+        Err(error) => {
+            warn!("Failed to detect shell: {error}");
+            return Ok(());
+        }
+    };
+    let env_paths = copy_env_files_if_not_exist(&config.config, installation_dir).await?;
+
+    let msg = format!(
+        "Added {installation_dir} to system PATH. Please start a new terminal session for changes to take effect."
+    );
+
+    let files = match get_rc_files_from_shell(&shell) {
+        Ok(files) => std::rc::Rc::new(files),
+        Err(error) => {
+            let kind_str = format!("{shell:?}");
+            warn!("Failed to get {kind_str} rc files: {error}");
+            return Ok(());
+        }
+    };
+
+    match shell {
+        Shell::Fish(_fish) => {
+            let fish_file = files
+                .first()
+                .ok_or_else(|| {
+                    warn!("No fish rc files found");
+                    anyhow!("No fish rc files found")
+                })?
+                .as_ref()
+                .join("bob.fish");
+
+            let env_path = env_paths.fish_script.to_str().unwrap();
+
+            create_if_not_exist(&fish_file, env_path).await.map_or_else(
+                |error| {
+                    warn!("Failed to create fish config file: {error}");
+                    Ok(())
+                },
+                |_| {
+                    info!(msg);
+                    Ok(())
+                },
+            )
+        }
+        _shell => {
+            let env_path: &str = env_paths.sh_script.to_str().unwrap();
+
+            let line = format!(". \"{}\"", env_path);
+            for file in files.iter() {
+                let file = file.as_ref().to_path_buf();
+                if let Err(error) = what_the_path::shell::append_to_rcfile(file, &line) {
+                    warn!("Failed to append to rc file: {error}");
+                    return Ok(());
+                }
+            }
+            info!(msg);
+            Ok(())
+        }
+    }
+}
+
+// Developer note:
+// The `+ use<>` here (without anything in it)
+// indicates we want to opt-out of the
+// RPIT (return-position `impl Trait` (RPIT) types)
+// lifetime capturing.
+//
+// This is a change in the 2024 edition and up-
+// Read more in the `use` docs under `precise capturing`.
+//
+#[cfg(not(target_family = "windows"))]
+fn get_rc_files_from_shell(
+    shell: &what_the_path::shell::Shell,
+) -> Result<Vec<impl AsRef<Path> + use<>>> {
+    Ok(match shell.get_rcfiles() {
+        Ok(files) => files,
+        Err(error) => {
+            return Err(anyhow::anyhow!(error).context("Failed to get rc files"));
+        }
+    })
+}
+
+#[cfg(not(target_family = "windows"))]
+async fn create_if_not_exist<P>(file_path: P, env_path: &str) -> Result<()>
+where
+    P: AsRef<Path>,
+{
+    use tokio::fs::File;
+    use tokio::io::AsyncWriteExt;
+
+    if file_path.as_ref().exists() {
+        tracing::warn!(
+            "Fish rc file already exists: {}",
+            file_path.as_ref().display()
+        );
+        return Ok(());
+    }
+
+    let mut opened_file = File::create(file_path).await?;
+
+    opened_file
+        .write_all(format!("source \"{}\"\n", &env_path).as_bytes())
+        .await?;
+    opened_file.flush().await?;
+
+    Ok(())
+}
+
+#[cfg(not(target_family = "windows"))]
+#[derive(Debug)]
+struct FishScriptPath<F>(F);
+
+#[cfg(not(target_family = "windows"))]
+#[derive(Debug)]
+struct ShScriptPath<S>(S);
+
+#[cfg(not(target_family = "windows"))]
+impl<F> std::ops::Deref for FishScriptPath<F> {
+    type Target = F;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[cfg(not(target_family = "windows"))]
+impl<S> std::ops::Deref for ShScriptPath<S> {
+    type Target = S;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[cfg(not(target_family = "windows"))]
+#[derive(Debug)]
+struct EnvPaths<F, S> {
+    fish_script: F,
+    sh_script: S,
+}
+
+#[cfg(not(target_family = "windows"))]
+impl<F, S> From<(F, S)> for EnvPaths<F, S> {
+    fn from(paths: (F, S)) -> Self {
+        EnvPaths {
+            fish_script: paths.0,
+            sh_script: paths.1,
+        }
+    }
+}
+
+#[cfg(not(target_family = "windows"))]
+type EnvPathsBufs = EnvPaths<FishScriptPath<PathBuf>, ShScriptPath<PathBuf>>;
+
+#[cfg(not(target_family = "windows"))]
 async fn copy_env_files_if_not_exist(
     config: &Config,
     installation_dir: &str,
-) -> Result<Vec<PathBuf>> {
+) -> Result<EnvPathsBufs> {
     use crate::helpers::directories::get_downloads_directory;
     use tokio::io::AsyncWriteExt;
 
@@ -451,5 +597,123 @@ async fn copy_env_files_if_not_exist(
         file.flush().await?;
     }
 
-    Ok(vec![posix_env_path, fish_env_path])
+    Ok(EnvPaths::from((
+        FishScriptPath(fish_env_path),
+        ShScriptPath(posix_env_path),
+    )))
+}
+
+#[cfg(not(target_family = "windows"))]
+#[cfg(test)]
+mod use_handler_tests {
+    use super::*;
+    // Debug using the `dbg!()` macros via:
+    //                                         V- to binary
+    // `cargo test --bin bob use_handler_tests -- --no-capture`
+
+    #[tokio::test]
+    async fn copy_env_files_test() {
+        let config = ConfigFile::get().await.unwrap();
+        let installation_dir = get_installation_directory(&config.config).await.unwrap();
+        let env_paths =
+            copy_env_files_if_not_exist(&config.config, installation_dir.to_str().unwrap())
+                .await
+                .unwrap();
+
+        dbg!(&env_paths.fish_script);
+        dbg!(&env_paths.sh_script);
+
+        assert!(env_paths.fish_script.exists());
+        assert!(env_paths.sh_script.exists());
+    }
+
+    #[test]
+    fn fish_get_rc_files_test() {
+        use what_the_path::shell::Shell;
+
+        let fish_shell = what_the_path::shell::Fish;
+        let fish_type = Shell::Fish(fish_shell);
+
+        let fish_files = get_rc_files_from_shell(&fish_type).unwrap();
+
+        let printable = fish_files
+            .iter()
+            .map(|p| p.as_ref().to_string_lossy())
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        dbg!(&printable);
+
+        let fish_file = fish_files
+            .first()
+            .ok_or_else(|| anyhow::anyhow!("No fish rc files found"))
+            .unwrap()
+            .as_ref()
+            .join("bob.fish");
+
+        dbg!(&fish_file);
+
+        assert!(fish_file.ends_with("bob.fish"));
+
+        assert_ne!(fish_files.len(), 0);
+    }
+
+    #[test]
+    fn sh_get_rc_files_test() {
+        use what_the_path::shell::Shell;
+
+        let bash_shell = what_the_path::shell::Bash;
+        let bash_type = Shell::Bash(bash_shell);
+
+        let bash_files = get_rc_files_from_shell(&bash_type).unwrap();
+
+        let printable = bash_files
+            .iter()
+            .map(|p| p.as_ref().to_string_lossy())
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        dbg!(&printable);
+
+        assert_ne!(bash_files.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn sh_get_rc_with_env_test() {
+        let config = ConfigFile::get().await.unwrap();
+        let installation_dir = get_installation_directory(&config.config).await.unwrap();
+        let env_paths =
+            copy_env_files_if_not_exist(&config.config, installation_dir.to_str().unwrap())
+                .await
+                .unwrap();
+
+        let env_path: &str = env_paths.sh_script.to_str().unwrap();
+
+        let inner_shell = what_the_path::shell::Bash;
+        let shell = what_the_path::shell::Shell::Bash(inner_shell);
+
+        let files = match get_rc_files_from_shell(&shell) {
+            Ok(files) => std::rc::Rc::new(files),
+            Err(error) => {
+                panic!("Failed to get POSIX rc files: {error}");
+            }
+        };
+
+        // Inside the match arm for _shell (aka: non-Fish)
+        let line = format!(". \"{}\"", env_path);
+        for file in files.iter() {
+            let file = file.as_ref().to_path_buf();
+            if let Err(error) = what_the_path::shell::append_to_rcfile(file.clone(), &line) {
+                dbg!(&file);
+                dbg!(&line);
+                dbg!(&env_path);
+                eprintln!("Failed to append to rc file: {error}");
+                return;
+            }
+            // otherwise we should be calling the error branch above
+            // Can be dubugged by running:
+            // `cargo test --bin bob sh_get_rc_with_env_test -- --no-capture`
+            assert!(file.exists());
+        }
+    }
 }
