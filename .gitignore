@@ -1,3 +1,6 @@
 /target
 bob.iml
 report.json
+.idea/
+_*/
+_*
