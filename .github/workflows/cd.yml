@@ -29,7 +29,7 @@ jobs:
                 os:
                     - { NAME: linux, OS: ubuntu-latest, ARCH: x86_64, PATH: target/optimized/bob, TARGET: "" }
                     - { NAME: linux, OS: ubuntu-24.04-arm, ARCH: arm, PATH: target/optimized/bob, TARGET: "" }
-                    - { NAME: macos, OS: macos-13, ARCH: x86_64, PATH: target/optimized/bob, TARGET: "" }
+                    - { NAME: macos, OS: macos-latest, ARCH: x86_64, PATH: target/x86_64-apple-darwin/optimized/bob, TARGET: "x86_64-apple-darwin" }
                     - { NAME: windows, OS: windows-latest, ARCH: x86_64, PATH: build, TARGET: "" }
                     - { NAME: macos, OS: macos-latest, ARCH: arm, PATH: target/optimized/bob, TARGET: "" }
                 tls:
@@ -44,6 +44,9 @@ jobs:
                   toolchain: stable
                   profile: minimal
                   override: true
+            - name: Add Rust target for cross-compilation
+              if: matrix.os.TARGET != ''
+              run: rustup target add ${{ matrix.os.TARGET }}
             - name: Install OpenSSL libraries
               run: sudo apt update && sudo apt install libssl-dev
               if: matrix.os.OS == 'ubuntu-latest' && matrix.tls.NAME == 'OpenSSL'
@@ -52,7 +55,7 @@ jobs:
               uses: actions-rs/cargo@v1
               with:
                   command: build
-                  args: --locked --profile optimized ${{ matrix.tls.ARGS }}
+                  args: --locked --profile optimized ${{ matrix.tls.ARGS }} ${{ matrix.os.TARGET != '' && format('--target {0}', matrix.os.TARGET) || '' }}
             - name: Install AppImage tools
               if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
               run: |

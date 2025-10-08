@@ -5,7 +5,7 @@ jobs:
     clippy:
         strategy:
             matrix:
-                os: [macos-latest, windows-latest, ubuntu-latest, ubuntu-24.04-arm, macos-13]
+                os: [macos-latest, windows-latest, ubuntu-latest, ubuntu-24.04-arm]
         runs-on: ${{matrix.os}}
         steps:
             - name: Checkout
@@ -25,7 +25,7 @@ jobs:
     test:
         strategy:
             matrix:
-                os: [macos-latest, windows-latest, ubuntu-latest, macos-13, ubuntu-24.04-arm]
+                os: [macos-latest, windows-latest, ubuntu-latest, ubuntu-24.04-arm]
         runs-on: ${{matrix.os}}
         steps:
             - name: Checkout
@@ -102,10 +102,10 @@ jobs:
                       }
                     - {
                           NAME: macos,
-                          OS: macos-13,
+                          OS: macos-latest,
                           ARCH: x86_64,
-                          PATH: target/optimized/bob,
-                          TARGET: "",
+                          PATH: target/x86_64-apple-darwin/optimized/bob,
+                          TARGET: "x86_64-apple-darwin",
                       }
                     - {
                           NAME: windows,
@@ -137,6 +137,9 @@ jobs:
                   toolchain: stable
                   profile: minimal
                   override: true
+            - name: Add Rust target for cross-compilation
+              if: matrix.os.TARGET != ''
+              run: rustup target add ${{ matrix.os.TARGET }}
             - name: Install OpenSSL libraries
               run: sudo apt update && sudo apt install libssl-dev
               if: matrix.os.OS == 'ubuntu-latest' && matrix.tls.NAME == 'OpenSSL'
@@ -145,7 +148,7 @@ jobs:
               uses: actions-rs/cargo@v1
               with:
                   command: build
-                  args: --locked --profile optimized ${{ matrix.tls.ARGS }}
+                  args: --locked --profile optimized ${{ matrix.tls.ARGS }} ${{ matrix.os.TARGET != '' && format('--target {0}', matrix.os.TARGET) || '' }}
             - name: Install AppImage tools
               if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
               run: |
