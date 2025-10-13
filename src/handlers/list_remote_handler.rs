@@ -72,9 +72,8 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
         .collect();
 
     let stable_version = search_stable_version(&client).await?;
-    let padding = " ".repeat(12);
 
-    let mut stdout = io::stdout().lock();
+    let mut buffer = Vec::with_capacity(1024);
 
     for version in filtered_versions {
         let version_installed = local_versions.iter().any(|v| {
@@ -91,24 +90,20 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
 
         let write_result = if helpers::version::is_version_used(&version.name, &config).await {
             writeln!(
-                stdout,
-                "{padding}{}{}",
+                buffer,
+                "{}{}",
                 Paint::green(&version.name),
                 stable_version_string
             )
         } else if version_installed {
             writeln!(
-                stdout,
-                "{padding}{}{}",
+                buffer,
+                "{}{}",
                 Paint::yellow(&version.name),
                 stable_version_string
             )
         } else {
-            writeln!(
-                stdout,
-                "{padding}{}{}",
-                &version.name, stable_version_string
-            )
+            writeln!(buffer, "{}{}", &version.name, stable_version_string)
         };
 
         if let Err(e) = write_result {
@@ -127,6 +122,14 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
             });
         }
     }
+
+    let mut stdout = io::stdout().lock();
+    stdout.write_all(&buffer).map_err(|e| {
+        if e.kind() == io::ErrorKind::BrokenPipe {
+            return anyhow::anyhow!("Failed to write to stdout: Broken pipe");
+        }
+        e.into()
+    })?;
 
     stdout.flush()?;
 
