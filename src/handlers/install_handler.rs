@@ -695,7 +695,6 @@ where
 ///
 /// # See Also
 ///
-/// * [`helpers::get_platform_name_download`](src/helpers/platform.rs)
 /// * [`helpers::get_file_type`](src/helpers/file.rs)
 async fn send_request(
     client: &Client,
