@@ -124,20 +124,14 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
     }
 
     let mut stdout = io::stdout().lock();
-    stdout.write_all(&buffer).unwrap_or_else(|e| {
+    stdout.write_all(&buffer).map_err(|e| {
         if e.kind() == io::ErrorKind::BrokenPipe {
-            eprintln!("Error writing to stdout (BrokenPipe): {}", e);
-            stdout.flush().unwrap_or(());
+            return anyhow::anyhow!("Failed to write to stdout: Broken pipe");
         }
-        eprintln!("Error writing to stdout (BrokenPipe): {}", e);
-        stdout.flush().unwrap_or(());
-    });
-    stdout.flush().unwrap_or_else(|e| {
-        if e.kind() != io::ErrorKind::BrokenPipe {
-            eprintln!("Error flushing stdout: {}", e);
-        }
-        stdout.flush().unwrap_or(());
-    });
+        e.into()
+    })?;
+
+    stdout.flush()?;
 
     Ok(())
 }
