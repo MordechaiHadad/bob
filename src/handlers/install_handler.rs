@@ -147,7 +147,7 @@ pub async fn start(
                     downloaded_checksum.file_name, downloaded_checksum.file_format
                 ));
 
-                let platform = helpers::get_platform_name_download(&version.semver);
+                let platform = helpers::get_platform_name(&version.semver);
 
                 if !sha256cmp(
                     &archive_path,
@@ -703,7 +703,7 @@ async fn send_request(
     version: &ParsedVersion,
     get_sha256sum: bool,
 ) -> Result<reqwest::Response, reqwest::Error> {
-    let platform = helpers::get_platform_name_download(&version.semver);
+    let platform = helpers::get_platform_name(&version.semver);
     let file_type = crate::FILETYPE_EXT;
 
     let url = config
