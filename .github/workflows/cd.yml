@@ -1,4 +1,4 @@
-name: Continuous Deployment
+name: "Continuous Deployment"
 
 on:
     push:
@@ -14,9 +14,9 @@ jobs:
     check-version:
         runs-on: ubuntu-latest
         steps:
-            - name: Checkout code
+            - name: "Checkout code"
               uses: actions/checkout@v2
-            - name: Check version
+            - name: "Check version"
               id: check_version
               run: |
                   VERSION=v$(grep '^version =' Cargo.toml | cut -d '"' -f 2 | head -n 1)
@@ -43,25 +43,25 @@ jobs:
         runs-on: ${{matrix.os.OS}}
         steps:
             - uses: actions/checkout@v4
-            - name: Install Rust
+            - name: "Install Rust"
               uses: actions-rs/toolchain@v1
               with:
                   toolchain: ${{ env.RUST_TOOLCHAIN }}
                   profile: ${{ env.RUST_PROFILE }}
                   override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
-            - name: Add Rust target for cross-compilation
+            - name: "Add Rust target for cross-compilation"
               if: matrix.os.TARGET != ''
               run: rustup target add ${{ matrix.os.TARGET }}
-            - name: Install OpenSSL libraries
+            - name: "Install OpenSSL libraries"
               run: sudo apt update && sudo apt install libssl-dev
               if: matrix.os.OS == 'ubuntu-latest' && matrix.tls.NAME == 'OpenSSL'
             - uses: Swatinem/rust-cache@v1
-            - name: Build Bob
+            - name: "Build Bob"
               uses: actions-rs/cargo@v1
               with:
                   command: build
                   args: --locked --profile optimized ${{ matrix.tls.ARGS }} ${{ matrix.os.TARGET != '' && format('--target {0}', matrix.os.TARGET) || '' }}
-            - name: Install AppImage tools
+            - name: "Install AppImage tools"
               if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
               run: |
                   sudo apt update && sudo apt install -y libfuse2 # Needed by AppImage/linuxdeploy
@@ -77,7 +77,7 @@ jobs:
                   wget -c "https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-$DOWNLOAD_ARCH.AppImage" -O linuxdeploy-plugin-appimage
                   chmod +x linuxdeploy linuxdeploy-plugin-appimage
 
-            - name: Prepare AppDir
+            - name: "Prepare AppDir"
               if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
               run: |
                   mkdir -p AppDir/usr/bin AppDir/usr/share/icons/hicolor/256x256/apps AppDir/usr/share/applications
@@ -104,19 +104,19 @@ jobs:
                   ./linuxdeploy --appdir AppDir --executable AppDir/usr/bin/bob --desktop-file AppDir/bob.desktop --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/bob.png --output appimage
 
 
-            - name: Setup Bob build directory
+            - name: "Setup Bob build directory"
               run: |
                   mkdir build
                   copy .\\bin\\vcruntime140.dll .\\build
                   copy .\\target\\optimized\\bob.exe .\\build
               if: matrix.os.OS == 'windows-latest'
-            - name: Upload Bob binary
+            - name: "Upload Bob binary"
               uses: actions/upload-artifact@v4
               with:
                   name: "bob-${{ matrix.os.NAME }}-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}"
                   path: ${{ matrix.os.PATH }}
                   if-no-files-found: error
-            - name: Upload Bob AppImage
+            - name: "Upload Bob AppImage"
               if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
               uses: actions/upload-artifact@v4
               with:
@@ -129,15 +129,15 @@ jobs:
         needs: [build]
         runs-on: ubuntu-latest
         steps:
-            - name: Checkout
+            - name: "Checkout"
               uses: actions/checkout@v3
               with:
                   fetch-depth: 0
-            - name: Download artifacts
+            - name: "Download artifacts"
               uses: actions/download-artifact@v4
               with:
                   path: artifacts
-            - name: Prepare Release Assets (Zip binaries, keep AppImages separate)
+            - name: "Prepare Release Assets (Zip binaries, keep AppImages separate)"
               run: |
                   cd artifacts
                   # Zip directories (binaries)
@@ -152,7 +152,7 @@ jobs:
                   find . -mindepth 1 -maxdepth 1 -type d -empty -delete
                   echo "Prepared assets:"
                   ls -l
-            - name: Release
+            - name: "Release"
               uses: softprops/action-gh-release@v1
               if: startsWith(github.ref, 'refs/tags/')
               with:
