@@ -6,7 +6,6 @@ pub mod unarchive;
 pub mod version;
 use semver::Version;
 
-
 /// Returns the platform-specific name for the Neovim version.
 ///
 /// This function takes an `Option<Version>` as an argument, which represents the version of Neovim to be downloaded.
