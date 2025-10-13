@@ -5,7 +5,7 @@ use tracing::info;
 
 use crate::{config::ConfigFile, helpers::version};
 
-use super::use_handler;
+use crate::handlers::use_handler;
 
 /// Starts the synchronization process.
 ///
