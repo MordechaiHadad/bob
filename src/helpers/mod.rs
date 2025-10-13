@@ -88,7 +88,7 @@ pub fn get_platform_name_download(version: &Option<Version>) -> &'static str {
     } else if cfg!(target_os = "macos") {
         "nvim-macos-x86_64"
     } else if is_linux_legacy {
-        "nvim"
+        "nvim-linux64"
     } else if cfg!(target_arch = "aarch64") {
         "nvim-linux-arm64"
     } else {
