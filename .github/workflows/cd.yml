@@ -24,7 +24,7 @@ jobs:
           - {NAME: linux, OS: ubuntu-latest, ARCH: x86_64, PATH: target/optimized/bob, TARGET: ""}
           - {NAME: linux, OS: ubuntu-24.04-arm, ARCH: arm, PATH: target/optimized/bob, TARGET: ""}
           - {NAME: macos, OS: macos-latest, ARCH: x86_64, PATH: target/x86_64-apple-darwin/optimized/bob, TARGET: "x86_64-apple-darwin"}
-          - {NAME: windows, OS: windows-latest, ARCH: x86_64, PATH: build, TARGET: ""}
+          - {NAME: windows, OS: windows-latest, ARCH: x86_64, PATH: build_out, TARGET: ""}
           - {NAME: macos, OS: macos-latest, ARCH: arm, PATH: target/optimized/bob, TARGET: ""}
         tls:
           - {NAME: Rustls, SUFFIX: "", ARGS: ""}
@@ -69,10 +69,12 @@ jobs:
         if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
         run: "mkdir -p AppDir/usr/bin AppDir/usr/share/icons/hicolor/256x256/apps AppDir/usr/share/applications\ncp target/optimized/bob AppDir/usr/bin/\ncp resources/bob-icon.png AppDir/usr/share/icons/hicolor/256x256/apps/bob.png\ncat <<EOF > AppDir/bob.desktop\n[Desktop Entry]\nName=Bob Neovim Manager\nExec=bob\nIcon=bob\nType=Application\nCategories=Utility;Development;\nComment=A cross-platform Neovim version manager\nEOF\ncp AppDir/bob.desktop AppDir/usr/share/applications/\n\n# Verify the file exists right before linuxdeploy\nls -l AppDir/usr/bin/bob \n\nexport UPD_INFO=\"gh-releases-zsync|Matsuuu|bob|latest|bob-${{ matrix.os.ARCH }}.AppImage.zsync\"\nexport OUTPUT=\"bob-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}.AppImage\"\n\n# Change --executable path to be relative to CWD\n./linuxdeploy --appdir AppDir --executable AppDir/usr/bin/bob --desktop-file AppDir/bob.desktop --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/bob.png --output appimage\n"
       - name: "Setup Bob build directory"
+        # env:
+        #   BUILD_OUTPUT: build_out
         run: |
-          mkdir build
-          copy .\\bin\\vcruntime140.dll .\\build
-          copy .\\target\\optimized\\bob.exe .\\build
+          mkdir ${{ matrix.os.PATH }}
+          copy .\\bin\\vcruntime140.dll .\\${{ matrix.os.PATH }}
+          copy .\\target\\optimized\\bob.exe ".\\${{ matrix.os.PATH }}"
         if: matrix.os.OS == 'windows-latest'
       - name: "Upload Bob binary"
         uses: actions/upload-artifact@v4
