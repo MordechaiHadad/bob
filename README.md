@@ -161,7 +161,7 @@ List all installed and used versions.
 
 ---
 
-- `bob complete bash|elvish|fish|powershell|zsh`
+- `bob complete bash|elvish|fish|powershell|zsh|nushell`
 
 Generate shell completion.
 
@@ -342,6 +342,26 @@ Next, we either save the completions file into our profile, or into a separate f
 bob complete powershell >> ${env:USERPROFILE}\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1
 ```
 
+- Nushell
+
+Nushell completions are commonly stored in `($nu.data-dir)/completions`. Run:
+
+```nu
+mkdir ($nu.data-dir | path join "completions")
+bob complete nu | save -f ($nu.data-dir | path join "completions/bob.nu")
+```
+
+To generate the completion file. Then, in order to automatically load the completions on startup, add:
+
+```nu
+source ($nu.data-dir | path join "completions/bob.nu")
+```
+
+To the end of your Nushell config (it is located at `$nu.config-path`). Finally, to apply the changes, restart the shell with
+
+```nu
+exec nu
+```
 ## 🛠️ Troubleshooting
 
 `sudo: nvim: command not found`
