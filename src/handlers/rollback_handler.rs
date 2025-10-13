@@ -1,14 +1,15 @@
-use crate::helpers::version::nightly::produce_nightly_vec;
 use anyhow::Result;
 use chrono::{Duration, Utc};
-use dialoguer::{Select, console::Term, theme::ColorfulTheme};
+use dialoguer::Select;
+use dialoguer::console::Term;
+use dialoguer::theme::ColorfulTheme;
 use tracing::info;
 
-use crate::{
-    config::Config,
-    handlers::use_handler,
-    helpers::{self, version::types::ParsedVersion},
-};
+use crate::config::Config;
+use crate::handlers::use_handler;
+use crate::helpers;
+use crate::helpers::version::nightly::produce_nightly_vec;
+use crate::helpers::version::types::ParsedVersion;
 
 /// Starts the rollback process.
 ///
@@ -63,10 +64,10 @@ pub async fn start(config: Config) -> Result<()> {
             use_handler::switch(
                 &config,
                 &ParsedVersion {
-                    tag_name: name_list[i].clone(),
-                    version_type: helpers::version::types::VersionType::Normal,
+                    tag_name:          name_list[i].clone(),
+                    version_type:      helpers::version::types::VersionType::Normal,
                     non_parsed_string: "".to_string(),
-                    semver: None,
+                    semver:            None,
                 },
             )
             .await?;
@@ -87,10 +88,7 @@ pub async fn start(config: Config) -> Result<()> {
             let now = Utc::now();
             let since = now.signed_duration_since(find.data.published_at);
             let humanized = humanize_duration(since)?;
-            info!(
-                "Successfully rolled back to version '{}' from {} ago",
-                name_list[i], humanized
-            );
+            info!("Successfully rolled back to version '{}' from {} ago", name_list[i], humanized);
         }
         None => info!("Rollback aborted..."),
     }
