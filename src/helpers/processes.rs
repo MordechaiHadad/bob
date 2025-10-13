@@ -1,13 +1,12 @@
-use crate::config::Config;
-use anyhow::{Result, anyhow};
 use std::time::Duration;
-use sysinfo::System;
-use tokio::{process::Command, time::sleep};
 
-use crate::helpers::{
-    directories, get_platform_name,
-    version::{self},
-};
+use anyhow::{Result, anyhow};
+use sysinfo::System;
+use tokio::process::Command;
+use tokio::time::sleep;
+
+use crate::config::Config;
+use crate::helpers::{directories, get_platform_name, version};
 
 /// Handles the execution of a subprocess.
 ///
@@ -134,11 +133,13 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
     loop {
         let child_done = spawned_child.try_wait();
         match child_done {
-            Ok(Some(status)) => match status.code() {
-                Some(0) => return Ok(()),
-                Some(code) => return Err(anyhow!("Process exited with error code {}", code)),
-                None => return Err(anyhow!("Process terminated by signal")),
-            },
+            Ok(Some(status)) => {
+                match status.code() {
+                    Some(0) => return Ok(()),
+                    Some(code) => return Err(anyhow!("Process exited with error code {}", code)),
+                    None => return Err(anyhow!("Process terminated by signal")),
+                }
+            }
             Ok(None) => {
                 // short delay to avoid high cpu usage
                 sleep(Duration::from_millis(200)).await;

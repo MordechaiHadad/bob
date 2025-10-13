@@ -38,10 +38,7 @@ pub async fn start(version: &str, args: &[String], client: &Client, config: &Con
     // Use the specific version's binary
     let bin_path = version_path.join("bin").join("nvim");
     if !bin_path.exists() {
-        anyhow::bail!(
-            "Neovim binary not found at expected path: {}",
-            bin_path.display()
-        );
+        anyhow::bail!("Neovim binary not found at expected path: {}", bin_path.display());
     }
 
     // Run the specific version with the provided args

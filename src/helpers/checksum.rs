@@ -1,8 +1,8 @@
-use anyhow::Result;
-use anyhow::anyhow;
-use sha2::{Digest, Sha256};
 use std::path::Path;
 use std::{fs, io};
+
+use anyhow::{Result, anyhow};
+use sha2::{Digest, Sha256};
 
 /// Checks whether the checksum of the file at path 'a' matches the checksum saved in the file at path 'b'.
 /// # Arguments
