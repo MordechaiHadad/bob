@@ -1,5 +1,6 @@
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use std::{fs, path::PathBuf};
+use tracing::info;
 use yansi::Paint;
 
 use crate::{
@@ -35,7 +36,8 @@ pub async fn start(config: Config) -> Result<()> {
         .collect();
 
     if paths.is_empty() {
-        return Err(anyhow!("There are no versions installed"));
+        info!("There are no versions installed");
+        return Ok(());
     }
 
     let version_max_len = if has_rollbacks(&config).await? { 16 } else { 7 };
