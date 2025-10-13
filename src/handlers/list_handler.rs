@@ -1,7 +1,7 @@
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use std::{fs, path::PathBuf};
-use yansi::Paint;
 use tracing::info;
+use yansi::Paint;
 
 use crate::{
     config::Config,
