@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use super::version::types::LocalVersion;
+use crate::version::types::LocalVersion;
 
 /// Starts the process of expanding a downloaded file.
 ///
