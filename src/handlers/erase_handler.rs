@@ -2,10 +2,8 @@ use anyhow::{Result, anyhow};
 use tokio::fs;
 use tracing::info;
 
-use crate::{
-    config::Config,
-    helpers::directories::{self},
-};
+use crate::config::Config;
+use crate::helpers::directories;
 
 /// Starts the erase process based on the provided `Config`.
 ///
