@@ -59,12 +59,7 @@ pub async fn start(version: Option<&str>, config: Config) -> Result<()> {
         Err(error) => return Err(anyhow!(error)),
     };
 
-    let path = if crate::VERSION_REGEX.is_match(&version.non_parsed_string) {
-        let intermediate = format!("v{}", &version.non_parsed_string);
-        downloads_dir.join(intermediate)
-    } else {
-        downloads_dir.join(&version.non_parsed_string)
-    };
+    let path = downloads_dir.join(&version.tag_name);
 
     fs::remove_dir_all(path).await?;
     info!(
