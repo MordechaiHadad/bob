@@ -151,6 +151,7 @@ pub async fn get_version_sync_file_location(config: &Config) -> Result<Option<Pa
                     path.parent().unwrap().display()
                 ))?;
                 file.write_all(b"").await?;
+                file.flush().await?;
             }
             Some(PathBuf::from(path))
         }
@@ -349,7 +350,8 @@ async fn get_latest_commit(client: &Client) -> Result<String> {
 }
 
 #[cfg(test)]
-mod version_is_hash_tests {
+mod version_mod_tests {
+    use super::*;
 
     pub(crate) fn is_hash(version: &str) -> bool {
         crate::HASH_REGEX.is_match(version)
@@ -414,5 +416,40 @@ mod version_is_hash_tests {
     fn test_is_hash_with_long_hash() {
         let version = "abc123abc123abc123abc123abc123abc123abc123";
         assert!(!is_hash(version));
+    }
+
+    #[tokio::test]
+    async fn test_version_is_hash_tests() {
+        let mut config = crate::config::Config::default();
+
+        let mut version_file = tokio::fs::File::options()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open("test_version_sync_file_location")
+            .await;
+
+        tokio::io::AsyncWriteExt::write_all(&mut version_file.as_mut().unwrap(), b"")
+            .await
+            .unwrap();
+
+        assert!(version_file.is_ok());
+
+        config.version_sync_file_location = Some("test_version_sync_file_location".to_string());
+
+        let res = get_version_sync_file_location(&config).await;
+
+        assert!(res.is_ok());
+        let res = res.unwrap();
+        assert!(res.is_some());
+
+        tokio::sync::Barrier::new(1).wait().await;
+        tokio::fs::remove_file("test_version_sync_file_location")
+            .await
+            .unwrap_or_else(|e| {
+                eprintln!("Could not remove test file: {}", e);
+                std::fs::remove_file("test_version_sync_file_location")
+                    .unwrap_or_else(|e| panic!("Could not remove test file: {}", e))
+            });
     }
 }
