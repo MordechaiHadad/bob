@@ -129,7 +129,7 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
 
     #[cfg(windows)]
     {
-        use std::time::Duration;
+        use tokio::time::Duration;
         use tokio::time::sleep;
 
         let mut spawned_child = child.spawn()?;
