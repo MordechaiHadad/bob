@@ -1,8 +1,7 @@
 use crate::config::Config;
 use anyhow::{Result, anyhow};
-use std::time::Duration;
 use sysinfo::System;
-use tokio::{process::Command, time::sleep};
+use tokio::process::Command;
 
 use crate::helpers::{
     directories, get_platform_name,
@@ -99,8 +98,8 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
     };
 
     let mut location = downloads_dir.join(&new_version).join("bin").join("nvim");
-
-    if cfg!(windows) {
+    #[cfg(windows)]
+    {
         location = location.with_extension("exe");
     }
 
@@ -111,7 +110,8 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
             .join("bin")
             .join("nvim");
 
-        if cfg!(windows) {
+        #[cfg(windows)]
+        {
             location = location.with_extension("exe");
         }
     }
@@ -120,30 +120,33 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
     child.args(args);
 
     // On Unix, replace the current process with nvim
-    if cfg!(unix) {
-        #[cfg(unix)]
-        {
-            use std::os::unix::process::CommandExt;
-            let err = child.exec();
-            return Err(anyhow!("Failed to exec neovim: {}", err));
-        }
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        let err = child.exec();
+        Err(anyhow!("Failed to exec neovim: {}", err))
     }
 
-    let mut spawned_child = child.spawn()?;
+    #[cfg(windows)]
+    {
+        use std::time::Duration;
+        use tokio::time::sleep;
 
-    loop {
-        let child_done = spawned_child.try_wait();
-        match child_done {
-            Ok(Some(status)) => match status.code() {
-                Some(0) => return Ok(()),
-                Some(code) => return Err(anyhow!("Process exited with error code {}", code)),
-                None => return Err(anyhow!("Process terminated by signal")),
-            },
-            Ok(None) => {
-                // short delay to avoid high cpu usage
-                sleep(Duration::from_millis(200)).await;
+        let mut spawned_child = child.spawn()?;
+        loop {
+            let child_done = spawned_child.try_wait();
+            match child_done {
+                Ok(Some(status)) => match status.code() {
+                    Some(0) => return Ok(()),
+                    Some(code) => return Err(anyhow!("Process exited with error code {}", code)),
+                    None => return Err(anyhow!("Process terminated by signal")),
+                },
+                Ok(None) => {
+                    // short delay to avoid high cpu usage
+                    sleep(Duration::from_millis(200)).await;
+                }
+                Err(_) => return Err(anyhow!("Failed to wait on child process")),
             }
-            Err(_) => return Err(anyhow!("Failed to wait on child process")),
         }
     }
 }
