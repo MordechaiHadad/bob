@@ -20,7 +20,7 @@ use tokio::{fs, process::Command};
 use tracing::{info, warn};
 use yansi::Paint;
 
-use super::{InstallResult, PostDownloadVersionType};
+use crate::handlers::{InstallResult, PostDownloadVersionType};
 
 /// Starts the installation process for a given version.
 ///
@@ -508,106 +508,79 @@ fn file_type_ext(version: &ParsedVersion, get_sha256sum: bool) -> std::borrow::C
 /// let config = Config::default();
 /// let result = handle_building_from_source(&version, &config).await;
 /// ```
-#[rustfmt::skip]
-async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -> Result<PostDownloadVersionType> {
-    cfg_if::cfg_if! {
-        if #[cfg(windows)] {
-            if env::var("VisualStudioVersion").is_err() {
-                return Err(anyhow!("Please make sure you are using Developer PowerShell/Command Prompt for VS"));
-            }
-
-        } else {
-            let is_clang_present = match Command::new("clang").output().await {
-                Ok(_) => true,
-                Err(error) => !matches!(error.kind(), std::io::ErrorKind::NotFound)
-            };
-            let is_gcc_present = match Command::new("gcc").output().await {
-                Ok(_) => true,
-                Err(error) => !matches!(error.kind(), std::io::ErrorKind::NotFound)
-            };
-            if !is_gcc_present && !is_clang_present {
-                return Err(anyhow!(
-                    "Clang or GCC have to be installed in order to build neovim from source"
-                ));
-            }
-
-        }
+async fn handle_building_from_source(
+    version: &ParsedVersion,
+    config: &Config,
+) -> Result<PostDownloadVersionType> {
+    if cfg!(windows) && env::var("VisualStudioVersion").is_err() {
+        return Err(anyhow!(
+            "Please make sure you are using Developer PowerShell/Command Prompt for VS"
+        ));
     }
 
-    match Command::new("cmake").output().await {
-        Ok(_) => (),
-        Err(error) => {
-            if error.kind() == std::io::ErrorKind::NotFound {
-                return Err(anyhow!(
-                    "Cmake has to be installed in order to build neovim from source"
-                ));
-            }
-        }
-    }
-
-    if let Err(error) = Command::new("git").output().await {
-        if error.kind() == std::io::ErrorKind::NotFound {
+    if cfg!(not(windows)) {
+        let is_clang_present = match Command::new("clang").output().await {
+            Ok(_) => true,
+            Err(error) => !matches!(error.kind(), std::io::ErrorKind::NotFound),
+        };
+        let is_gcc_present = match Command::new("gcc").output().await {
+            Ok(_) => true,
+            Err(error) => !matches!(error.kind(), std::io::ErrorKind::NotFound),
+        };
+        if !is_gcc_present && !is_clang_present {
             return Err(anyhow!(
-                "Git has to be installed in order to build neovim from source"
+                "Clang or GCC have to be installed in order to build neovim from source"
             ));
         }
     }
 
+    let check_if_cmd_found = async |name: &str| -> Result<()> {
+        match Command::new(name.to_lowercase()).output().await {
+            Ok(_) => Ok(()),
+            #[rustfmt::skip]
+            Err(error) => {
+                if error.kind() == std::io::ErrorKind::NotFound {
+                    // uppercase the first letter
+                    let fmt_name = name.chars().next().unwrap().to_uppercase().to_string() + &name[1..];
+                    // if cfg!(windows) { fmt_name.push_str(".exe"); }
+                    return Err(anyhow!(format!("{fmt_name} has to be installed in order to build neovim from source")));
+                }
+                Err(anyhow!(format!("unknown error: {}", error)))
+            }
+        }
+    };
+
+    match check_if_cmd_found("cmake").await {
+        Ok(_) => (),
+        Err(error) => return Err(error),
+    }
+
+    match check_if_cmd_found("git").await {
+        Ok(_) => (),
+        Err(error) => return Err(error),
+    }
+
     // create neovim-git if it does not exist
     let dirname = "neovim-git";
-    if let Err(error) = fs::metadata(dirname).await {
-        match error.kind() {
-            std::io::ErrorKind::NotFound => {
-                fs::create_dir(dirname).await?;
-            }
-            _ => return Err(anyhow!("unknown error: {}", error)),
-        }
-    }
+    metadata_handler(dirname, || async {
+        tokio::fs::create_dir(dirname)
+            .await
+            .map_err(|e| anyhow!(format!("unknown error: {}", e)))
+    })
+    .await?;
 
     env::set_current_dir(dirname)?; // cd into neovim-git
 
     // check if repo is initialized
-    if let Err(error) = fs::metadata(".git").await {
-        match error.kind() {
-            std::io::ErrorKind::NotFound => {
-                Command::new("git").arg("init").stdout(Stdio::null())
-                    .spawn()?.wait()
-                    .await?;
-            }
+    metadata_handler(".git", || async {
+        #[rustfmt::skip]
+        let mut child = tokio::process::Command::new("git").arg("--version").stdout(Stdio::null()).spawn()?;
+        child.wait().await?;
+        Ok(())
+    })
+    .await?;
 
-            _ => return Err(anyhow!("unknown error: {}", error)),
-        }
-    };
-
-    {
-
-    // check if repo has a remote
-    let remote = Command::new("git").arg("remote").arg("get-url").arg("origin").stdout(Stdio::null())
-        .spawn()?.wait().await?;
-    if !remote.success() {
-        // add neovim's remote
-        Command::new("git").arg("remote").arg("add").arg("origin").arg("https://github.com/neovim/neovim.git")
-            .spawn()?.wait().await?;
-    } else {
-        // set neovim's remote otherwise
-        Command::new("git").arg("remote").arg("set-url").arg("origin").arg("https://github.com/neovim/neovim.git")
-            .spawn()?.wait().await?;
-    };
-    // fetch version from origin
-    let fetch_successful = Command::new("git").arg("fetch").arg("--depth").arg("1").arg("origin").arg(&version.non_parsed_string)
-        .spawn()?.wait().await?.success();
-
-    if !fetch_successful {
-        return Err(anyhow!("fetching remote failed, try providing the full commit hash"));
-    }
-
-    // checkout fetched files
-    Command::new("git").arg("checkout").arg("FETCH_HEAD").stdout(Stdio::null())
-        .spawn()?
-        .wait()
-        .await?;
-
-    }
+    remote_checks(&version.non_parsed_string).await?;
 
     if fs::metadata("build").await.is_ok() {
         filesystem::remove_dir("build").await?;
@@ -624,22 +597,62 @@ async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -
 
     let build_arg = format!("CMAKE_BUILD_TYPE={build_type}");
 
-    cfg_if::cfg_if! {
-        if #[cfg(windows)] {
+    #[cfg(windows)]
+    windows_deps(
+        build_arg.to_string(),
+        build_type.to_string(),
+        folder_name.to_string_lossy().to_string(),
+    )
+    .await?;
 
-            windows_deps(build_arg.to_string(), build_type.to_string(), folder_name.to_string_lossy().to_string()).await?;
-
-        } else {
-            let location_arg = format!("CMAKE_INSTALL_PREFIX={}", folder_name.to_string_lossy());
-            handle_subprocess(Command::new("make").arg(&location_arg).arg(&build_arg)).await?;
-            handle_subprocess(Command::new("make").arg("install")).await?;
-        }
+    if cfg!(not(windows)) {
+        let location_arg = format!("CMAKE_INSTALL_PREFIX={}", folder_name.to_string_lossy());
+        handle_subprocess(Command::new("make").arg(&location_arg).arg(&build_arg)).await?;
+        handle_subprocess(Command::new("make").arg("install")).await?;
     }
 
     let mut file = File::create(folder_name.join("full-hash.txt")).await?;
     file.write_all(version.non_parsed_string.as_bytes()).await?;
 
     Ok(PostDownloadVersionType::Hash)
+}
+
+#[rustfmt::skip]
+async fn remote_checks(non_parsed_str: &str) -> Result<()> {
+    // check if repo has a remote
+    let remote = Command::new("git").arg("remote").arg("get-url").arg("origin").stdout(Stdio::null()).spawn()?.wait().await?;
+    if !remote.success() {
+        // add neovim's remote
+        Command::new("git").arg("remote").arg("add").arg("origin").arg("https://github.com/neovim/neovim.git").spawn()?.wait().await?;
+    } else {
+        // set neovim's remote otherwise
+        Command::new("git").arg("remote").arg("set-url").arg("origin").arg("https://github.com/neovim/neovim.git").spawn()?.wait().await?;
+    }
+
+    // fetch version from origin
+    let fetch_successful = Command::new("git").arg("fetch").arg("--depth").arg("1").arg("origin").arg(non_parsed_str).spawn()?.wait().await?.success();
+
+    if !fetch_successful {
+        return Err(anyhow!(
+            "fetching remote failed, try providing the full commit hash"
+        ));
+    }
+
+    // checkout fetched files
+    Command::new("git").arg("checkout").arg("FETCH_HEAD").stdout(Stdio::null()).spawn()?.wait().await?;
+    Ok(())
+}
+
+async fn metadata_handler<F, Fut>(dir: &str, action: F) -> Result<()>
+where
+    F: FnOnce() -> Fut,
+    Fut: std::future::Future<Output = Result<()>>,
+{
+    match tokio::fs::metadata(dir).await {
+        Ok(_) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => action().await,
+        Err(error) => Err(anyhow!(format!("unknown error: {}", error))),
+    }
 }
 
 #[cfg(target_os = "windows")]
@@ -703,7 +716,6 @@ async fn send_request(
     get_sha256sum: bool,
 ) -> Result<reqwest::Response, reqwest::Error> {
     let platform = helpers::get_platform_name(&version.semver);
-    let file_type = crate::FILETYPE_EXT;
 
     let url = config
         .github_mirror
@@ -718,11 +730,15 @@ async fn send_request(
             format!("{url}/neovim/neovim/releases/download/{version_tag}/shasum.txt")
         } else {
             format!(
-                "{url}/neovim/neovim/releases/download/{version_tag}/{platform}.{file_type}.sha256sum"
+                "{url}/neovim/neovim/releases/download/{version_tag}/{platform}.{}.sha256sum",
+                crate::FILETYPE_EXT
             )
         }
     } else {
-        format!("{url}/neovim/neovim/releases/download/{version_tag}/{platform}.{file_type}")
+        format!(
+            "{url}/neovim/neovim/releases/download/{version_tag}/{platform}.{}",
+            crate::FILETYPE_EXT
+        )
     };
 
     client
