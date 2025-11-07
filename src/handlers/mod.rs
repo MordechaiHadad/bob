@@ -9,7 +9,7 @@ pub mod uninstall_handler;
 pub mod update_handler;
 pub mod use_handler;
 
-use super::version::types::LocalVersion;
+use crate::version::types::LocalVersion;
 
 /// Represents the result of an installation attempt.
 ///

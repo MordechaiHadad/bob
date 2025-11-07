@@ -53,7 +53,6 @@ pub fn get_platform_name(version: &Option<Version>) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     #[test]
