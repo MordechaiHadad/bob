@@ -97,53 +97,69 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
         used_version
     };
 
-    let mut location = downloads_dir.join(&new_version).join("bin").join("nvim");
-    #[cfg(windows)]
-    {
-        location = location.with_extension("exe");
-    }
-
-    if !location.exists() {
-        location = downloads_dir
-            .join(new_version)
+    let mut location = if cfg!(target_os = "windows") {
+        downloads_dir
+            .join(&new_version)
             .join(platform)
             .join("bin")
-            .join("nvim");
+            .join("nvim.exe")
+    } else {
+        downloads_dir.join(&new_version).join("bin").join("nvim")
+    };
 
-        #[cfg(windows)]
-        {
-            location = location.with_extension("exe");
-        }
+    if !location.exists() {
+        location = if cfg!(target_os = "windows") {
+            downloads_dir
+                .join(&new_version)
+                .join(platform)
+                .join("bin")
+                .join("nvim.exe")
+        } else {
+            downloads_dir
+                .join(&new_version)
+                .join(platform)
+                .join("bin")
+                .join("nvim")
+        };
     }
-
-    let mut child = std::process::Command::new(location);
-    child.args(args);
 
     // On Unix, replace the current process with nvim
     #[cfg(unix)]
     {
         use std::os::unix::process::CommandExt;
-        let err = child.exec();
+        let err = tokio::process::Command::new(&location)
+            .args(args)
+            .as_std_mut()
+            .exec();
+
         Err(anyhow!("Failed to exec neovim: {}", err))
     }
 
     #[cfg(windows)]
     {
-        use tokio::time::Duration;
-        use tokio::time::sleep;
+        let status = tokio::process::Command::new(&location)
+            .args(args)
+            .spawn()?
+            .wait()
+            .await?;
 
-        let mut spawned_child = child.spawn()?;
-        loop {
-            let child_done = spawned_child.try_wait();
-            match child_done {
-                Ok(Some(status)) => match status.code() {
-                    Some(0) => return Ok(()),
-                    Some(code) => return Err(anyhow!("Process exited with error code {}", code)),
-                    None => return Err(anyhow!("Process terminated by signal")),
-                },
-                Ok(None) => {
-                    // short delay to avoid high cpu usage
-                    sleep(Duration::from_millis(200)).await;
+        if let Some(code) = status.code() {
+            std::process::exit(code);
+        }
+        std::process::exit(1);
+    }
+}
+
+pub fn is_neovim_running() -> bool {
+    System::new_all().processes().values().any(|process| {
+        process
+            .name()
+            .to_string_lossy()
+            .to_lowercase()
+            .contains("nvim")
+    })
+}
+
                 }
                 Err(_) => return Err(anyhow!("Failed to wait on child process")),
             }
