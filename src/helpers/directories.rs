@@ -22,7 +22,7 @@ use crate::config::Config;
 /// ```rust
 /// let home_dir = get_home_dir()?;
 /// ```
-pub fn get_home_dir() -> Result<PathBuf> {
+fn get_home_dir() -> Result<PathBuf> {
     let mut home_str = PathBuf::new();
 
     if cfg!(windows) {
@@ -73,7 +73,7 @@ pub fn get_home_dir() -> Result<PathBuf> {
 /// ```rust
 /// let local_data_dir = get_local_data_dir()?;
 /// ```
-pub fn get_local_data_dir() -> Result<PathBuf> {
+fn get_local_data_dir() -> Result<PathBuf> {
     let mut home_dir = get_home_dir()?;
     if cfg!(windows) {
         home_dir.push("AppData\\Local");
