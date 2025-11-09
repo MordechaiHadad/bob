@@ -3,9 +3,9 @@ use reqwest::Client;
 use tokio::fs;
 use tracing::info;
 
-use crate::{config::ConfigFile, helpers::version};
-
+use crate::config::ConfigFile;
 use crate::handlers::use_handler;
+use crate::helpers::version;
 
 /// Starts the synchronization process.
 ///
@@ -52,19 +52,11 @@ pub async fn start(client: &Client, config: ConfigFile) -> Result<()> {
 
     info!(
         "Using version {version} set in {}",
-        version_sync_file_location
-            .into_os_string()
-            .into_string()
-            .unwrap()
+        version_sync_file_location.into_os_string().into_string().unwrap()
     );
 
-    use_handler::start(
-        version::parse_version_type(client, trimmed_version).await?,
-        true,
-        client,
-        config,
-    )
-    .await?;
+    use_handler::start(version::parse_version_type(client, trimmed_version).await?, true, client, config)
+        .await?;
 
     Ok(())
 }

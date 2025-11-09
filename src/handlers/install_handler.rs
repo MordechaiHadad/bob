@@ -1,3 +1,21 @@
+use std::cmp::min;
+use std::env;
+use std::path::Path;
+use std::process::Stdio;
+
+use anyhow::{Result, anyhow};
+use futures_util::stream::StreamExt;
+use indicatif::{ProgressBar, ProgressStyle};
+use reqwest::Client;
+use semver::Version;
+use tokio::fs;
+use tokio::fs::File;
+use tokio::io::AsyncWriteExt;
+use tokio::process::Command;
+use tracing::{info, warn};
+use yansi::Paint;
+
+use super::{InstallResult, PostDownloadVersionType};
 use crate::config::{Config, ConfigFile};
 use crate::github_requests::{UpstreamVersion, get_commits_for_nightly, get_upstream_nightly};
 use crate::helpers::checksum::sha256cmp;
@@ -5,22 +23,6 @@ use crate::helpers::processes::handle_subprocess;
 use crate::helpers::version::nightly::produce_nightly_vec;
 use crate::helpers::version::types::{LocalVersion, ParsedVersion, VersionType};
 use crate::helpers::{self, directories, filesystem, unarchive};
-use anyhow::{Result, anyhow};
-use futures_util::stream::StreamExt;
-use indicatif::{ProgressBar, ProgressStyle};
-use reqwest::Client;
-use semver::Version;
-use std::cmp::min;
-use std::env;
-use std::path::Path;
-use std::process::Stdio;
-use tokio::fs::File;
-use tokio::io::AsyncWriteExt;
-use tokio::{fs, process::Command};
-use tracing::{info, warn};
-use yansi::Paint;
-
-use super::{InstallResult, PostDownloadVersionType};
 
 /// Starts the installation process for a given version.
 ///
@@ -107,9 +109,7 @@ pub async fn start(
         handle_rollback(&config.config).await?;
 
         match config.config.enable_nightly_info {
-            Some(boolean) if boolean => {
-                print_commits(client, &local_nightly, upstream_nightly).await?
-            }
+            Some(boolean) if boolean => print_commits(client, &local_nightly, upstream_nightly).await?,
             None => print_commits(client, &local_nightly, upstream_nightly).await?,
             _ => (),
         }
@@ -134,18 +134,13 @@ pub async fn start(
         if version.semver.is_some() && version.semver.as_ref().unwrap() <= &Version::new(0, 4, 4) {
             unarchive::start(downloaded_archive).await?
         } else {
-            let downloaded_checksum =
-                download_version(client, version, root, &config.config, true).await?;
-            let archive_path = root.join(format!(
-                "{}.{}",
-                downloaded_archive.file_name, downloaded_archive.file_format
-            ));
+            let downloaded_checksum = download_version(client, version, root, &config.config, true).await?;
+            let archive_path =
+                root.join(format!("{}.{}", downloaded_archive.file_name, downloaded_archive.file_format));
 
             if let PostDownloadVersionType::Standard(downloaded_checksum) = downloaded_checksum {
-                let checksum_path = root.join(format!(
-                    "{}.{}",
-                    downloaded_checksum.file_name, downloaded_checksum.file_format
-                ));
+                let checksum_path = root
+                    .join(format!("{}.{}", downloaded_checksum.file_name, downloaded_checksum.file_format));
 
                 let platform = helpers::get_platform_name(&version.semver);
 
@@ -177,16 +172,12 @@ pub async fn start(
             let mut json_file = File::create(downloads_dir).await?;
 
             if let Err(error) = json_file.write_all(nightly_string.as_bytes()).await {
-                return Err(anyhow!(
-                    "Failed to create file nightly/bob.json, reason: {error}"
-                ));
+                return Err(anyhow!("Failed to create file nightly/bob.json, reason: {error}"));
             }
         }
     }
 
-    Ok(InstallResult::InstallationSuccess(
-        root.display().to_string(),
-    ))
+    Ok(InstallResult::InstallationSuccess(root.display().to_string()))
 }
 
 /// Asynchronously handles the rollback for the nightly version(s) of Neovim.
@@ -287,13 +278,8 @@ async fn handle_rollback(config: &Config) -> Result<()> {
 /// let upstream = UpstreamVersion::get_upstream_version(&client).await?;
 /// print_commits(&client, &local, &upstream).await?;
 /// ```
-async fn print_commits(
-    client: &Client,
-    local: &UpstreamVersion,
-    upstream: &UpstreamVersion,
-) -> Result<()> {
-    let commits =
-        get_commits_for_nightly(client, &local.published_at, &upstream.published_at).await?;
+async fn print_commits(client: &Client, local: &UpstreamVersion, upstream: &UpstreamVersion) -> Result<()> {
+    let commits = get_commits_for_nightly(client, &local.published_at, &upstream.published_at).await?;
 
     for commit in commits {
         println!(
@@ -355,10 +341,7 @@ async fn download_version(
 
             // Handle error case first so we don't need a match statement
             let response = if let Err(error) = response {
-                return Err(anyhow!(
-                    "Failed to download version {}: {error}",
-                    version.tag_name
-                ));
+                return Err(anyhow!("Failed to download version {}: {error}", version.tag_name));
             } else {
                 response?
             };
@@ -371,8 +354,7 @@ async fn download_version(
 
                 let file_type = file_type_ext(version, get_sha256sum);
 
-                let mut file =
-                    tokio::fs::File::create(format!("{}.{file_type}", version.tag_name)).await?;
+                let mut file = tokio::fs::File::create(format!("{}.{file_type}", version.tag_name)).await?;
                 let mut downloaded: u64 = 0;
 
                 while let Some(item) = response_bytes.next().await {
@@ -389,10 +371,10 @@ async fn download_version(
                 pbw.finish(root, file_type.clone().into());
 
                 Ok(PostDownloadVersionType::Standard(LocalVersion {
-                    file_name: version.tag_name.to_owned(),
+                    file_name:   version.tag_name.to_owned(),
                     file_format: file_type.to_string(),
-                    path: root.display().to_string(),
-                    semver: version.semver.clone(),
+                    path:        root.display().to_string(),
+                    semver:      version.semver.clone(),
                 }))
             } else if get_sha256sum {
                 Ok(PostDownloadVersionType::None)
@@ -403,11 +385,7 @@ async fn download_version(
                         "Version does not exist in Neovim releases. Please check available versions with 'bob list-remote'"
                     ));
                 }
-                Err(anyhow!(
-                    "Failed to download version {}: {}",
-                    version.tag_name,
-                    error_text
-                ))
+                Err(anyhow!("Failed to download version {}: {}", version.tag_name, error_text))
             }
         }
         VersionType::Hash => handle_building_from_source(version, config).await,
@@ -416,8 +394,8 @@ async fn download_version(
 }
 
 struct PbWrapper<'a, S> {
-    pb: ProgressBar,
-    tag_name: &'a S,
+    pb:            ProgressBar,
+    tag_name:      &'a S,
     download_type: &'static str,
 }
 
@@ -717,17 +695,11 @@ async fn send_request(
         {
             format!("{url}/neovim/neovim/releases/download/{version_tag}/shasum.txt")
         } else {
-            format!(
-                "{url}/neovim/neovim/releases/download/{version_tag}/{platform}.{file_type}.sha256sum"
-            )
+            format!("{url}/neovim/neovim/releases/download/{version_tag}/{platform}.{file_type}.sha256sum")
         }
     } else {
         format!("{url}/neovim/neovim/releases/download/{version_tag}/{platform}.{file_type}")
     };
 
-    client
-        .get(request_url)
-        .header("user-agent", "bob")
-        .send()
-        .await
+    client.get(request_url).header("user-agent", "bob").send().await
 }

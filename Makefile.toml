@@ -1,0 +1,92 @@
+extend = [
+  { path = "./build/common-tasks.toml" },
+  { path = "./build/dist-tasks.toml" },
+  { path = "./build/docker-tasks.toml", optional = true },
+  { path = "./build/watch-tasks.toml", optional = true },
+]
+
+# Name of output if/when calling dist tasks, should match the cargo bin output
+env.PROJECT_NAME = "bob" # "cargo_output_binary_name_for_PROJECT_NAME"
+# Default profile to use for builds during dist related tasks
+env.SLEEP_TIME = "15"
+
+# Identifies the first argument passed after `cargo` as, or inplace of `build`.
+# ie: `cargo build <...zyx...>` vs. `cargo zigbuild <...xyz...>`
+env.BUILD_ARG = "build"
+# env.BUILD_ARG = "zigbuild"
+
+## START Full sweeps/aliases
+[tasks.b]
+run_task = { name = ["build"], parallel = false }
+
+[tasks.br]
+run_task = { name = ["build_release"], parallel = false }
+
+[tasks.a]
+run_task = { name = [
+  "build_workspace",
+  "build",
+  "test",
+  "build_release_workspace",
+  "build_release",
+  "test_all",
+], parallel = false }
+
+[tasks.r]
+run_task = { name = ["run"], parallel = false }
+
+[tasks.rr]
+run_task = { name = ["run_release"], parallel = false }
+
+[tasks.bw]
+run_task = { name = ["build_workspace"], parallel = false }
+
+[tasks.brw]
+run_task = { name = ["build_release_workspace"], parallel = false }
+
+[tasks.t]
+run_task = { name = ["test"], parallel = false }
+
+[tasks.ta]
+run_task = { name = ["test_all"], parallel = false }
+
+[tasks.tnc]
+run_task = { name = ["test_no_capture"], parallel = false }
+
+[tasks.tanc]
+run_task = { name = ["test_all_no_capture"], parallel = false }
+
+[tasks.f]
+run_task = { name = ["format"], parallel = false }
+
+[tasks.c]
+run_task = { name = ["check"], parallel = false }
+
+[tasks.cp]
+run_task = { name = ["clippy"], parallel = false }
+
+[tasks.cl]
+run_task = { name = ["clean"], parallel = false }
+
+[tasks.reset]
+run_task = { name = ["clean", "a"], parallel = false }
+
+[tasks.envs]
+run_task = { name = "print_all", parallel = false }
+
+[tasks.up]
+run_task = { name = [
+  "a",
+  "docker_start",
+  "sleep",
+  "run_as_project",
+], parallel = false }
+
+[tasks.down]
+run_task = { name = ["docker_stop"], parallel = false }
+
+[tasks.dist]
+env.PROFILE = "release"
+run_task = { name = ["build_release_dist"], parallel = false }
+
+# END Full sweeps/aliases
