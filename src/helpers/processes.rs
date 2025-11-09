@@ -160,21 +160,84 @@ pub fn is_neovim_running() -> bool {
     })
 }
 
+#[cfg(test)]
+mod processes_tests {
+    use super::*;
+    use tokio::process::Command;
+
+    #[tokio::test]
+    async fn test_handle_subprocess_success() {
+        let mut cmd = Command::new("true");
+        let result = handle_subprocess(&mut cmd).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_subprocess_failure() {
+        let mut cmd = Command::new("false");
+        let result = handle_subprocess(&mut cmd).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_is_neovim_running() {
+        // attempt to find nvim on the system PATH,
+        // if it's not available, we can skip this test
+
+        if !t_ensure_nvim_available() {
+            eprintln!("Neovim not found in PATH, skipping test");
+            return;
+        }
+
+        let cmd = tokio::process::Command::new("nvim")
+            .args(["--headless", "-c", "sleep 1"])
+            .spawn()
+            .unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+        let checking_handle = tokio::spawn(async {
+            for _pid in 0..10 {
+                if is_neovim_running() {
+                    return true;
                 }
-                Err(_) => return Err(anyhow!("Failed to wait on child process")),
+                tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+                continue;
             }
+            false
+        });
+
+        let result = checking_handle.await.unwrap();
+
+        tokio::spawn(async move {
+            t_cleanup_nvim(cmd.id().unwrap()).await;
+        });
+
+        if !result {
+            panic!("Neovim process was not detected as running");
+        } else {
+            assert!(result);
         }
     }
-}
 
-pub fn is_neovim_running() -> bool {
-    let sys = System::new_all();
+    /// Test function to ensure Neovim is available in the system PATH.
+    /// We call this to ensure the testing environment has Neovim installed.
+    fn t_ensure_nvim_available() -> bool {
+        let system_paths = std::env::var_os("PATH").unwrap_or_default();
+        std::env::split_paths(&system_paths)
+            .any(|path| path.join("nvim").exists() || path.join("nvim.exe").exists())
+    }
 
-    for process in sys.processes().values() {
-        let name = process.name().to_string_lossy().to_lowercase();
-        if name.contains("nvim") {
-            return true;
+    /// Test function to clean up the Neovim process after testing.
+    /// Checks for the process by its PID and kills it if found.
+    async fn t_cleanup_nvim(pid: u32) {
+        let system = System::new_all();
+        if let Some(process) = system
+            .processes()
+            .values()
+            .find(|process| process.pid().as_u32() == pid)
+        {
+            let _ = process.kill();
         }
     }
-    false
 }
