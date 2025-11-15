@@ -255,17 +255,15 @@ pub async fn start(config: ConfigFile) -> Result<()> {
             handlers::use_handler::start(version, !no_install, &client, config).await?;
         }
         Cli::Install { version } => {
-            let mut version = parse_version_type(&client, &version).await?;
+            let version = parse_version_type(&client, &version).await?;
+            let tag_name: &str = version.tag_name.as_str();
 
-            match handlers::install_handler::start(&mut version, &client, &config).await? {
+            match handlers::install_handler::start(&version, &client, &config).await? {
                 InstallResult::InstallationSuccess(location) => {
-                    info!(
-                        "{} has been successfully installed in {location}",
-                        version.tag_name
-                    );
+                    info!("{tag_name} has been successfully installed in {location}",);
                 }
                 InstallResult::VersionAlreadyInstalled => {
-                    info!("{} is already installed", version.tag_name);
+                    info!("{tag_name} is already installed");
                 }
                 InstallResult::NightlyIsUpdated => {
                     info!("Nightly up to date!");

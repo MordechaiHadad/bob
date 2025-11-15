@@ -62,7 +62,7 @@ use super::{InstallResult, PostDownloadVersionType};
 /// let result = start(&mut version, &client, &config).await;
 /// ```
 pub async fn start(
-    version: &mut ParsedVersion,
+    version: &ParsedVersion,
     client: &Client,
     config: &ConfigFile,
 ) -> Result<InstallResult> {
