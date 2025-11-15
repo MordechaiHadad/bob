@@ -90,7 +90,7 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
     let downloads_dir = directories::get_downloads_directory(config).await?;
     let used_version = version::get_current_version(config).await?;
     let version = semver::Version::parse(&used_version.replace('v', "")).ok();
-    let platform = get_platform_name(&version);
+    let platform = get_platform_name(version.as_ref());
 
     let new_version: String = if crate::HASH_REGEX.is_match(&used_version) {
         used_version.chars().take(7).collect()
@@ -125,7 +125,7 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
         {
             use std::os::unix::process::CommandExt;
             let err = child.exec();
-            return Err(anyhow!("Failed to exec neovim: {}", err));
+            return Err(anyhow!("Failed to exec neovim: {err}"));
         }
     }
 
@@ -136,7 +136,7 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
         match child_done {
             Ok(Some(status)) => match status.code() {
                 Some(0) => return Ok(()),
-                Some(code) => return Err(anyhow!("Process exited with error code {}", code)),
+                Some(code) => return Err(anyhow!("Process exited with error code {code}")),
                 None => return Err(anyhow!("Process terminated by signal")),
             },
             Ok(None) => {
