@@ -85,7 +85,10 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                     tag_name: returned_version,
                     version_type: VersionType::Normal,
                     non_parsed_string: version.to_string(),
-                    semver: Some(Version::parse(&cloned_version.replace('v', ""))?),
+                    semver: Some(
+                        Version::parse(&cloned_version.replace('v', ""))
+                            .context("Unable to parse version string in parse_version_type")?,
+                    ),
                 });
             } else if crate::HASH_REGEX.is_match(version) {
                 return Ok(ParsedVersion {
