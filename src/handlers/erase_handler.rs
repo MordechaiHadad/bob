@@ -42,6 +42,7 @@ use crate::{
 ///
 /// * [`directories::get_downloads_directory`](src/helpers/directories.rs)
 /// * [`directories::get_installation_directory`](src/helpers/directories.rs)
+#[allow(clippy::items_after_statements)]
 pub async fn start(config: Config) -> Result<()> {
     let downloads = directories::get_downloads_directory(&config).await?;
     let mut installation_dir = directories::get_installation_directory(&config).await?;

@@ -53,9 +53,9 @@ pub async fn start(data: Update, client: &Client, config: ConfigFile) -> Result<
     if data.version.is_none() || data.all {
         let mut did_update = false;
 
-        let mut stable = crate::version::parse_version_type(client, "stable").await?;
+        let stable = crate::version::parse_version_type(client, "stable").await?;
         if is_version_installed(&stable.tag_name, &config.config).await? {
-            match install_handler::start(&mut stable, client, &config).await? {
+            match install_handler::start(&stable, client, &config).await? {
                 InstallResult::InstallationSuccess(_) => did_update = true,
                 InstallResult::VersionAlreadyInstalled
                 | InstallResult::NightlyIsUpdated
@@ -64,8 +64,8 @@ pub async fn start(data: Update, client: &Client, config: ConfigFile) -> Result<
         }
 
         if is_version_installed("nightly", &config.config).await? {
-            let mut nightly = crate::version::parse_version_type(client, "nightly").await?;
-            match install_handler::start(&mut nightly, client, &config).await? {
+            let nightly = crate::version::parse_version_type(client, "nightly").await?;
+            match install_handler::start(&nightly, client, &config).await? {
                 InstallResult::InstallationSuccess(_) => did_update = true,
                 InstallResult::NightlyIsUpdated
                 | InstallResult::VersionAlreadyInstalled
@@ -80,13 +80,13 @@ pub async fn start(data: Update, client: &Client, config: ConfigFile) -> Result<
         return Ok(());
     }
 
-    let mut version = crate::version::parse_version_type(client, &data.version.unwrap()).await?;
+    let version = crate::version::parse_version_type(client, &data.version.unwrap()).await?;
 
     if !is_version_installed(&version.tag_name, &config.config).await? {
         warn!("{} is not installed.", version.non_parsed_string);
         return Ok(());
     }
-    match install_handler::start(&mut version, client, &config).await? {
+    match install_handler::start(&version, client, &config).await? {
         InstallResult::NightlyIsUpdated => info!("Nightly is already updated!"),
         InstallResult::VersionAlreadyInstalled => info!("Stable is already updated!"),
         InstallResult::InstallationSuccess(_) | InstallResult::GivenNightlyRollback => (),
