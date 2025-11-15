@@ -43,9 +43,8 @@ use tracing::{info, warn};
 pub async fn start(version: Option<&str>, config: Config) -> Result<()> {
     let client = Client::new();
 
-    let version = match version {
-        Some(value) => value,
-        None => return uninstall_selections(&client, &config).await,
+    let Some(version) = version else {
+        return uninstall_selections(&client, &config).await;
     };
 
     let version = helpers::version::parse_version_type(&client, version).await?;
@@ -107,9 +106,9 @@ async fn uninstall_selections(client: &Client, config: &Config) -> Result<()> {
     while let Some(path) = paths.next_entry().await? {
         let name = path.file_name().to_str().unwrap().to_owned();
 
-        let version = match helpers::version::parse_version_type(client, &name).await {
-            Ok(value) => value,
-            Err(_) => continue,
+        let Ok(version) = helpers::version::parse_version_type(client, &name).await else {
+            warn!("Could not parse version from file name: {}", name);
+            continue;
         };
 
         if helpers::version::is_version_used(&version.non_parsed_string, config).await {
@@ -140,12 +139,10 @@ async fn uninstall_selections(client: &Client, config: &Config) -> Result<()> {
                 .with_prompt("Do you wish to continue?")
                 .interact_on_opt(&Term::stderr())?;
 
-            match confirm {
-                Some(true) => {}
-                None | Some(false) => {
-                    info!("Uninstall aborted...");
-                    return Ok(());
-                }
+            if let Some(true) = confirm {
+            } else {
+                info!("Uninstall aborted...");
+                return Ok(());
             }
 
             for &i in ids {

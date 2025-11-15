@@ -196,9 +196,8 @@ pub async fn is_version_installed(version: &str, config: &Config) -> Result<bool
         let name = directory.file_name().to_str().unwrap().to_owned();
         if !version.eq(&name) {
             continue;
-        } else {
-            return Ok(true);
         }
+        return Ok(true);
     }
     Ok(false)
 }
@@ -295,7 +294,7 @@ pub async fn search_stable_version(client: &Client) -> Result<String> {
         .text()
         .await?;
 
-    let versions: Vec<UpstreamVersion> = deserialize_response(response)?;
+    let versions: Vec<UpstreamVersion> = deserialize_response(&response)?;
     let stable_release = versions
         .iter()
         .find(|v| v.tag_name == "stable")
@@ -343,7 +342,7 @@ async fn get_latest_commit(client: &Client) -> Result<String> {
         .text()
         .await?;
 
-    let commit: RepoCommit = deserialize_response(response)?;
+    let commit: RepoCommit = deserialize_response(&response)?;
 
     Ok(commit.sha)
 }

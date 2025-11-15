@@ -42,10 +42,10 @@ use crate::version::types::LocalVersion;
 /// };
 /// start(downloaded_file).await;
 /// ```
-pub async fn start(file: LocalVersion) -> Result<()> {
+pub async fn start(file: &LocalVersion) -> Result<()> {
     let temp_file = file.clone();
-    match tokio::task::spawn_blocking(move || match expand(temp_file) {
-        Ok(_) => Ok(()),
+    match tokio::task::spawn_blocking(move || match expand(&temp_file) {
+        Ok(()) => Ok(()),
         Err(error) => Err(anyhow!(error)),
     })
     .await
@@ -134,7 +134,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
 
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
-        let file_path = remove_base_parent(&file.mangled_name()).unwrap();
+        let file_path = remove_base_parent(&file.mangled_name());
         let outpath = Path::new(&downloaded_file.file_name).join(file_path);
 
         if file.is_dir() {
@@ -200,7 +200,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
 /// expand(downloaded_file);
 /// ```
 #[cfg(unix)]
-fn expand(downloaded_file: LocalVersion) -> Result<()> {
+fn expand(downloaded_file: &LocalVersion) -> Result<()> {
     use flate2::read::GzDecoder;
     use indicatif::{ProgressBar, ProgressStyle};
     use std::cmp::min;
@@ -246,7 +246,7 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
             Ok(mut file) => {
                 let mut outpath = PathBuf::new();
                 outpath.push(&downloaded_file.file_name);
-                let no_parent_file = remove_base_parent(&file.path().unwrap()).unwrap();
+                let no_parent_file = remove_base_parent(&file.path().unwrap());
                 outpath.push(no_parent_file);
 
                 let file_name = format!("{}", file.path()?.display()); // file.path()?.is_dir() always returns false... weird
@@ -310,10 +310,10 @@ fn expand(downloaded_file: LocalVersion) -> Result<()> {
 /// assert_eq!(new_path, PathBuf::from("test.txt"));
 /// ```
 #[allow(dead_code)]
-fn remove_base_parent(path: &Path) -> Option<PathBuf> {
+fn remove_base_parent(path: &Path) -> PathBuf {
     let mut components = path.components();
 
     components.next();
 
-    Some(components.as_path().to_path_buf())
+    components.as_path().to_path_buf()
 }

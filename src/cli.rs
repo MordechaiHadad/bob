@@ -283,14 +283,14 @@ pub async fn start(config: ConfigFile) -> Result<()> {
         Cli::Erase => erase_handler::start(config.config).await?,
         Cli::List => list_handler::start(config.config).await?,
         Cli::Complete { shell } => {
-            clap_complete::generate(shell, &mut Cli::command(), "bob", &mut std::io::stdout())
+            clap_complete::generate(shell, &mut Cli::command(), "bob", &mut std::io::stdout());
         }
         Cli::Update(data) => {
             update_handler::start(data, &client, config).await?;
         }
         Cli::ListRemote => list_remote_handler::start(config.config, client).await?,
         Cli::Run { version, args } => {
-            run_handler::start(&version, &args, &client, &config.config).await?
+            run_handler::start(&version, &args, &client, &config.config).await?;
         }
     }
 
