@@ -98,7 +98,7 @@ pub async fn start(file: &LocalVersion) -> Result<()> {
 /// expand(downloaded_file);
 /// ```
 #[cfg(target_family = "windows")]
-fn expand(downloaded_file: LocalVersion) -> Result<()> {
+fn expand(downloaded_file: &LocalVersion) -> Result<()> {
     use indicatif::{ProgressBar, ProgressStyle};
     use std::cmp::min;
     use std::fs::File;
