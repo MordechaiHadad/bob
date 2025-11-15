@@ -75,7 +75,15 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
             })
         }
         _ => {
-            if crate::VERSION_REGEX.is_match(version) {
+            if crate::HASH_REGEX.is_match(version) {
+                return Ok(ParsedVersion {
+                    tag_name: version.to_string().chars().take(7).collect(),
+                    version_type: VersionType::Hash,
+                    non_parsed_string: version.to_string(),
+                    semver: None,
+                });
+            }
+            else if crate::VERSION_REGEX.is_match(version) {
                 let mut returned_version = version.to_string();
                 if !version.contains('v') {
                     returned_version.insert(0, 'v');
@@ -86,13 +94,6 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                     version_type: VersionType::Normal,
                     non_parsed_string: version.to_string(),
                     semver: Some(Version::parse(&cloned_version.replace('v', ""))?),
-                });
-            } else if crate::HASH_REGEX.is_match(version) {
-                return Ok(ParsedVersion {
-                    tag_name: version.to_string().chars().take(7).collect(),
-                    version_type: VersionType::Hash,
-                    non_parsed_string: version.to_string(),
-                    semver: None,
                 });
             }
 
