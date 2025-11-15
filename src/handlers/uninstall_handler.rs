@@ -139,8 +139,7 @@ async fn uninstall_selections(client: &Client, config: &Config) -> Result<()> {
                 .with_prompt("Do you wish to continue?")
                 .interact_on_opt(&Term::stderr())?;
 
-            if let Some(true) = confirm {
-            } else {
+            if !matches!(confirm, Some(true)) {
                 info!("Uninstall aborted...");
                 return Ok(());
             }
