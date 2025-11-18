@@ -1,169 +1,139 @@
-name: Continuous Deployment
-
+name: "Continuous Deployment"
 on:
-    push:
-        tags:
-            - "v*.*.*"
-
+  push:
+    tags:
+      - "v*.*.*"
+env:
+  RUST_TOOLCHAIN: nightly
+  RUST_PROFILE: minimal
+  RUST_TOOLCHAIN_OVERRIDE: true
 jobs:
-    check-version:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v2
-            - name: Check version
-              id: check_version
-              run: |
-                  VERSION=v$(grep '^version =' Cargo.toml | cut -d '"' -f 2 | head -n 1)
-                  GIT_TAG_VERSION=${{ github.ref }} 
-                  GIT_TAG_VERSION=${GIT_TAG_VERSION#refs/tags/}
-                  if [[ "$VERSION" != "$GIT_TAG_VERSION" ]]; then
-                    echo "Version in Cargo.toml ($VERSION) does not match pushed tag ($GIT_TAG_VERSION)"
-                    exit 1
-                  fi
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v2
+      - name: "Check version"
+        id: check_version
+        run: "VERSION=v$(grep '^version =' Cargo.toml | cut -d '\"' -f 2 | head -n 1)\nGIT_TAG_VERSION=${{ github.ref }} \nGIT_TAG_VERSION=${GIT_TAG_VERSION#refs/tags/}\nif [[ \"$VERSION\" != \"$GIT_TAG_VERSION\" ]]; then\n  echo \"Version in Cargo.toml ($VERSION) does not match pushed tag ($GIT_TAG_VERSION)\"\n  exit 1\nfi\n"
+  build:
+    needs: [check-version]
+    strategy:
+      matrix:
+        os:
+          - {NAME: linux, OS: ubuntu-latest, ARCH: x86_64, PATH: target/optimized/bob, TARGET: ""}
+          - {NAME: linux, OS: ubuntu-24.04-arm, ARCH: arm, PATH: target/optimized/bob, TARGET: ""}
+          - {NAME: macos, OS: macos-latest, ARCH: x86_64, PATH: target/x86_64-apple-darwin/optimized/bob, TARGET: "x86_64-apple-darwin"}
+          - {NAME: windows, OS: windows-latest, ARCH: x86_64, PATH: build_out, TARGET: ""}
+          - {NAME: macos, OS: macos-latest, ARCH: arm, PATH: target/optimized/bob, TARGET: ""}
+        tls:
+          - {NAME: Rustls, SUFFIX: "", ARGS: ""}
+          - {NAME: OpenSSL, SUFFIX: "-openssl", ARGS: "--no-default-features --features native-tls"}
+    runs-on: ${{matrix.os.OS}}
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Install Rust"
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          profile: ${{ env.RUST_PROFILE }}
+          override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
+      - name: "Add Rust target for cross-compilation"
+        if: matrix.os.TARGET != ''
+        run: rustup target add ${{ matrix.os.TARGET }}
+      - name: "Install OpenSSL libraries"
+        run: sudo apt update && sudo apt install libssl-dev
+        if: matrix.os.OS == 'ubuntu-latest' && matrix.tls.NAME == 'OpenSSL'
+      - uses: Swatinem/rust-cache@v1
+      - name: "Build Bob"
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --locked --profile optimized ${{ matrix.tls.ARGS }} ${{ matrix.os.TARGET != '' && format('--target {0}', matrix.os.TARGET) || '' }}
+      - name: "Install AppImage tools"
+        if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
+        run: |
+          sudo apt update && sudo apt install -y libfuse2 # Needed by AppImage/linuxdeploy
 
-    build:
-        needs: [check-version]
-        strategy:
-            matrix:
-                os:
-                    - { NAME: linux, OS: ubuntu-latest, ARCH: x86_64, PATH: target/optimized/bob, TARGET: "" }
-                    - { NAME: linux, OS: ubuntu-24.04-arm, ARCH: arm, PATH: target/optimized/bob, TARGET: "" }
-                    - { NAME: macos, OS: macos-latest, ARCH: x86_64, PATH: target/x86_64-apple-darwin/optimized/bob, TARGET: "x86_64-apple-darwin" }
-                    - { NAME: windows, OS: windows-latest, ARCH: x86_64, PATH: build, TARGET: "" }
-                    - { NAME: macos, OS: macos-latest, ARCH: arm, PATH: target/optimized/bob, TARGET: "" }
-                tls:
-                    - { NAME: Rustls, SUFFIX: "", ARGS: "" }
-                    - { NAME: OpenSSL, SUFFIX: "-openssl", ARGS: "--no-default-features --features native-tls" }
-        runs-on: ${{matrix.os.OS}}
-        steps:
-            - uses: actions/checkout@v4
-            - name: Install Rust
-              uses: actions-rs/toolchain@v1
-              with:
-                  toolchain: stable
-                  profile: minimal
-                  override: true
-            - name: Add Rust target for cross-compilation
-              if: matrix.os.TARGET != ''
-              run: rustup target add ${{ matrix.os.TARGET }}
-            - name: Install OpenSSL libraries
-              run: sudo apt update && sudo apt install libssl-dev
-              if: matrix.os.OS == 'ubuntu-latest' && matrix.tls.NAME == 'OpenSSL'
-            - uses: Swatinem/rust-cache@v1
-            - name: Build Bob
-              uses: actions-rs/cargo@v1
-              with:
-                  command: build
-                  args: --locked --profile optimized ${{ matrix.tls.ARGS }} ${{ matrix.os.TARGET != '' && format('--target {0}', matrix.os.TARGET) || '' }}
-            - name: Install AppImage tools
-              if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
-              run: |
-                  sudo apt update && sudo apt install -y libfuse2 # Needed by AppImage/linuxdeploy
-                  
-                  # Determine the correct architecture for linuxdeploy download
-                  DOWNLOAD_ARCH=${{ matrix.os.ARCH }}
-                  if [[ "${{ matrix.os.ARCH }}" == "arm" ]]; then
-                    DOWNLOAD_ARCH="aarch64"
-                  fi
-                  
-                  echo "Downloading linuxdeploy tools for architecture: $DOWNLOAD_ARCH"
-                  wget -c "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-$DOWNLOAD_ARCH.AppImage" -O linuxdeploy
-                  wget -c "https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-$DOWNLOAD_ARCH.AppImage" -O linuxdeploy-plugin-appimage
-                  chmod +x linuxdeploy linuxdeploy-plugin-appimage
+          # Determine the correct architecture for linuxdeploy download
+          DOWNLOAD_ARCH=${{ matrix.os.ARCH }}
+          if [[ "${{ matrix.os.ARCH }}" == "arm" ]]; then
+            DOWNLOAD_ARCH="aarch64"
+          fi
 
-            - name: Prepare AppDir
-              if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
-              run: |
-                  mkdir -p AppDir/usr/bin AppDir/usr/share/icons/hicolor/256x256/apps AppDir/usr/share/applications
-                  cp target/optimized/bob AppDir/usr/bin/
-                  cp resources/bob-icon.png AppDir/usr/share/icons/hicolor/256x256/apps/bob.png
-                  cat <<EOF > AppDir/bob.desktop
-                  [Desktop Entry]
-                  Name=Bob Neovim Manager
-                  Exec=bob
-                  Icon=bob
-                  Type=Application
-                  Categories=Utility;Development;
-                  Comment=A cross-platform Neovim version manager
-                  EOF
-                  cp AppDir/bob.desktop AppDir/usr/share/applications/
-                  
-                  # Verify the file exists right before linuxdeploy
-                  ls -l AppDir/usr/bin/bob 
-
-                  export UPD_INFO="gh-releases-zsync|Matsuuu|bob|latest|bob-${{ matrix.os.ARCH }}.AppImage.zsync"
-                  export OUTPUT="bob-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}.AppImage"
-                  
-                  # Change --executable path to be relative to CWD
-                  ./linuxdeploy --appdir AppDir --executable AppDir/usr/bin/bob --desktop-file AppDir/bob.desktop --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/bob.png --output appimage
-
-
-            - name: Setup Bob build directory
-              run: |
-                  mkdir build
-                  copy .\\bin\\vcruntime140.dll .\\build
-                  copy .\\target\\optimized\\bob.exe .\\build
-              if: matrix.os.OS == 'windows-latest'
-            - name: Upload Bob binary
-              uses: actions/upload-artifact@v4
-              with:
-                  name: "bob-${{ matrix.os.NAME }}-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}"
-                  path: ${{ matrix.os.PATH }}
-                  if-no-files-found: error
-            - name: Upload Bob AppImage
-              if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
-              uses: actions/upload-artifact@v4
-              with:
-                  name: "bob-${{ matrix.os.NAME }}-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}-appimage"
-                  path: "bob-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}.AppImage*" 
-                  if-no-files-found: error
-                  retention-days: 7
-
-    github-release:
-        needs: [build]
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v3
-              with:
-                  fetch-depth: 0
-            - name: Download artifacts
-              uses: actions/download-artifact@v4
-              with:
-                  path: artifacts
-            - name: Prepare Release Assets (Zip binaries, keep AppImages separate)
-              run: |
-                  cd artifacts
-                  # Zip directories (binaries)
-                  find . -mindepth 1 -maxdepth 1 -type d -print0 | while IFS= read -r -d $'\0' dir; do
-                    base=$(basename "$dir")
-                    zip -r "${base}.zip" "$dir"
-                    rm -r "$dir" # Remove original directory after zipping
-                  done
-                  # Move AppImages and zsync files out of subdirectories if they exist
-                  find . -mindepth 2 -name '*.AppImage*' -exec mv {} . \;
-                  # Clean up any remaining empty directories from AppImage artifacts
-                  find . -mindepth 1 -maxdepth 1 -type d -empty -delete
-                  echo "Prepared assets:"
-                  ls -l
-            - name: Release
-              uses: softprops/action-gh-release@v1
-              if: startsWith(github.ref, 'refs/tags/')
-              with:
-                  generate_release_notes: true
-                  files: |
-                      ./artifacts/*
-
-    publish-cargo:
-        needs: github-release
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v3
-            - uses: actions-rs/toolchain@v1
-              with:
-                  toolchain: stable
-                  override: true
-            - uses: katyo/publish-crates@v2
-              with:
-                  registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          echo "Downloading linuxdeploy tools for architecture: $DOWNLOAD_ARCH"
+          wget -c "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-$DOWNLOAD_ARCH.AppImage" -O linuxdeploy
+          wget -c "https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-$DOWNLOAD_ARCH.AppImage" -O linuxdeploy-plugin-appimage
+          chmod +x linuxdeploy linuxdeploy-plugin-appimage
+      - name: "Prepare AppDir"
+        if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
+        run: "mkdir -p AppDir/usr/bin AppDir/usr/share/icons/hicolor/256x256/apps AppDir/usr/share/applications\ncp target/optimized/bob AppDir/usr/bin/\ncp resources/bob-icon.png AppDir/usr/share/icons/hicolor/256x256/apps/bob.png\ncat <<EOF > AppDir/bob.desktop\n[Desktop Entry]\nName=Bob Neovim Manager\nExec=bob\nIcon=bob\nType=Application\nCategories=Utility;Development;\nComment=A cross-platform Neovim version manager\nEOF\ncp AppDir/bob.desktop AppDir/usr/share/applications/\n\n# Verify the file exists right before linuxdeploy\nls -l AppDir/usr/bin/bob \n\nexport UPD_INFO=\"gh-releases-zsync|Matsuuu|bob|latest|bob-${{ matrix.os.ARCH }}.AppImage.zsync\"\nexport OUTPUT=\"bob-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}.AppImage\"\n\n# Change --executable path to be relative to CWD\n./linuxdeploy --appdir AppDir --executable AppDir/usr/bin/bob --desktop-file AppDir/bob.desktop --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/bob.png --output appimage\n"
+      - name: "Setup Bob build directory"
+        # env:
+        #   BUILD_OUTPUT: build_out
+        run: |
+          mkdir ${{ matrix.os.PATH }}
+          copy .\\bin\\vcruntime140.dll .\\${{ matrix.os.PATH }}
+          copy .\\target\\optimized\\bob.exe ".\\${{ matrix.os.PATH }}"
+        if: matrix.os.OS == 'windows-latest'
+      - name: "Upload Bob binary"
+        uses: actions/upload-artifact@v4
+        with:
+          name: "bob-${{ matrix.os.NAME }}-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}"
+          path: ${{ matrix.os.PATH }}
+          if-no-files-found: error
+      - name: "Upload Bob AppImage"
+        if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
+        uses: actions/upload-artifact@v4
+        with:
+          name: "bob-${{ matrix.os.NAME }}-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}-appimage"
+          path: "bob-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}.AppImage*"
+          if-no-files-found: error
+          retention-days: 7
+  github-release:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: "Download artifacts"
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: "Prepare Release Assets (Zip binaries, keep AppImages separate)"
+        run: |
+          cd artifacts
+          # Zip directories (binaries)
+          find . -mindepth 1 -maxdepth 1 -type d -print0 | while IFS= read -r -d $'\0' dir; do
+            base=$(basename "$dir")
+            zip -r "${base}.zip" "$dir"
+            rm -r "$dir" # Remove original directory after zipping
+          done
+          # Move AppImages and zsync files out of subdirectories if they exist
+          find . -mindepth 2 -name '*.AppImage*' -exec mv {} . \;
+          # Clean up any remaining empty directories from AppImage artifacts
+          find . -mindepth 1 -maxdepth 1 -type d -empty -delete
+          echo "Prepared assets:"
+          ls -l
+      - name: "Release"
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          generate_release_notes: true
+          files: |
+            ./artifacts/*
+  publish-cargo:
+    needs: github-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          profile: ${{ env.RUST_PROFILE }}
+          override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
+      - uses: katyo/publish-crates@v2
+        with:
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}

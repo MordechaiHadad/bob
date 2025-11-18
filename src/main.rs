@@ -5,10 +5,14 @@ pub mod github_requests;
 mod handlers;
 mod helpers;
 
+use std::env;
+use std::path::Path;
+use std::process::exit;
+
 use anyhow::Result;
 use config::ConfigFile;
-use helpers::{processes::handle_nvim_process, version};
-use std::{env, path::Path, process::exit};
+use helpers::processes::handle_nvim_process;
+use helpers::version;
 use tracing::{Level, error, warn};
 
 pub(crate) use crate::consts::*;
