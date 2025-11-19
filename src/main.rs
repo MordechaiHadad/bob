@@ -8,7 +8,7 @@ mod helpers;
 use anyhow::Result;
 use config::ConfigFile;
 use helpers::{processes::handle_nvim_process, version};
-use std::{env, path::Path, process::exit};
+use std::{env, process::exit};
 use tracing::{Level, error, warn};
 
 pub(crate) use crate::consts::*;
@@ -32,8 +32,13 @@ async fn run() -> Result<()> {
 
     let args: Vec<String> = env::args().collect();
 
-    let exe_name_path = Path::new(&args[0]);
-    let exe_name = exe_name_path.file_stem().unwrap().to_str().unwrap();
+    let exe_path = std::env::current_exe()?;
+    let exe_name = exe_path
+        .is_symlink()
+        .then(|| exe_path.read_link().ok())
+        .flatten()
+        .and_then(|p| p.file_stem().map(|s| s.to_owned()))
+        .unwrap_or_else(|| exe_path.file_stem().unwrap().to_owned());
 
     let rest_args = &args[1..];
 
