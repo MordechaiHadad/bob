@@ -46,7 +46,7 @@ use crate::helpers::version::types::{ParsedVersion, VersionType};
 /// start(version, install, &client, config).await.unwrap();
 /// ```
 pub async fn start(
-    mut version: ParsedVersion,
+    version: ParsedVersion,
     install: bool,
     client: &Client,
     config: ConfigFile,
@@ -61,7 +61,7 @@ pub async fn start(
     }
 
     if install {
-        match install_handler::start(&mut version, client, &config).await {
+        match install_handler::start(&version, client, &config).await {
             Ok(success) => {
                 if let InstallResult::NightlyIsUpdated = success {
                     if is_version_used {
@@ -139,10 +139,10 @@ pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
                 ));
             }
         } else {
-            version.non_parsed_string.to_string()
+            version.non_parsed_string.clone()
         }
     } else {
-        version.tag_name.to_string()
+        version.tag_name.clone()
     };
 
     fs::write("used", &file_version).await?;
@@ -272,7 +272,7 @@ async fn copy_file_with_error_handling(old_path: &Path, new_path: &Path) -> Resu
     match fs::copy(&old_path, &new_path).await {
         Ok(_) => Ok(()),
         Err(e) => match e.raw_os_error() {
-            Some(26) | Some(32) => Err(anyhow::anyhow!(
+            Some(26 | 32) => Err(anyhow::anyhow!(
                 "The file {} is busy. Please make sure to close any processes using it.",
                 old_path.display()
             )),
@@ -448,7 +448,7 @@ async fn modify_path(config: &ConfigFile, installation_dir: &str) -> Result<()> 
                     warn!("Failed to create fish config file: {error}");
                     Ok(())
                 },
-                |_| {
+                |()| {
                     info!(msg);
                     Ok(())
                 },
@@ -457,7 +457,7 @@ async fn modify_path(config: &ConfigFile, installation_dir: &str) -> Result<()> 
         _shell => {
             let env_path: &str = env_paths.sh_script.to_str().unwrap();
 
-            let line = format!(". \"{}\"", env_path);
+            let line = format!(". \"{env_path}\"");
             for file in files.iter() {
                 let file = file.as_ref().to_path_buf();
                 if let Err(error) = what_the_path::shell::append_to_rcfile(file, &line) {

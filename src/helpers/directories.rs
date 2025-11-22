@@ -8,8 +8,8 @@ use crate::config::Config;
 ///
 /// This function checks the target operating system using the `cfg!` macro and constructs the home directory path accordingly.
 /// For Windows, it uses the "USERPROFILE" environment variable.
-/// For macOS, it uses the "/Users/" directory and appends the "SUDO_USER" or "USER" environment variable if they exist and correspond to a valid directory.
-/// For other operating systems, it uses the "/home/" directory and appends the "SUDO_USER" or "USER" environment variable if they exist and correspond to a valid directory.
+/// For macOS, it uses the "/Users/" directory and appends the `SUDO_USER` or "USER" environment variable if they exist and correspond to a valid directory.
+/// For other operating systems, it uses the "/home/" directory and appends the `SUDO_USER` or "USER" environment variable if they exist and correspond to a valid directory.
 /// If none of the above methods work, it uses the "HOME" environment variable.
 ///
 /// # Returns
@@ -33,8 +33,8 @@ fn get_home_dir() -> Result<PathBuf> {
     if cfg!(target_os = "macos") {
         home_str.push("/Users/");
     } else {
-        home_str.push("/home/")
-    };
+        home_str.push("/home/");
+    }
 
     if let Ok(value) = std::env::var("SUDO_USER") {
         home_str.push(&value);
@@ -149,26 +149,23 @@ pub fn get_config_file() -> Result<PathBuf> {
 /// let downloads_directory = get_downloads_directory(&config).await?;
 /// ```
 pub async fn get_downloads_directory(config: &Config) -> Result<PathBuf> {
-    let path = match &config.downloads_location {
-        Some(path) => {
-            if tokio::fs::metadata(path).await.is_err() {
-                return Err(anyhow!("Custom directory {path} doesn't exist!"));
-            }
-
-            PathBuf::from(path)
+    let path = if let Some(path) = &config.downloads_location {
+        if tokio::fs::metadata(path).await.is_err() {
+            return Err(anyhow!("Custom directory {path} doesn't exist!"));
         }
-        None => {
-            let mut data_dir = get_local_data_dir()?;
 
-            data_dir.push("bob");
-            let does_folder_exist = tokio::fs::metadata(&data_dir).await.is_ok();
-            let is_folder_created = tokio::fs::create_dir_all(&data_dir).await.is_ok();
+        PathBuf::from(path)
+    } else {
+        let mut data_dir = get_local_data_dir()?;
 
-            if !does_folder_exist && !is_folder_created {
-                return Err(anyhow!("Couldn't create downloads directory"));
-            }
-            data_dir
+        data_dir.push("bob");
+        let does_folder_exist = tokio::fs::metadata(&data_dir).await.is_ok();
+        let is_folder_created = tokio::fs::create_dir_all(&data_dir).await.is_ok();
+
+        if !does_folder_exist && !is_folder_created {
+            return Err(anyhow!("Couldn't create downloads directory"));
         }
+        data_dir
     };
 
     Ok(path)
@@ -196,13 +193,12 @@ pub async fn get_downloads_directory(config: &Config) -> Result<PathBuf> {
 /// let installation_directory = get_installation_directory(&config).await?;
 /// ```
 pub async fn get_installation_directory(config: &Config) -> Result<PathBuf> {
-    match &config.installation_location {
-        Some(path) => Ok(PathBuf::from(path.clone())),
-        None => {
-            let mut installation_location = get_downloads_directory(config).await?;
-            installation_location.push("nvim-bin");
+    if let Some(path) = &config.installation_location {
+        Ok(PathBuf::from(path.clone()))
+    } else {
+        let mut installation_location = get_downloads_directory(config).await?;
+        installation_location.push("nvim-bin");
 
-            Ok(installation_location)
-        }
+        Ok(installation_location)
     }
 }

@@ -9,6 +9,7 @@ use crate::{
     handlers::use_handler,
     helpers::{self, version::types::ParsedVersion},
 };
+use std::fmt::Write;
 
 /// Starts the rollback process.
 ///
@@ -51,48 +52,47 @@ pub async fn start(config: Config) -> Result<()> {
         .default(0)
         .interact_on_opt(&Term::stderr())?;
 
-    match selection {
-        Some(i) => {
-            let is_version_used = helpers::version::is_version_used(&name_list[i], &config).await;
+    if let Some(i) = selection {
+        let is_version_used = helpers::version::is_version_used(&name_list[i], &config).await;
 
-            if is_version_used {
-                info!("{} is already used.", &name_list[i]);
-                return Ok(());
-            }
-
-            use_handler::switch(
-                &config,
-                &ParsedVersion {
-                    tag_name: name_list[i].clone(),
-                    version_type: helpers::version::types::VersionType::Normal,
-                    non_parsed_string: "".to_string(),
-                    semver: None,
-                },
-            )
-            .await?;
-
-            let find = nightly_vec
-                .iter()
-                .find(|item| {
-                    item.path
-                        .file_name()
-                        .unwrap()
-                        .to_os_string()
-                        .into_string()
-                        .unwrap()
-                        .contains(&name_list[i])
-                })
-                .unwrap();
-
-            let now = Utc::now();
-            let since = now.signed_duration_since(find.data.published_at);
-            let humanized = humanize_duration(since)?;
-            info!(
-                "Successfully rolled back to version '{}' from {} ago",
-                name_list[i], humanized
-            );
+        if is_version_used {
+            info!("{} is already used.", &name_list[i]);
+            return Ok(());
         }
-        None => info!("Rollback aborted..."),
+
+        use_handler::switch(
+            &config,
+            &ParsedVersion {
+                tag_name: name_list[i].clone(),
+                version_type: helpers::version::types::VersionType::Normal,
+                non_parsed_string: String::default(),
+                semver: None,
+            },
+        )
+        .await?;
+
+        let find = nightly_vec
+            .iter()
+            .find(|item| {
+                item.path
+                    .file_name()
+                    .unwrap()
+                    .to_os_string()
+                    .into_string()
+                    .unwrap()
+                    .contains(&name_list[i])
+            })
+            .unwrap();
+
+        let now = Utc::now();
+        let since = now.signed_duration_since(find.data.published_at);
+        let humanized = humanize_duration(since);
+        info!(
+            "Successfully rolled back to version '{}' from {} ago",
+            name_list[i], humanized
+        );
+    } else {
+        info!("Rollback aborted...");
     }
 
     Ok(())
@@ -117,7 +117,7 @@ pub async fn start(config: Config) -> Result<()> {
 /// let humanized_duration = humanize_duration(duration).unwrap();
 /// assert_eq!(humanized_duration, "1 day, 1 hour");
 /// ```
-fn humanize_duration(duration: Duration) -> Result<String> {
+fn humanize_duration(duration: Duration) -> String {
     let mut humanized_duration = String::new();
 
     let total_hours = duration.num_hours();
@@ -130,30 +130,47 @@ fn humanize_duration(duration: Duration) -> Result<String> {
 
     if weeks != 0 {
         if added_duration {
-            humanized_duration += ", ";
+            let _ = write!(humanized_duration, ",");
         }
-        humanized_duration += &format!("{} week{}", weeks, if weeks > 1 { "s" } else { "" });
+        // humanized_duration += &format!("{} week{}", weeks, if weeks > 1 { "s" } else { "" });
+        let _ = write!(
+            humanized_duration,
+            "{} week{}",
+            weeks,
+            if weeks > 1 { "s" } else { "" }
+        );
         added_duration = true;
     }
     if days != 0 {
         if added_duration {
-            humanized_duration += ", ";
+            let _ = write!(humanized_duration, ",");
         }
         if !humanized_duration.is_empty() {
-            humanized_duration += " ";
+            let _ = write!(humanized_duration, " ");
         }
-        humanized_duration += &format!("{} day{}", days, if days > 1 { "s" } else { "" });
+        // humanized_duration += &format!("{} day{}", days, if days > 1 { "s" } else { "" });
+        let _ = write!(
+            humanized_duration,
+            "{} day{}",
+            days,
+            if days > 1 { "s" } else { "" }
+        );
         added_duration = true;
     }
     if hours != 0 {
         if added_duration {
-            humanized_duration += " and";
+            let _ = write!(humanized_duration, ",");
         }
         if !humanized_duration.is_empty() {
-            humanized_duration += " ";
+            let _ = write!(humanized_duration, " ");
         }
-        humanized_duration += &format!("{} hour{}", hours, if hours > 1 { "s" } else { "" });
+        let _ = write!(
+            humanized_duration,
+            "{} hour{}",
+            hours,
+            if hours > 1 { "s" } else { "" }
+        );
     }
 
-    Ok(humanized_duration)
+    humanized_duration
 }
