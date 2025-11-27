@@ -35,8 +35,13 @@ pub async fn start(version: &str, args: &[String], client: &Client, config: &Con
         );
     }
 
-    // Use the specific version's binary
-    let bin_path = version_path.join("bin").join("nvim");
+    // Use the specific version's binary (With OS specific extension)
+    let bin_path = if cfg!(target_family = "windows") {
+        version_path.join("bin").join("nvim").with_extension("exe")
+    } else {
+        version_path.join("bin").join("nvim")
+    };
+
     if !bin_path.exists() {
         anyhow::bail!(
             "Neovim binary not found at expected path: {}",
