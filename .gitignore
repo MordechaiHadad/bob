@@ -3,3 +3,6 @@ bob.iml
 report.json
 .idea/
 .idea/*
+.idea/
+_*/
+_*

@@ -1,16 +1,13 @@
-use crate::{
-    config::Config,
-    helpers::{self, directories},
-};
 use anyhow::{Result, anyhow};
-use dialoguer::{
-    Confirm, MultiSelect,
-    console::{Term, style},
-    theme::ColorfulTheme,
-};
+use dialoguer::console::{Term, style};
+use dialoguer::theme::ColorfulTheme;
+use dialoguer::{Confirm, MultiSelect};
 use reqwest::Client;
 use tokio::fs;
 use tracing::{info, warn};
+
+use crate::config::Config;
+use crate::helpers::{self, directories};
 
 /// Starts the uninstall process.
 ///
@@ -61,10 +58,7 @@ pub async fn start(version: Option<&str>, config: Config) -> Result<()> {
     let path = downloads_dir.join(&version.tag_name);
 
     fs::remove_dir_all(path).await?;
-    info!(
-        "Successfully uninstalled version: {}",
-        version.non_parsed_string
-    );
+    info!("Successfully uninstalled version: {}", version.non_parsed_string);
     Ok(())
 }
 
@@ -147,10 +141,7 @@ async fn uninstall_selections(client: &Client, config: &Config) -> Result<()> {
             for &i in ids {
                 let path = downloads_dir.join(&installed_versions[i]);
                 fs::remove_dir_all(path).await?;
-                info!(
-                    "Successfully uninstalled version: {}",
-                    &installed_versions[i]
-                );
+                info!("Successfully uninstalled version: {}", &installed_versions[i]);
             }
         }
         None | Some(_) => info!("Uninstall aborted..."),

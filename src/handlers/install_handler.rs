@@ -1,27 +1,29 @@
-use crate::config::{Config, ConfigFile};
-use crate::github_requests::{UpstreamVersion, get_commits_for_nightly, get_upstream_nightly};
-use crate::helpers::checksum::sha256cmp;
-use crate::helpers::processes::handle_subprocess;
-use crate::helpers::version::nightly::produce_nightly_vec;
-use crate::helpers::version::types::{LocalVersion, ParsedVersion, VersionType};
-use crate::helpers::{self, directories, filesystem, unarchive};
-use anyhow::{Result, anyhow};
-use futures_util::stream::StreamExt;
-use indicatif::{ProgressBar, ProgressStyle};
-use reqwest::Client;
-use semver::Version;
 use std::cmp::min;
 use std::env;
 use std::fmt::Write;
 use std::path::Path;
 use std::process::Stdio;
+
+use anyhow::{Result, anyhow};
+use futures_util::stream::StreamExt;
+use indicatif::{ProgressBar, ProgressStyle};
+use reqwest::Client;
+use semver::Version;
+// use tokio::fs;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
-use tokio::{fs, process::Command};
+use tokio::process::Command;
 use tracing::{info, warn};
 use yansi::Paint;
 
-use super::{InstallResult, PostDownloadVersionType};
+use crate::config::{Config, ConfigFile};
+use crate::github_requests::{UpstreamVersion, get_commits_for_nightly, get_upstream_nightly};
+use crate::handlers::{InstallResult, PostDownloadVersionType};
+use crate::helpers::checksum::sha256cmp;
+use crate::helpers::processes::handle_subprocess;
+use crate::helpers::version::nightly::produce_nightly_vec;
+use crate::helpers::version::types::{LocalVersion, ParsedVersion, VersionType};
+use crate::helpers::{self, directories, filesystem, unarchive};
 
 /// Starts the installation process for a given version.
 ///
@@ -63,19 +65,15 @@ use super::{InstallResult, PostDownloadVersionType};
 /// let result = start(&mut version, &client, &config).await;
 /// ```
 #[allow(clippy::too_many_lines)]
-pub async fn start(
-    version: &ParsedVersion,
-    client: &Client,
-    config: &ConfigFile,
-) -> Result<InstallResult> {
+pub async fn start(version: &ParsedVersion, client: &Client, config: &ConfigFile) -> Result<InstallResult> {
     if version.version_type == VersionType::NightlyRollback {
         return Ok(InstallResult::GivenNightlyRollback);
     }
 
-    if let Some(version) = &version.semver {
-        if version <= &Version::new(0, 2, 2) {
-            return Err(anyhow!("Versions below 0.2.2 are not supported"));
-        }
+    if let Some(version) = &version.semver
+        && version <= &Version::new(0, 2, 2)
+    {
+        return Err(anyhow!("Versions below 0.2.2 are not supported"));
     }
 
     let root = directories::get_downloads_directory(&config.config).await?;
@@ -109,9 +107,7 @@ pub async fn start(
         handle_rollback(&config.config).await?;
 
         match config.config.enable_nightly_info {
-            Some(boolean) if boolean => {
-                print_commits(client, &local_nightly, upstream_nightly).await?;
-            }
+            Some(boolean) if boolean => print_commits(client, &local_nightly, upstream_nightly).await?,
             None => print_commits(client, &local_nightly, upstream_nightly).await?,
             _ => (),
         }
@@ -134,20 +130,15 @@ pub async fn start(
 
     if let PostDownloadVersionType::Standard(downloaded_archive) = downloaded_archive {
         if version.semver.is_some() && version.semver.as_ref().unwrap() <= &Version::new(0, 4, 4) {
-            unarchive::start(&downloaded_archive).await?;
+            unarchive::start(downloaded_archive).await?;
         } else {
-            let downloaded_checksum =
-                download_version(client, version, root, &config.config, true).await?;
-            let archive_path = root.join(format!(
-                "{}.{}",
-                downloaded_archive.file_name, downloaded_archive.file_format
-            ));
+            let downloaded_checksum = download_version(client, version, root, &config.config, true).await?;
+            let archive_path =
+                root.join(format!("{}.{}", downloaded_archive.file_name, downloaded_archive.file_format));
 
             if let PostDownloadVersionType::Standard(downloaded_checksum) = downloaded_checksum {
-                let checksum_path = root.join(format!(
-                    "{}.{}",
-                    downloaded_checksum.file_name, downloaded_checksum.file_format
-                ));
+                let checksum_path = root
+                    .join(format!("{}.{}", downloaded_checksum.file_name, downloaded_checksum.file_format));
 
                 let platform = helpers::get_platform_name(version.semver.as_ref());
 
@@ -163,32 +154,28 @@ pub async fn start(
 
                 info!("Checksum matched!");
                 tokio::fs::remove_file(checksum_path).await?;
-                unarchive::start(&downloaded_archive).await?;
+                unarchive::start(downloaded_archive).await?;
             } else if let PostDownloadVersionType::None = downloaded_checksum {
                 warn!("No checksum provided, skipping checksum verification");
-                unarchive::start(&downloaded_archive).await?;
+                unarchive::start(downloaded_archive).await?;
             }
         }
     }
 
-    if let VersionType::Nightly = version.version_type {
-        if let Some(nightly_version) = nightly_version {
-            let nightly_string = serde_json::to_string(&nightly_version)?;
+    if let VersionType::Nightly = version.version_type
+        && let Some(nightly_version) = nightly_version
+    {
+        let nightly_string = serde_json::to_string(&nightly_version)?;
 
-            let downloads_dir = root.join("nightly").join("bob.json");
-            let mut json_file = File::create(downloads_dir).await?;
+        let downloads_dir = root.join("nightly").join("bob.json");
+        let mut json_file = File::create(downloads_dir).await?;
 
-            if let Err(error) = json_file.write_all(nightly_string.as_bytes()).await {
-                return Err(anyhow!(
-                    "Failed to create file nightly/bob.json, reason: {error}"
-                ));
-            }
+        if let Err(error) = json_file.write_all(nightly_string.as_bytes()).await {
+            return Err(anyhow!("Failed to create file nightly/bob.json, reason: {error}"));
         }
     }
 
-    Ok(InstallResult::InstallationSuccess(
-        root.display().to_string(),
-    ))
+    Ok(InstallResult::InstallationSuccess(root.display().to_string()))
 }
 
 /// Asynchronously handles the rollback for the nightly version(s) of Neovim.
@@ -237,10 +224,10 @@ async fn handle_rollback(config: &Config) -> Result<()> {
 
     if nightly_vec.len() >= rollback_limit.into() {
         let oldest_path = nightly_vec.pop().unwrap().path;
-        fs::remove_dir_all(oldest_path).await?;
+        tokio::fs::remove_dir_all(oldest_path).await?;
     }
 
-    let nightly_file = fs::read_to_string("nightly/bob.json").await?;
+    let nightly_file = tokio::fs::read_to_string("nightly/bob.json").await?;
     let mut json_struct: UpstreamVersion = serde_json::from_str(&nightly_file)?;
     let id: String = json_struct
         .target_commitish
@@ -255,7 +242,7 @@ async fn handle_rollback(config: &Config) -> Result<()> {
     let _ = write!(json_struct.tag_name, "-{id}");
 
     let json_file = serde_json::to_string(&json_struct)?;
-    fs::write(format!("nightly-{id}/bob.json"), json_file).await?;
+    tokio::fs::write(format!("nightly-{id}/bob.json"), json_file).await?;
 
     Ok(())
 }
@@ -288,18 +275,13 @@ async fn handle_rollback(config: &Config) -> Result<()> {
 /// let upstream = UpstreamVersion::get_upstream_version(&client).await?;
 /// print_commits(&client, &local, &upstream).await?;
 /// ```
-async fn print_commits(
-    client: &Client,
-    local: &UpstreamVersion,
-    upstream: &UpstreamVersion,
-) -> Result<()> {
-    let commits =
-        get_commits_for_nightly(client, &local.published_at, &upstream.published_at).await?;
+async fn print_commits(client: &Client, local: &UpstreamVersion, upstream: &UpstreamVersion) -> Result<()> {
+    let commits = get_commits_for_nightly(client, &local.published_at, &upstream.published_at).await?;
 
     for commit in commits {
         println!(
             "| {} {}\n",
-            Paint::blue(commit.commit.author.name).bold(),
+            Paint::blue(&commit.commit.author.name).bold(),
             commit.commit.message.replace('\n', "\n| ")
         );
     }
@@ -356,10 +338,7 @@ async fn download_version(
 
             // Handle error case first so we don't need a match statement
             let response = if let Err(error) = response {
-                return Err(anyhow!(
-                    "Failed to download version {}: {error}",
-                    version.tag_name
-                ));
+                return Err(anyhow!("Failed to download version {}: {error}", version.tag_name));
             } else {
                 response?
             };
@@ -372,8 +351,7 @@ async fn download_version(
 
                 let file_type = file_type_ext(version, get_sha256sum);
 
-                let mut file =
-                    tokio::fs::File::create(format!("{}.{file_type}", version.tag_name)).await?;
+                let mut file = tokio::fs::File::create(format!("{}.{file_type}", version.tag_name)).await?;
                 let mut downloaded: u64 = 0;
 
                 while let Some(item) = response_bytes.next().await {
@@ -390,10 +368,10 @@ async fn download_version(
                 pbw.finish(root, file_type.clone().into());
 
                 Ok(PostDownloadVersionType::Standard(LocalVersion {
-                    file_name: version.tag_name.clone(),
+                    file_name:   version.tag_name.clone(),
                     file_format: file_type.to_string(),
-                    path: root.display().to_string(),
-                    semver: version.semver.clone(),
+                    path:        root.display().to_string(),
+                    semver:      version.semver.clone(),
                 }))
             } else if get_sha256sum {
                 Ok(PostDownloadVersionType::None)
@@ -404,11 +382,7 @@ async fn download_version(
                         "Version does not exist in Neovim releases. Please check available versions with 'bob list-remote'"
                     ));
                 }
-                Err(anyhow!(
-                    "Failed to download version {}: {}",
-                    version.tag_name,
-                    error_text
-                ))
+                Err(anyhow!("Failed to download version {}: {}", version.tag_name, error_text))
             }
         }
         VersionType::Hash => handle_building_from_source(version, config).await,
@@ -417,8 +391,8 @@ async fn download_version(
 }
 
 struct PbWrapper<'a, S> {
-    pb: ProgressBar,
-    tag_name: &'a S,
+    pb:            ProgressBar,
+    tag_name:      &'a S,
     download_type: &'static str,
 }
 
@@ -510,111 +484,79 @@ fn file_type_ext(version: &ParsedVersion, get_sha256sum: bool) -> std::borrow::C
 /// let result = handle_building_from_source(&version, &config).await;
 /// ```
 #[allow(clippy::too_many_lines)]
-#[rustfmt::skip]
-async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -> Result<PostDownloadVersionType> {
-    cfg_if::cfg_if! {
-        if #[cfg(windows)] {
-            if env::var("VisualStudioVersion").is_err() {
-                return Err(anyhow!("Please make sure you are using Developer PowerShell/Command Prompt for VS"));
-            }
+async fn handle_building_from_source(
+    version: &ParsedVersion,
+    config: &Config,
+) -> Result<PostDownloadVersionType> {
+    if cfg!(windows) && env::var("VisualStudioVersion").is_err() {
+        return Err(anyhow!("Please make sure you are using Developer PowerShell/Command Prompt for VS"));
+    }
 
-        } else {
-            let is_clang_present = match Command::new("clang").output().await {
-                Ok(_) => true,
-                Err(error) => !matches!(error.kind(), std::io::ErrorKind::NotFound)
-            };
-            let is_gcc_present = match Command::new("gcc").output().await {
-                Ok(_) => true,
-                Err(error) => !matches!(error.kind(), std::io::ErrorKind::NotFound)
-            };
-            if !is_gcc_present && !is_clang_present {
-                return Err(anyhow!(
-                    "Clang or GCC have to be installed in order to build neovim from source"
-                ));
-            }
-
+    if cfg!(not(windows)) {
+        let is_clang_present = match Command::new("clang").output().await {
+            Ok(_) => true,
+            Err(error) => !matches!(error.kind(), std::io::ErrorKind::NotFound),
+        };
+        let is_gcc_present = match Command::new("gcc").output().await {
+            Ok(_) => true,
+            Err(error) => !matches!(error.kind(), std::io::ErrorKind::NotFound),
+        };
+        if !is_gcc_present && !is_clang_present {
+            return Err(anyhow!("Clang or GCC have to be installed in order to build neovim from source"));
         }
     }
 
-    match Command::new("cmake").output().await {
-        Ok(_) => (),
-        Err(error) => {
-            if error.kind() == std::io::ErrorKind::NotFound {
-                return Err(anyhow!(
-                    "Cmake has to be installed in order to build neovim from source"
-                ));
+    let check_if_command_found = async |name: &str| -> Result<()> {
+        match Command::new(name.to_lowercase()).output().await {
+            Ok(_) => Ok(()),
+            #[rustfmt::skip]
+            Err(error) => {
+                if error.kind() == std::io::ErrorKind::NotFound {
+                    // uppercase first letter
+                    let fmt_name = name.chars().next().unwrap().to_uppercase().to_string() + &name[1..];
+                    // if cfg(windows) { fmt_name.push_str(".exe"); }
+                    return Err(anyhow!(format!("{fmt_name} has to be installed in order to build neovim from source")));
+                }
+                Err(anyhow!(format!("unknown error: {error}")))
             }
         }
-    }
+    };
 
-    if let Err(error) = Command::new("git").output().await {
-        if error.kind() == std::io::ErrorKind::NotFound {
-            return Err(anyhow!(
-                "Git has to be installed in order to build neovim from source"
-            ));
-        }
-    }
+    check_if_command_found("cmake").await?;
+
+    check_if_command_found("git").await?;
 
     // create neovim-git if it does not exist
     let dirname = "neovim-git";
-    if let Err(error) = fs::metadata(dirname).await {
-        match error.kind() {
-            std::io::ErrorKind::NotFound => {
-                fs::create_dir(dirname).await?;
-            }
-            _ => return Err(anyhow!("unknown error: {error}")),
+    metadata_handler(dirname, || {
+        async {
+            tokio::fs::create_dir(dirname)
+                .await
+                .map_err(|e| anyhow!(format!("unknown error: {e}")))?;
+            Ok(())
         }
-    }
+    })
+    .await?;
 
     env::set_current_dir(dirname)?; // cd into neovim-git
 
     // check if repo is initialized
-    if let Err(error) = fs::metadata(".git").await {
-        match error.kind() {
-            std::io::ErrorKind::NotFound => {
-                Command::new("git").arg("init").stdout(Stdio::null())
-                    .spawn()?.wait()
-                    .await?;
-            }
-
-            _ => return Err(anyhow!("unknown error: {error}")),
+    metadata_handler(".git", || {
+        async {
+            #[rustfmt::skip]
+        let mut child = tokio::process::Command::new("git").arg("--version").stdout(Stdio::null()).spawn()?;
+            child.wait().await?;
+            Ok(())
         }
-    }
+    })
+    .await?;
 
-    {
+    remote_checks(&version.non_parsed_string).await?;
 
-    // check if repo has a remote
-    let remote = Command::new("git").arg("remote").arg("get-url").arg("origin").stdout(Stdio::null())
-        .spawn()?.wait().await?;
-    if remote.success() {
-        // set neovim's remote
-        Command::new("git").arg("remote").arg("set-url").arg("origin").arg("https://github.com/neovim/neovim.git")
-            .spawn()?.wait().await?;
-    } else {
-        // add neovim's remote otherwise
-        Command::new("git").arg("remote").arg("add").arg("origin").arg("https://github.com/neovim/neovim.git")
-            .spawn()?.wait().await?;
-    }
-    // fetch version from origin
-    let fetch_successful = Command::new("git").arg("fetch").arg("--depth").arg("1").arg("origin").arg(&version.non_parsed_string)
-        .spawn()?.wait().await?.success();
-
-    if !fetch_successful {
-        return Err(anyhow!("fetching remote failed, try providing the full commit hash"));
-    }
-
-    // checkout fetched files
-    Command::new("git").arg("checkout").arg("FETCH_HEAD").stdout(Stdio::null())
-        .spawn()?
-        .wait()
-        .await?;
-
-    }
-
-    if fs::metadata("build").await.is_ok() {
+    if tokio::fs::metadata("build").await.is_ok() {
         filesystem::remove_dir("build").await?;
     }
-    fs::create_dir("build").await?;
+    tokio::fs::create_dir("build").await?;
 
     let downloads_location = directories::get_downloads_directory(config).await?;
     let folder_name = downloads_location.join(&version.tag_name[0..7]);
@@ -626,16 +568,19 @@ async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -
 
     let build_arg = format!("CMAKE_BUILD_TYPE={build_type}");
 
-    cfg_if::cfg_if! {
-        if #[cfg(windows)] {
+    #[cfg(windows)]
+    #[rustfmt::skip]
+    windows_deps(
+        build_arg.to_string(),
+        build_type.to_string(),
+        folder_name.to_string_lossy().to_string(),
+    )
+    .await?;
 
-            windows_deps(build_arg.to_string(), build_type.to_string(), folder_name.to_string_lossy().to_string()).await?;
-
-        } else {
-            let location_arg = format!("CMAKE_INSTALL_PREFIX={}", folder_name.to_string_lossy());
-            handle_subprocess(Command::new("make").arg(&location_arg).arg(&build_arg)).await?;
-            handle_subprocess(Command::new("make").arg("install")).await?;
-        }
+    if cfg!(not(windows)) {
+        let location_arg = format!("CMAKE_INSTALL_PREFIX={}", folder_name.to_string_lossy());
+        handle_subprocess(Command::new("make").arg(&location_arg).arg(&build_arg)).await?;
+        handle_subprocess(Command::new("make").arg("install")).await?;
     }
 
     let mut file = File::create(folder_name.join("full-hash.txt")).await?;
@@ -644,13 +589,51 @@ async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -
     Ok(PostDownloadVersionType::Hash)
 }
 
+#[rustfmt::skip]
+async fn remote_checks(non_parsed_str: &str) -> Result<()> {
+    // check if repo has a remote
+    let remote = Command::new("git").arg("remote").arg("get-url").arg("origin").stdout(Stdio::null()).spawn()?.wait().await?;
+    if remote.success() {
+        // set neovim's remote otherwise
+        Command::new("git").arg("remote").arg("set-url").arg("origin").arg("https://github.com/neovim/neovim.git").spawn()?.wait().await?;
+    } else {
+        // add neovim's remote
+        Command::new("git").arg("remote").arg("add").arg("origin").arg("https://github.com/neovim/neovim.git").spawn()?.wait().await?;
+    }
+
+    // fetch version from origin
+    let fetch_successful = Command::new("git").arg("fetch").arg("--depth").arg("1").arg("origin").arg(non_parsed_str).spawn()?.wait().await?.success();
+
+    if !fetch_successful {
+        return Err(anyhow!(
+                "fetching remote failed, try providing the full commit hash"
+        ));
+    }
+
+    // checkout fetched files
+    Command::new("git").arg("checkout").arg("FETCH_HEAD").stdout(Stdio::null()).spawn()?.wait().await?;
+    Ok(())
+}
+
+async fn metadata_handler<F, Fut>(dir: &str, action: F) -> Result<()>
+where
+    F: FnOnce() -> Fut,
+    Fut: std::future::Future<Output = Result<()>>,
+{
+    match tokio::fs::metadata(dir).await {
+        Ok(_) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => action().await,
+        Err(error) => Err(anyhow!(format!("unknown error: {error}"))),
+    }
+}
+
 #[cfg(target_os = "windows")]
 #[rustfmt::skip]
 async fn windows_deps<S>(build_arg: S, build_type: S, folder_name: S) -> Result<()>
 where
     S: AsRef<std::ffi::OsStr>
 {
-    if fs::metadata(".deps").await.is_ok() {
+    if tokio::fs::metadata(".deps").await.is_ok() {
         helpers::filesystem::remove_dir(".deps").await?;
     }
 
@@ -707,10 +690,10 @@ async fn send_request(
     let platform = helpers::get_platform_name(version.semver.as_ref());
     let file_type = crate::FILETYPE_EXT;
 
-    let url = config.github_mirror.as_ref().map_or_else(
-        || "https://github.com".to_string(),
-        std::string::ToString::to_string,
-    );
+    let url = config
+        .github_mirror
+        .as_ref()
+        .map_or_else(|| "https://github.com".to_string(), std::string::ToString::to_string);
 
     let version_tag = &version.tag_name;
     let request_url = if get_sha256sum {
@@ -719,17 +702,11 @@ async fn send_request(
         {
             format!("{url}/neovim/neovim/releases/download/{version_tag}/shasum.txt")
         } else {
-            format!(
-                "{url}/neovim/neovim/releases/download/{version_tag}/{platform}.{file_type}.sha256sum"
-            )
+            format!("{url}/neovim/neovim/releases/download/{version_tag}/{platform}.{file_type}.sha256sum")
         }
     } else {
         format!("{url}/neovim/neovim/releases/download/{version_tag}/{platform}.{file_type}")
     };
 
-    client
-        .get(request_url)
-        .header("user-agent", "bob")
-        .send()
-        .await
+    client.get(request_url).header("user-agent", "bob").send().await
 }

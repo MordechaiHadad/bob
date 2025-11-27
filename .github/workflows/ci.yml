@@ -1,6 +1,5 @@
 name: Continuous Integration
 on: [push, pull_request]
-
 jobs:
   clippy:
     strategy:
@@ -21,7 +20,6 @@ jobs:
         with:
           command: clippy
           args: --all-targets -- -D warnings
-
   test:
     strategy:
       matrix:
@@ -41,7 +39,6 @@ jobs:
         with:
           command: test
           args: --locked
-
   formatting:
     runs-on: ubuntu-latest
     steps:
@@ -58,7 +55,6 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
-
   security_audit:
     runs-on: ubuntu-latest
     steps:
@@ -80,47 +76,16 @@ jobs:
         with:
           command: audit
           args: --deny warnings
-
   build:
     needs: [clippy, formatting, test, security_audit]
     strategy:
       matrix:
         os:
-          - {
-              NAME: linux,
-              OS: ubuntu-latest,
-              ARCH: x86_64,
-              PATH: target/optimized/bob,
-              TARGET: "",
-            }
-          - {
-              NAME: linux,
-              OS: ubuntu-24.04-arm,
-              ARCH: arm,
-              PATH: target/optimized/bob,
-              TARGET: "",
-            }
-          - {
-              NAME: macos,
-              OS: macos-latest,
-              ARCH: x86_64,
-              PATH: target/x86_64-apple-darwin/optimized/bob,
-              TARGET: "x86_64-apple-darwin",
-            }
-          - {
-              NAME: windows,
-              OS: windows-latest,
-              ARCH: x86_64,
-              PATH: build,
-              TARGET: "",
-            }
-          - {
-              NAME: macos,
-              OS: macos-latest,
-              ARCH: arm,
-              PATH: target/optimized/bob,
-              TARGET: "",
-            }
+          - {NAME: linux, OS: ubuntu-latest, ARCH: x86_64, PATH: target/optimized/bob, TARGET: ""}
+          - {NAME: linux, OS: ubuntu-24.04-arm, ARCH: arm, PATH: target/optimized/bob, TARGET: ""}
+          - {NAME: macos, OS: macos-latest, ARCH: x86_64, PATH: target/x86_64-apple-darwin/optimized/bob, TARGET: "x86_64-apple-darwin"}
+          - {NAME: windows, OS: windows-latest, ARCH: x86_64, PATH: build, TARGET: ""}
+          - {NAME: macos, OS: macos-latest, ARCH: arm, PATH: target/optimized/bob, TARGET: ""}
     runs-on: ${{matrix.os.OS}}
     steps:
       - uses: actions/checkout@v4

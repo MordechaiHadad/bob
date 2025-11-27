@@ -1,0 +1,182 @@
+[env]
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+CARGO_MAKE_TIME_SUMMARY = true
+BREAKER = "----------------------------------------"
+
+# ROOT = "${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}"
+ROOT = "."
+
+# Platform specific file extensions, can use specifics for
+# build/dist taks that call linux.(args|command) vs windows.(args|command)
+# WINDOWS_EXTENSION = ".exe"
+# LINUX_EXTENSION = ""
+# MACOS_EXTENSION = ""
+
+# BIN_EXTENSION = "${LINUX_EXTENSION}"
+
+# Using a 'decode-mapping' to set the correct extension
+BIN_EXTENSION = { source = "${CARGO_MAKE_RUST_TARGET_OS}", default_value = "", mapping = { "linux" = "", "macos" = "", "windows" = ".exe", "openbsd" = "" } }
+
+## This isn't needed anyway
+# PROFILE = "${CARGO_MAKE_CARGO_PROFILE}"
+PROFILE = "release"
+VERSION = "${CARGO_MAKE_PROJECT_VERSION}"
+# Name of the output binary
+BIN_NAME = "${PROJECT_NAME}"
+# The formatted name of the output binary we want
+OUTPUT_BIN_NAME = "${BIN_NAME}_${VERSION}"
+# The folder where the binary will be copied to -- /_output_bin_name_dist
+DIST_FOLDER = "${ROOT}/_${OUTPUT_BIN_NAME}_dist"
+# the FULL path from root WITH EXE - root / target /current_profile / the_bin_name.EXE
+FOLDER_BIN_EXE = "${ROOT}/target/${PROFILE}/${BIN_NAME}${BIN_EXTENSION}"
+
+# If you're running on an older Windows, or a builder (workflows etc.)
+# You may want to change this to "powershell.exe" or "powershell"
+# I have not tested with the older versions personally- all commands are
+# powershell/pwsh compatible afik
+#
+# NOTE: cmd.exe is NOT supported as the commands use CMDlets for zipping, moving, etc.
+#
+WINDOWS_SHELL = "pwsh.exe"
+
+VARS = { script = ['''
+echo ""ROOT: ${ROOT}
+echo "PROFILE: ${PROFILE}"
+echo "VERSION: ${VERSION}"
+echo "BIN_NAME: ${BIN_NAME}"
+echo "OUTPUT_BIN_NAME: ${OUTPUT_BIN_NAME}"
+echo "DIST_FOLDER: ${DIST_FOLDER}"
+echo "FOLDER_BIN_EXE: ${FOLDER_BIN_EXE}"
+echo "BREAKER: ${BREAKER}"
+'''], multi_line = true }
+
+# Sanity command to dump out all the variables
+# Also serves as a way to see variable interp in multiline scripts (it's odd)
+[tasks.print_all]
+script_runner = "@duckscript"
+script = '''
+echo "BREAKER: ${BREAKER}"
+echo ""ROOT: ${ROOT}
+echo "PROFILE: ${PROFILE}"
+echo "VERSION: ${VERSION}"
+echo "BIN_NAME: ${BIN_NAME}"
+echo "OUTPUT_BIN_NAME: ${OUTPUT_BIN_NAME}"
+echo "DIST_FOLDER: ${DIST_FOLDER}"
+echo "FOLDER_BIN_EXE: ${FOLDER_BIN_EXE}"
+echo "BREAKER: ${BREAKER}"
+'''
+
+# START Core bare. min
+[tasks.format]
+command = "cargo"
+args = ["fmt", "--", "--emit=files"]
+dependencies = ["_taplo_format"]
+
+[tasks.clean]
+command = "cargo"
+args = ["clean"]
+
+[tasks.build]
+command = "cargo"
+args = ["${BUILD_ARG}", "${@}"]
+dependencies = ["format"]
+
+[tasks.build_release]
+command = "cargo"
+args = ["${BUILD_ARG}", "--release", "${@}"]
+dependencies = ["format"]
+
+[tasks.docs]
+command = "cargo"
+args = ["doc", "--no-deps", "${@}"]
+
+[tasks.check]
+command = "cargo"
+args = ["check", "--all-targets", "--color", "always", "${@}"]
+
+[tasks.clippy]
+command = "cargo"
+args = [
+  "clippy",
+  "--all-targets",
+  "--color",
+  "always",
+  "--",
+  "-W",
+  "clippy::pedantic",
+]
+# END Core bare. min
+
+# START Tests
+[tasks.test]
+command = "cargo"
+args = ["test", "${@}"]
+
+[tasks.test_all]
+command = "cargo"
+args = ["test", "--all", "${@}"]
+
+[tasks.test_no_capture]
+command = "cargo"
+args = ["test", "${@}", "--", "--nocapture"]
+
+[tasks.test_all_no_capture]
+command = "cargo"
+args = ["test", "--all", "${@}", "--", "--nocapture"]
+# END Tests
+
+# START Function outputs
+[tasks.run]
+command = "cargo"
+# We also capture anything after the main command
+args = ["run", "${@}"]
+
+[tasks.run_release]
+command = "cargo"
+args = ["run", "--release", "${@}"]
+
+[tasks.run_as_project]
+command = "cargo"
+args = ["run", " --bin", "${PROJECT_NAME}", "${@}"]
+
+# END Function outputs
+
+# START Workspaces
+[tasks.build_workspace]
+command = "cargo"
+args = ["${BUILD_ARG}", "--workspace", "${@}"]
+dependencies = ["format"]
+
+[tasks.build_release_workspace]
+command = "cargo"
+args = ["${BUILD_ARG}", "--release", "--workspace", "${@}"]
+dependencies = ["format"]
+
+[tasks.test_workspace]
+command = "cargo"
+args = ["test", "--workspace", "${@}"]
+# END Workspaces
+
+[tasks.sleep]
+linux.command = "sleep"
+linux.args = ["${SLEEP_TIME}"]
+windows.command = "${WINDOWS_SHELL}"
+windows.args = ["-Command", "Start-Sleep", "-Seconds", "${SLEEP_TIME}"]
+
+## START Misc tasks
+
+# START Taplo (TOML Formmater) tasks
+[tasks.taplo_lint]
+command = "taplo"
+args = ["lint"]
+
+[tasks._taplo_format]
+command = "taplo"
+args = ["format"]
+
+[tasks._taplo_format_force]
+command = "taplo"
+args = ["format", "--force"]
+# END Taplo (TOML Formmater) tasks
+
+## END Misc tasks

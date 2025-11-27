@@ -1,9 +1,10 @@
-use anyhow::{Result, anyhow};
-use dialoguer::Confirm;
-use reqwest::Client;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+use anyhow::{Result, anyhow};
+use dialoguer::Confirm;
+use reqwest::Client;
 use tokio::fs::{self};
 use tracing::info;
 
@@ -45,14 +46,8 @@ use crate::helpers::version::types::{ParsedVersion, VersionType};
 /// let config = Config::default();
 /// start(version, install, &client, config).await.unwrap();
 /// ```
-pub async fn start(
-    version: ParsedVersion,
-    install: bool,
-    client: &Client,
-    config: ConfigFile,
-) -> Result<()> {
-    let is_version_used =
-        helpers::version::is_version_used(&version.tag_name, &config.config).await;
+pub async fn start(version: ParsedVersion, install: bool, client: &Client, config: ConfigFile) -> Result<()> {
+    let is_version_used = helpers::version::is_version_used(&version.tag_name, &config.config).await;
 
     copy_nvim_proxy(&config).await?;
     if is_version_used && version.tag_name != "nightly" {
@@ -63,11 +58,11 @@ pub async fn start(
     if install {
         match install_handler::start(&version, client, &config).await {
             Ok(success) => {
-                if let InstallResult::NightlyIsUpdated = success {
-                    if is_version_used {
-                        info!("Nightly is already updated and used!");
-                        return Ok(());
-                    }
+                if let InstallResult::NightlyIsUpdated = success
+                    && is_version_used
+                {
+                    info!("Nightly is already updated and used!");
+                    return Ok(());
                 }
             }
             Err(error) => return Err(error),
@@ -76,10 +71,10 @@ pub async fn start(
 
     switch(&config.config, &version).await?;
 
-    if let VersionType::Latest = version.version_type {
-        if fs::metadata("stable").await.is_ok() {
-            fs::remove_dir_all("stable").await?;
-        }
+    if let VersionType::Latest = version.version_type
+        && fs::metadata("stable").await.is_ok()
+    {
+        fs::remove_dir_all("stable").await?;
     }
 
     let installation_dir = get_installation_directory(&config.config).await?;
@@ -134,9 +129,7 @@ pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
             if let Ok(hash) = hash_result {
                 hash
             } else {
-                return Err(anyhow!(
-                    "Full hash file doesn't exist, please rebuild this commit"
-                ));
+                return Err(anyhow!("Full hash file doesn't exist, please rebuild this commit"));
             }
         } else {
             version.non_parsed_string.clone()
@@ -146,8 +139,7 @@ pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
     };
 
     fs::write("used", &file_version).await?;
-    if let Some(version_sync_file_location) =
-        helpers::version::get_version_sync_file_location(config).await?
+    if let Some(version_sync_file_location) = helpers::version::get_version_sync_file_location(config).await?
     {
         // Write the used version to version_sync_file_location only if it's different
         let stored_version = fs::read_to_string(&version_sync_file_location).await?;
@@ -155,10 +147,7 @@ pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
             fs::write(&version_sync_file_location, file_version).await?;
             info!(
                 "Written version to {}",
-                version_sync_file_location
-                    .into_os_string()
-                    .into_string()
-                    .unwrap()
+                version_sync_file_location.into_os_string().into_string().unwrap()
             );
         }
     }
@@ -198,8 +187,7 @@ pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
 /// ```
 async fn copy_nvim_proxy(config: &ConfigFile) -> Result<()> {
     let exe_path = env::current_exe().unwrap();
-    let mut installation_dir =
-        helpers::directories::get_installation_directory(&config.config).await?;
+    let mut installation_dir = helpers::directories::get_installation_directory(&config.config).await?;
 
     if fs::metadata(&installation_dir).await.is_err() {
         fs::create_dir_all(&installation_dir).await?;
@@ -212,10 +200,7 @@ async fn copy_nvim_proxy(config: &ConfigFile) -> Result<()> {
     }
 
     if fs::metadata(&installation_dir).await.is_ok() {
-        let output = Command::new(&installation_dir)
-            .arg("--&bob")
-            .output()?
-            .stdout;
+        let output = Command::new(&installation_dir).arg("--&bob").output()?.stdout;
         let version = String::from_utf8(output)?.trim().to_string();
 
         if version == env!("CARGO_PKG_VERSION") {
@@ -271,13 +256,17 @@ async fn copy_nvim_proxy(config: &ConfigFile) -> Result<()> {
 async fn copy_file_with_error_handling(old_path: &Path, new_path: &Path) -> Result<()> {
     match fs::copy(&old_path, &new_path).await {
         Ok(_) => Ok(()),
-        Err(e) => match e.raw_os_error() {
-            Some(26 | 32) => Err(anyhow::anyhow!(
-                "The file {} is busy. Please make sure to close any processes using it.",
-                old_path.display()
-            )),
-            _ => Err(anyhow::anyhow!(e).context("Failed to copy file")),
-        },
+        Err(e) => {
+            match e.raw_os_error() {
+                Some(26 | 32) => {
+                    Err(anyhow::anyhow!(
+                        "The file {} is busy. Please make sure to close any processes using it.",
+                        old_path.display()
+                    ))
+                }
+                _ => Err(anyhow::anyhow!(e).context("Failed to copy file")),
+            }
+        }
     }
 }
 
@@ -481,9 +470,7 @@ async fn modify_path(config: &ConfigFile, installation_dir: &str) -> Result<()> 
 // Read more in the `use` docs under `precise capturing`.
 //
 #[cfg(not(target_family = "windows"))]
-fn get_rc_files_from_shell(
-    shell: &what_the_path::shell::Shell,
-) -> Result<Vec<impl AsRef<Path> + use<>>> {
+fn get_rc_files_from_shell(shell: &what_the_path::shell::Shell) -> Result<Vec<impl AsRef<Path> + use<>>> {
     Ok(match shell.get_rcfiles() {
         Ok(files) => files,
         Err(error) => {
@@ -501,10 +488,7 @@ where
     use tokio::io::AsyncWriteExt;
 
     if file_path.as_ref().exists() {
-        tracing::warn!(
-            "Fish rc file already exists: {}",
-            file_path.as_ref().display()
-        );
+        tracing::warn!("Fish rc file already exists: {}", file_path.as_ref().display());
         return Ok(());
     }
 
@@ -548,7 +532,7 @@ impl<S> std::ops::Deref for ShScriptPath<S> {
 #[derive(Debug)]
 struct EnvPaths<F, S> {
     fish_script: F,
-    sh_script: S,
+    sh_script:   S,
 }
 
 #[cfg(not(target_family = "windows"))]
@@ -556,7 +540,7 @@ impl<F, S> From<(F, S)> for EnvPaths<F, S> {
     fn from(paths: (F, S)) -> Self {
         EnvPaths {
             fish_script: paths.0,
-            sh_script: paths.1,
+            sh_script:   paths.1,
         }
     }
 }
@@ -565,12 +549,10 @@ impl<F, S> From<(F, S)> for EnvPaths<F, S> {
 type EnvPathsBufs = EnvPaths<FishScriptPath<PathBuf>, ShScriptPath<PathBuf>>;
 
 #[cfg(not(target_family = "windows"))]
-async fn copy_env_files_if_not_exist(
-    config: &Config,
-    installation_dir: &str,
-) -> Result<EnvPathsBufs> {
-    use crate::helpers::directories::get_downloads_directory;
+async fn copy_env_files_if_not_exist(config: &Config, installation_dir: &str) -> Result<EnvPathsBufs> {
     use tokio::io::AsyncWriteExt;
+
+    use crate::helpers::directories::get_downloads_directory;
 
     let fish_env = include_str!("../../env/env.fish").replace("{nvim_bin}", installation_dir);
     let posix_env = include_str!("../../env/env.sh").replace("{nvim_bin}", installation_dir);
@@ -597,10 +579,7 @@ async fn copy_env_files_if_not_exist(
         file.flush().await?;
     }
 
-    Ok(EnvPaths::from((
-        FishScriptPath(fish_env_path),
-        ShScriptPath(posix_env_path),
-    )))
+    Ok(EnvPaths::from((FishScriptPath(fish_env_path), ShScriptPath(posix_env_path))))
 }
 
 #[cfg(not(target_family = "windows"))]
@@ -615,10 +594,9 @@ mod use_handler_tests {
     async fn copy_env_files_test() {
         let config = ConfigFile::get().await.unwrap();
         let installation_dir = get_installation_directory(&config.config).await.unwrap();
-        let env_paths =
-            copy_env_files_if_not_exist(&config.config, installation_dir.to_str().unwrap())
-                .await
-                .unwrap();
+        let env_paths = copy_env_files_if_not_exist(&config.config, installation_dir.to_str().unwrap())
+            .await
+            .unwrap();
 
         dbg!(&env_paths.fish_script);
         dbg!(&env_paths.sh_script);
@@ -682,10 +660,9 @@ mod use_handler_tests {
     async fn sh_get_rc_with_env_test() {
         let config = ConfigFile::get().await.unwrap();
         let installation_dir = get_installation_directory(&config.config).await.unwrap();
-        let env_paths =
-            copy_env_files_if_not_exist(&config.config, installation_dir.to_str().unwrap())
-                .await
-                .unwrap();
+        let env_paths = copy_env_files_if_not_exist(&config.config, installation_dir.to_str().unwrap())
+            .await
+            .unwrap();
 
         let env_path: &str = env_paths.sh_script.to_str().unwrap();
 
