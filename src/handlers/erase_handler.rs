@@ -1,11 +1,11 @@
+use std::path::Path;
+
 use anyhow::{Result, anyhow};
 use tokio::fs;
 use tracing::info;
 
-use crate::{
-    config::Config,
-    helpers::directories::{self},
-};
+use crate::config::Config;
+use crate::helpers::directories;
 
 /// Starts the erase process based on the provided `Config`.
 ///
@@ -47,46 +47,7 @@ pub async fn start(config: Config) -> Result<()> {
     let downloads = directories::get_downloads_directory(&config).await?;
     let mut installation_dir = directories::get_installation_directory(&config).await?;
 
-    cfg_if::cfg_if! {
-        if #[cfg(windows)] {
-            use winreg::RegKey;
-            use winreg::enums::*;
-
-            let current_usr = RegKey::predef(HKEY_CURRENT_USER);
-            let env = current_usr.open_subkey_with_flags("Environment", KEY_READ | KEY_WRITE)?;
-            let usr_path: String = env.get_value("Path")?;
-            if usr_path.contains("neovim") {
-                let usr_path = usr_path.replace(&format!("{}", installation_dir.display()), "");
-                env.set_value("Path", &usr_path)?;
-
-                info!("Successfully removed neovim's installation PATH from registry");
-            }
-        } else {
-            use what_the_path::shell::Shell;
-
-            let shell = Shell::detect_by_shell_var()?;
-
-            match shell {
-                Shell::Fish(fish) => {
-                   if let Ok(files) = fish.get_rcfiles() {
-                       let fish_file = files[0].join("bob.fish");
-                       if !fish_file.exists() { return Ok(()) }
-                       fs::remove_file(fish_file).await?;
-                   }
-                },
-                shell => {
-                    if let Ok(files) = shell.get_rcfiles() {
-                        let env_path = downloads.join("env/env.sh");
-                        let source_string = format!(". \"{}\"", env_path.display());
-                        for file in files {
-                            what_the_path::shell::remove_from_rcfile(file, &source_string)?;
-                        }
-
-                    }
-                }
-            }
-        }
-    }
+    update_platform_path(&downloads, &installation_dir)?;
 
     if config.installation_location.is_some() {
         installation_dir.push("nvim");
@@ -96,6 +57,7 @@ pub async fn start(config: Config) -> Result<()> {
     } else if fs::remove_dir_all(&installation_dir).await.is_ok() {
         info!("Successfully removed neovim's installation folder");
     }
+
     if fs::remove_dir_all(downloads).await.is_ok() {
         // For some weird reason this check doesn't really work for downloads folder
         // as it keeps thinking the folder exists, and it runs with no issues even tho the folder
@@ -106,4 +68,54 @@ pub async fn start(config: Config) -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(windows)]
+fn update_platform_path<P: AsRef<Path>>(_downloads: &P, installation_dir: &P) -> Result<()> {
+    use winreg::RegKey;
+    use winreg::enums::*;
+
+    let installation_dir = installation_dir.as_ref();
+
+    let current_usr = RegKey::predef(HKEY_CURRENT_USER);
+    let env = current_usr.open_subkey_with_flags("Environment", KEY_READ | KEY_WRITE)?;
+    let usr_path: String = env.get_value("Path")?;
+    if usr_path.contains("neovim") {
+        let usr_path = usr_path.replace(&format!("{}", installation_dir.display()), "");
+        env.set_value("Path", &usr_path)?;
+
+        info!("Successfully removed neovim's installation PATH from registry");
+    }
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn update_platform_path<P: AsRef<Path>>(downloads: &P, _installation_dir: &P) -> Result<()> {
+    use what_the_path::shell::Shell;
+
+    let shell = Shell::detect_by_shell_var()?;
+    let downloads = downloads.as_ref();
+
+    match shell {
+        Shell::Fish(fish) => {
+            if let Ok(files) = fish.get_rcfiles() {
+                let fish_file = files[0].join("bob.fish");
+                if !fish_file.exists() {
+                    return Ok(());
+                }
+                std::fs::remove_file(fish_file)?; //.await?;
+            }
+            Ok(())
+        }
+        shell => {
+            if let Ok(files) = shell.get_rcfiles() {
+                let env_path = downloads.join("env/env.sh");
+                let source_string = format!(". \"{}\"", env_path.display());
+                for file in files {
+                    what_the_path::shell::remove_from_rcfile(file, &source_string)?;
+                }
+            }
+            Ok(())
+        }
+    }
 }
