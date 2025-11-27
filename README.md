@@ -373,6 +373,14 @@ This error can be caused when `secure_path` is enabled in `/etc/sudoers` like in
 
 These workarounds were devised by @nfejzic and @s11s11, thanks to them.
 
+## 🤝 Integrations
+
+Bob is used as the underlying Neovim version manager by several projects in the ecosystem
+
+- [nvim-lazyman](https://github.com/doctorfree/nvim-lazyman): A configuration manager that supports over 100+ Neovim setups. It uses Bob to seamlessly install and manage the required Neovim binary versions for each configuration.
+- [Topgrade](https://github.com/topgrade-rs/topgrade): A universal system upgrade tool. Topgrade automatically detects Bob installations and keeps your Neovim versions up-to-date alongside your other system packages.
+
+
 ## :heart: Credits And Inspiration
 
 - [nvm](https://github.com/nvm-sh/nvm) A node version manager
