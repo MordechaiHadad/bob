@@ -212,7 +212,7 @@ pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
     )
     .await?;
 
-    deserialize_response(response)
+    deserialize_response(&response)
 }
 
 /// Asynchronously searches for the stable version of Neovim.
@@ -288,7 +288,7 @@ pub async fn get_commits_for_nightly(
     let response = make_github_request(client, format!(
             "https://api.github.com/repos/neovim/neovim/commits?since={since}&until={until}&per_page=100")).await?;
 
-    deserialize_response(response)
+    deserialize_response(&response)
 }
 
 /// Deserializes a JSON response from the GitHub API.
@@ -317,8 +317,8 @@ pub async fn get_commits_for_nightly(
 ///     Err(e) => println!("An error occurred: {:?}", e),
 /// }
 /// ```
-pub fn deserialize_response<T: DeserializeOwned>(response: String) -> Result<T> {
-    let value: serde_json::Value = serde_json::from_str(&response)?;
+pub fn deserialize_response<T: DeserializeOwned>(response: &str) -> Result<T> {
+    let value: serde_json::Value = serde_json::from_str(response)?;
 
     if value.get("message").is_some() {
         let result: ErrorResponse = serde_json::from_value(value)?;

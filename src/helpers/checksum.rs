@@ -20,7 +20,7 @@ pub fn sha256cmp(a: &Path, b: &Path, filename: &str) -> Result<bool> {
         .lines()
         .find(|line| line.contains(filename))
         .and_then(|line| line.split_whitespace().next())
-        .ok_or_else(|| anyhow!("Checksum not found for {}", filename))?;
+        .ok_or_else(|| anyhow!("Checksum not found for {filename}"))?;
 
     let mut hasher = Sha256::new();
     let mut file = fs::File::open(a)?;

@@ -10,7 +10,7 @@ use std::sync::LazyLock;
 /// assert!(VERSION_REGEX.is_match(var));
 /// ```
 pub static VERSION_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^v?([0-9]+(\.)?){1,3}").expect("Failed to compile static VERSION_REGEX")
+    Regex::new(r"^v?([0-9]+(\.)+){1,3}").expect("Failed to compile static VERSION_REGEX")
 });
 
 // pub static VERSION_REGEX: LazyLock<Regex> = LazyLock::new(|| {
