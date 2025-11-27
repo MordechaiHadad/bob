@@ -48,8 +48,8 @@ version  = "0.28.0"
 features = ["signal"]
 
 [target.'cfg(unix)'.dependencies]
-flate2 = "1.0.26"
-tar = "0.4"
+flate2 = "1.1.5"
+tar    = "0.4"
 
 [target."cfg(windows)".dependencies]
 winreg = "0.10.1"
