@@ -215,6 +215,41 @@ pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
     deserialize_response(response)
 }
 
+/// Asynchronously searches for the stable version of Neovim.
+///
+/// This function takes a reference to a `Client` as an argument and makes a GitHub API request to get the releases of the Neovim repository.
+/// It then deserializes the response into a vector of `UpstreamVersion`.
+/// It finds the release that has the tag name "stable" and the release that has the same `target_commitish` as the stable release but does not have the tag name "stable".
+/// The function returns the tag name of the found release.
+///
+/// # Arguments
+///
+/// * `client` - A reference to a `Client` used to make the GitHub API request.
+///
+/// # Returns
+///
+/// This function returns a `Result` that contains a `String` representing the tag name of the stable version if the operation was successful.
+/// If the operation failed, the function returns `Err` with a description of the error.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use reqwest::Client;
+/// use bob::github_requests::get_upstream_stable;
+/// let client = Client::new();
+/// let upstream_version = get_upstream_stable(&Client::new()).await?;
+/// assert!(upstream_version.is_ok());
+/// ```
+pub async fn get_upstream_stable(client: &Client) -> Result<UpstreamVersion> {
+    let response = make_github_request(
+        client,
+        "https://api.github.com/repos/neovim/neovim/releases/latest",
+    )
+    .await?;
+
+    deserialize_response(response)
+}
+
 /// Fetches the commits for the nightly version from the GitHub API.
 ///
 /// This function sends a GET request to the GitHub API to fetch the commits for the nightly version of the software. The commits are fetched for a specified time range, from `since` to `until`.
