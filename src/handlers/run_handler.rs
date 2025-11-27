@@ -43,10 +43,7 @@ pub async fn start(version: &str, args: &[String], client: &Client, config: &Con
     };
 
     if !bin_path.exists() {
-        anyhow::bail!(
-            "Neovim binary not found at expected path: {}",
-            bin_path.display()
-        );
+        anyhow::bail!("Neovim binary not found at expected path: {}", bin_path.display());
     }
 
     // Run the specific version with the provided args

@@ -1,0 +1,154 @@
+[tasks.print_outs]
+script_runner = "@duckscript"
+script = '''
+echo "BREAKER: ${BREAKER}"
+echo "winodows would be args: "FROM:: ${FOLDER_BIN_EXE}""
+echo "winodows would be args: "TO:: ${DIST_FOLDER}/${OUTPUT_BIN_NAME}.exe""
+echo "BREAKER: ${BREAKER}"
+'''
+
+[tasks.clear_dist_if_exist]
+linux.command = "rm"
+linux.args = ["-rf", "${DIST_FOLDER}/"]
+windows.command = "${WINDOWS_SHELL}"
+windows.args = [
+  "-Command",
+  "Remove-Item",
+  "-Recurse",
+  "-Force",
+  "${DIST_FOLDER}/",
+  "-ErrorAction",
+  "SilentlyContinue",
+]
+ignore_errors = true # REQUIRED as - if the dir doesn't exist, SilenlyContinue does nothing really
+
+[tasks.create_dist]
+linux.command = "mkdir"
+linux.args = ["-p", "${DIST_FOLDER}/"]
+windows.command = "mkdir"
+windows.args = ["${DIST_FOLDER}/"]
+
+[tasks.create_showcase_dist]
+linux.command = "mkdir"
+linux.args = ["-p", "${DIST_FOLDER}/showcase/"]
+windows.command = "mkdir"
+windows.args = ["${DIST_FOLDER}/showcase/"]
+dependencies = ["create_dist"]
+
+[tasks.copy_readme_to_dist]
+linux.command = "cp"
+linux.args = ["${ROOT}/README.md", "${DIST_FOLDER}/"]
+windows.command = "${WINDOWS_SHELL}"
+windows.args = [
+  "-Command",
+  "Copy-Item",
+  "-Path",
+  "${ROOT}/README.md",
+  "-Destination",
+  "${DIST_FOLDER}",
+]
+dependencies = ["create_dist"]
+
+[tasks.copy_license_to_dist]
+linux.command = "cp"
+linux.args = ["${ROOT}/LICENSE", "${DIST_FOLDER}/"]
+windows.command = "${WINDOWS_SHELL}"
+windows.args = [
+  "-Command",
+  "Copy-Item",
+  "-Path",
+  "${ROOT}/LICENSE",
+  "-Destination",
+  "${DIST_FOLDER}",
+]
+dependencies = ["create_dist"]
+
+[tasks.copy_release_to_dist]
+linux.command = "cp"
+linux.args = ["${FOLDER_BIN_EXE}", "${DIST_FOLDER}/${OUTPUT_BIN_NAME}"]
+windows.command = "${WINDOWS_SHELL}"
+windows.args = [
+  "-Command",
+  "Copy-Item",
+  "-Path",
+  "${FOLDER_BIN_EXE}",
+  "-Destination",
+  "${DIST_FOLDER}/${OUTPUT_BIN_NAME}.exe",
+]
+dependencies = ["create_dist"]
+
+[tasks.compress_dist]
+linux.command = "tar"
+linux.args = ["-czvf", "${DIST_FOLDER}.tar.gz", "${DIST_FOLDER}/"]
+windows.command = "${WINDOWS_SHELL}"
+windows.args = [
+  "-Command",
+  "Compress-Archive",
+  "-Path",
+  "${DIST_FOLDER}\\*",
+  "-DestinationPath",
+  "${DIST_FOLDER}.zip",
+]
+dependencies = ["create_dist"]
+
+[tasks.move_compressed_to_dist]
+linux.command = "mv"
+linux.args = ["${DIST_FOLDER}.tar.gz", "${DIST_FOLDER}/"]
+windows.command = "${WINDOWS_SHELL}"
+windows.args = [
+  "-Command",
+  "Move-Item",
+  "-Path",
+  "${DIST_FOLDER}.zip",
+  "-Destination",
+  "${DIST_FOLDER}/",
+]
+
+[tasks.copy_docs_to_dist]
+linux.command = "cp"
+linux.args = ["-r", "${ROOT}/target/doc/", "${DIST_FOLDER}/docs/"]
+windows.command = "${WINDOWS_SHELL}"
+windows.args = [
+  "-Command",
+  "Copy-Item",
+  "-Path",
+  "${ROOT}\\target\\doc\\*",
+  "-Destination",
+  "${DIST_FOLDER}\\docs\\",
+  "-Recurse",
+]
+
+# Lets any streaming (archiving) tasks finish writing to disk
+# underscored here as it's specific to dist tasks,
+# the normal one is under common-tasks.toml and takes the env variable
+# at the top of Makefile.toml
+[tasks._dist_sleep]
+linux.command = "sleep"
+linux.args = ["1"]
+windows.command = "${WINDOWS_SHELL}"
+windows.args = ["-Command", "Start-Sleep", "-Seconds", "1"]
+
+[tasks.gitignore_folder_contents]
+linux.command = "echo"
+linux.args = ["\"*\" >> ${DIST_FOLDER}/.gitignore"]
+windows.command = "${WINDOWS_SHELL}"
+windows.args = ["-Command", "echo", "\"*\"", ">>", "${DIST_FOLDER}/.gitignore"]
+
+[tasks.build_release_dist]
+env.PROFILE = "release"
+dependencies = [
+  "a",
+  "clear_dist_if_exist",
+  "create_dist",
+  # "create_showcase_dist",   # For running shocase and examples with in-house teams
+  "copy_readme_to_dist",
+  "copy_license_to_dist",
+  "copy_release_to_dist",
+  "docs",
+  "copy_docs_to_dist",         # Comment this out if you don't wish to ship docs in dist folder
+  "print_all",
+  "gitignore_folder_contents",
+  "compress_dist",
+  "_dist_sleep",
+  "move_compressed_to_dist",
+]

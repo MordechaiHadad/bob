@@ -5,14 +5,21 @@ pub mod github_requests;
 mod handlers;
 mod helpers;
 
+use std::env;
+use std::process::exit;
+
 use anyhow::Result;
 use config::ConfigFile;
-use helpers::{processes::handle_nvim_process, version};
-use std::{env, process::exit};
+use helpers::processes::handle_nvim_process;
+use helpers::version;
 use tracing::{Level, error, warn};
 
 pub(crate) use crate::consts::{
-    ENVIRONMENT_VAR_REGEX, FILETYPE_EXT, HASH_REGEX, NIGHTLY_REGEX, VERSION_REGEX,
+    ENVIRONMENT_VAR_REGEX,
+    FILETYPE_EXT,
+    HASH_REGEX,
+    NIGHTLY_REGEX,
+    VERSION_REGEX,
 };
 
 #[tokio::main]
@@ -39,7 +46,7 @@ async fn run() -> Result<()> {
         .is_symlink()
         .then(|| exe_path.read_link().ok())
         .flatten()
-        .and_then(|p| p.file_stem().map(|s| s.to_owned()))
+        .and_then(|p| p.file_stem().map(std::borrow::ToOwned::to_owned))
         .unwrap_or_else(|| exe_path.file_stem().unwrap().to_owned());
 
     let rest_args = &args[1..];

@@ -1,7 +1,8 @@
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
 use reqwest::Client;
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 
 /// Represents the version of the upstream software in the GitHub API.
 ///
@@ -27,9 +28,9 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 /// ```
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UpstreamVersion {
-    pub tag_name: String,
+    pub tag_name:         String,
     pub target_commitish: Option<String>,
-    pub published_at: DateTime<Utc>,
+    pub published_at:     DateTime<Utc>,
 }
 
 /// Represents a repository commit in the GitHub API.
@@ -61,7 +62,7 @@ pub struct UpstreamVersion {
 /// ```
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RepoCommit {
-    pub sha: String,
+    pub sha:    String,
     pub commit: Commit,
 }
 
@@ -89,7 +90,7 @@ pub struct RepoCommit {
 /// ```
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Commit {
-    pub author: CommitAuthor,
+    pub author:  CommitAuthor,
     pub message: String,
 }
 
@@ -135,7 +136,7 @@ pub struct CommitAuthor {
 /// ```
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ErrorResponse {
-    pub message: String,
+    pub message:           String,
     pub documentation_url: String,
 }
 
@@ -206,11 +207,9 @@ pub async fn make_github_request<T: AsRef<str> + reqwest::IntoUrl>(
 /// assert!(upstream_version.is_ok());
 /// ```
 pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
-    let response = make_github_request(
-        client,
-        "https://api.github.com/repos/neovim/neovim/releases/tags/nightly",
-    )
-    .await?;
+    let response =
+        make_github_request(client, "https://api.github.com/repos/neovim/neovim/releases/tags/nightly")
+            .await?;
 
     deserialize_response(&response)
 }
@@ -250,8 +249,13 @@ pub async fn get_commits_for_nightly(
     since: &DateTime<Utc>,
     until: &DateTime<Utc>,
 ) -> Result<Vec<RepoCommit>> {
-    let response = make_github_request(client, format!(
-            "https://api.github.com/repos/neovim/neovim/commits?since={since}&until={until}&per_page=100")).await?;
+    let response = make_github_request(
+        client,
+        format!(
+            "https://api.github.com/repos/neovim/neovim/commits?since={since}&until={until}&per_page=100"
+        ),
+    )
+    .await?;
 
     deserialize_response(&response)
 }

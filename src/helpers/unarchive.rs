@@ -1,8 +1,7 @@
+use std::fs;
+use std::path::{Path, PathBuf};
+
 use anyhow::{Result, anyhow};
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
 
 use crate::version::types::LocalVersion;
 
@@ -42,22 +41,20 @@ use crate::version::types::LocalVersion;
 /// };
 /// start(downloaded_file).await;
 /// ```
-pub async fn start(file: &LocalVersion) -> Result<()> {
+pub async fn start(file: LocalVersion) -> Result<()> {
     let temp_file = file.clone();
-    match tokio::task::spawn_blocking(move || match expand(&temp_file) {
-        Ok(()) => Ok(()),
-        Err(error) => Err(anyhow!(error)),
+    match tokio::task::spawn_blocking(move || {
+        match expand(&temp_file) {
+            Ok(()) => Ok(()),
+            Err(error) => Err(anyhow!(error)),
+        }
     })
     .await
     {
         Ok(_) => (),
         Err(error) => return Err(anyhow!(error)),
     }
-    tokio::fs::remove_file(format!(
-        "{}/{}.{}",
-        file.path, file.file_name, file.file_format
-    ))
-    .await?;
+    tokio::fs::remove_file(format!("{}/{}.{}", file.path, file.file_name, file.file_format)).await?;
     Ok(())
 }
 /// Expands a downloaded file on Windows.
@@ -99,21 +96,19 @@ pub async fn start(file: &LocalVersion) -> Result<()> {
 /// ```
 #[cfg(target_family = "windows")]
 fn expand(downloaded_file: &LocalVersion) -> Result<()> {
-    use indicatif::{ProgressBar, ProgressStyle};
     use std::cmp::min;
     use std::fs::File;
     use std::io;
     use std::path::Path;
+
+    use indicatif::{ProgressBar, ProgressStyle};
     use zip::ZipArchive;
 
     if fs::metadata(&downloaded_file.file_name).is_ok() {
         fs::remove_dir_all(&downloaded_file.file_name)?;
     }
 
-    let file = File::open(format!(
-        "{}.{}",
-        downloaded_file.file_name, downloaded_file.file_format
-    ))?;
+    let file = File::open(format!("{}.{}", downloaded_file.file_name, downloaded_file.file_format))?;
 
     let mut archive = ZipArchive::new(file)?;
     let totalsize: u64 = archive.len() as u64;
@@ -201,22 +196,21 @@ fn expand(downloaded_file: &LocalVersion) -> Result<()> {
 /// ```
 #[cfg(unix)]
 fn expand(downloaded_file: &LocalVersion) -> Result<()> {
-    use flate2::read::GzDecoder;
-    use indicatif::{ProgressBar, ProgressStyle};
     use std::cmp::min;
     use std::fs::File;
     use std::io;
-    use std::{os::unix::fs::PermissionsExt, path::PathBuf};
+    use std::os::unix::fs::PermissionsExt;
+    use std::path::PathBuf;
+
+    use flate2::read::GzDecoder;
+    use indicatif::{ProgressBar, ProgressStyle};
     use tar::Archive;
 
     if fs::metadata(&downloaded_file.file_name).is_ok() {
         fs::remove_dir_all(&downloaded_file.file_name)?;
     }
 
-    let file = match File::open(format!(
-        "{}.{}",
-        downloaded_file.file_name, downloaded_file.file_format
-    )) {
+    let file = match File::open(format!("{}.{}", downloaded_file.file_name, downloaded_file.file_format)) {
         Ok(value) => value,
         Err(error) => {
             return Err(anyhow!(

@@ -1,19 +1,16 @@
-use std::{
-    fs,
-    io::{self, Write},
-    path::PathBuf,
-};
+use std::fs;
+use std::io::{self, Write};
+use std::path::PathBuf;
 
 use anyhow::Result;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use yansi::Paint;
 
-use crate::{
-    config::Config,
-    github_requests::{deserialize_response, make_github_request},
-    helpers::{self, directories, version::search_stable_version},
-};
+use crate::config::Config;
+use crate::github_requests::{deserialize_response, make_github_request};
+use crate::helpers::version::search_stable_version;
+use crate::helpers::{self, directories};
 
 /// Asynchronously starts the process of listing remote versions of Neovim.
 ///
@@ -45,31 +42,18 @@ use crate::{
 /// ```
 pub async fn start(config: Config, client: Client) -> Result<()> {
     let downloads_dir = directories::get_downloads_directory(&config).await?;
-    let response = make_github_request(
-        &client,
-        "https://api.github.com/repos/neovim/neovim/tags?per_page=50",
-    )
-    .await?;
+    let response =
+        make_github_request(&client, "https://api.github.com/repos/neovim/neovim/tags?per_page=50").await?;
 
     let mut local_versions: Vec<PathBuf> = fs::read_dir(downloads_dir)?
         .filter_map(Result::ok)
-        .filter(|entry| {
-            entry
-                .path()
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .contains('v')
-        })
+        .filter(|entry| entry.path().file_name().unwrap().to_str().unwrap().contains('v'))
         .map(|entry| entry.path())
         .collect();
 
     let versions: Vec<RemoteVersion> = deserialize_response(&response)?;
-    let filtered_versions: Vec<RemoteVersion> = versions
-        .into_iter()
-        .filter(|v| v.name.starts_with('v'))
-        .collect();
+    let filtered_versions: Vec<RemoteVersion> =
+        versions.into_iter().filter(|v| v.name.starts_with('v')).collect();
 
     let stable_version = search_stable_version(&client).await?;
 
@@ -89,19 +73,9 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
         };
 
         let write_result = if helpers::version::is_version_used(&version.name, &config).await {
-            writeln!(
-                buffer,
-                "{}{}",
-                Paint::green(&version.name),
-                stable_version_string
-            )
+            writeln!(buffer, "{}{}", Paint::green(&version.name), stable_version_string)
         } else if version_installed {
-            writeln!(
-                buffer,
-                "{}{}",
-                Paint::yellow(&version.name),
-                stable_version_string
-            )
+            writeln!(buffer, "{}{}", Paint::yellow(&version.name), stable_version_string)
         } else {
             writeln!(buffer, "{}{}", &version.name, stable_version_string)
         };
