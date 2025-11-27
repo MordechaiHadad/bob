@@ -36,11 +36,11 @@ pub async fn start(version: &str, args: &[String], client: &Client, config: &Con
     }
 
     // Use the specific version's binary (With OS specific extension)
-    #[cfg(not(target_family = "windows"))]
-    let bin_path = version_path.join("bin").join("nvim");
-
-    #[cfg(target_family = "windows")]
-    let bin_path = version_path.join("bin").join("nvim").with_extension("exe");
+    let bin_path = if cfg!(target_family = "windows") {
+        version_path.join("bin").join("nvim").with_extension("exe")
+    } else {
+        version_path.join("bin").join("nvim")
+    };
 
     if !bin_path.exists() {
         anyhow::bail!(
