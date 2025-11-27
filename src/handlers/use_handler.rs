@@ -4,7 +4,9 @@ use reqwest::Client;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::Duration;
 use tokio::fs::{self};
+use tokio::time::sleep;
 use tracing::info;
 
 use crate::config::{Config, ConfigFile};
@@ -229,6 +231,9 @@ async fn copy_nvim_proxy(config: &ConfigFile) -> Result<()> {
     Ok(())
 }
 
+const FILE_COPY_MAX_RETRIES: u32 = 5;
+const FILE_COPY_INITIAL_DELAY_MS: u64 = 50;
+
 /// Asynchronously copies a file from `old_path` to `new_path`, handling specific OS errors.
 ///
 /// This function attempts to copy a file from the specified `old_path` to the specified `new_path`.
@@ -269,15 +274,37 @@ async fn copy_nvim_proxy(config: &ConfigFile) -> Result<()> {
 /// }
 /// ```
 async fn copy_file_with_error_handling(old_path: &Path, new_path: &Path) -> Result<()> {
-    match fs::copy(&old_path, &new_path).await {
-        Ok(_) => Ok(()),
-        Err(e) => match e.raw_os_error() {
-            Some(26) | Some(32) => Err(anyhow::anyhow!(
-                "The file {} is busy. Please make sure to close any processes using it.",
-                old_path.display()
-            )),
-            _ => Err(anyhow::anyhow!(e).context("Failed to copy file")),
-        },
+    let mut delay = Duration::from_millis(FILE_COPY_INITIAL_DELAY_MS);
+    let mut attempts = 0;
+
+    loop {
+        match fs::copy(&old_path, &new_path).await {
+            Ok(_) => return Ok(()),
+            Err(e) => {
+                let is_file_busy = matches!(e.raw_os_error(), Some(26) | Some(32));
+
+                if is_file_busy && attempts < FILE_COPY_MAX_RETRIES {
+                    attempts += 1;
+                    tracing::debug!(
+                        "File {} is busy, retrying in {:?} (attempt {}/{})",
+                        new_path.display(),
+                        delay,
+                        attempts,
+                        FILE_COPY_MAX_RETRIES
+                    );
+                    sleep(delay).await;
+                    delay *= 2;
+                } else if is_file_busy {
+                    return Err(anyhow!(
+                        "The file {} is busy after {} attempts. Please make sure to close any processes using it.",
+                        new_path.display(),
+                        FILE_COPY_MAX_RETRIES
+                    ));
+                } else {
+                    return Err(anyhow!(e).context("Failed to copy file"));
+                }
+            }
+        }
     }
 }
 
