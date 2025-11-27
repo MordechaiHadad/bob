@@ -1,8 +1,10 @@
 use anyhow::{Result, anyhow};
 use tokio::fs;
 
+use crate::config::Config;
+use crate::github_requests::UpstreamVersion;
+use crate::helpers::directories;
 use crate::helpers::version::types::LocalNightly;
-use crate::{config::Config, github_requests::UpstreamVersion, helpers::directories};
 
 /// Retrieves the local nightly version.
 ///
@@ -33,9 +35,7 @@ use crate::{config::Config, github_requests::UpstreamVersion, helpers::directori
 /// ```
 pub async fn get_local_nightly(config: &Config) -> Result<UpstreamVersion> {
     let downloads_dir = directories::get_downloads_directory(config).await?;
-    if let Ok(file) =
-        fs::read_to_string(format!("{}/nightly/bob.json", downloads_dir.display())).await
-    {
+    if let Ok(file) = fs::read_to_string(format!("{}/nightly/bob.json", downloads_dir.display())).await {
         let file_json: UpstreamVersion = serde_json::from_str(&file)?;
         Ok(file_json)
     } else {

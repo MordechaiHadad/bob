@@ -1,7 +1,8 @@
+use std::path::PathBuf;
+
 use semver::Version;
 
 use crate::github_requests::UpstreamVersion;
-use std::path::PathBuf;
 
 /// Represents a parsed version of the software.
 ///
@@ -26,10 +27,10 @@ use std::path::PathBuf;
 /// println!("The parsed version is {:?}", parsed_version);
 /// ```
 pub struct ParsedVersion {
-    pub tag_name: String,
-    pub version_type: VersionType,
+    pub tag_name:          String,
+    pub version_type:      VersionType,
     pub non_parsed_string: String,
-    pub semver: Option<Version>,
+    pub semver:            Option<Version>,
 }
 
 /// Represents the type of (a) software version.
@@ -116,8 +117,8 @@ pub struct LocalNightly {
 /// ```
 #[derive(Clone, PartialEq, Debug)]
 pub struct LocalVersion {
-    pub file_name: String,
+    pub file_name:   String,
     pub file_format: String,
-    pub path: String,
-    pub semver: Option<Version>,
+    pub path:        String,
+    pub semver:      Option<Version>,
 }

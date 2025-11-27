@@ -1,12 +1,13 @@
+use std::fs;
+use std::path::PathBuf;
+
 use anyhow::Result;
-use std::{fs, path::PathBuf};
 use tracing::info;
 use yansi::Paint;
 
-use crate::{
-    config::Config,
-    helpers::{self, directories, version::nightly::produce_nightly_vec},
-};
+use crate::config::Config;
+use crate::helpers::version::nightly::produce_nightly_vec;
+use crate::helpers::{self, directories};
 
 /// Starts the list handler.
 ///
@@ -177,12 +178,13 @@ mod list_handler_is_version_tests {
             ("", false),
         ];
 
-        cases_expected
-            .iter()
-            .for_each(|(case, expected)| match expected {
-                true => assert!(is_version(case)),
-                false => assert!(!is_version(case)),
-            });
+        cases_expected.iter().for_each(|(case, expected)| {
+            if *expected {
+                assert!(is_version(case))
+            } else {
+                assert!(!is_version(case))
+            }
+        });
 
         cases_expected.iter().for_each(|(case, expected)| {
             assert_eq!(is_version(case), *expected);
@@ -192,62 +194,38 @@ mod list_handler_is_version_tests {
     #[test]
     fn test_with_v_semvar() {
         let version = "v1.2.3";
-        assert!(
-            is_version(version),
-            "Expected '{}' to be a valid version",
-            version
-        );
+        assert!(is_version(version), "Expected '{}' to be a valid version", version);
     }
 
     #[test]
     fn test_as_stable() {
         let version = "stable";
-        assert!(
-            is_version(version),
-            "Expected '{}' to be a valid version",
-            version
-        );
+        assert!(is_version(version), "Expected '{}' to be a valid version", version);
     }
 
     #[test]
     fn test_with_nightly_and_date() {
         let version = "nightly-2023-10-01";
-        assert!(
-            is_version(version),
-            "Expected '{}' to be a valid version",
-            version
-        );
+        assert!(is_version(version), "Expected '{}' to be a valid version", version);
     }
 
     #[test]
     fn test_with_invalid_version() {
         let version = "invalid-version";
         // let res = is_version(version);
-        assert!(
-            !is_version(version),
-            "Expected '{}' to not be a valid version",
-            version
-        );
+        assert!(!is_version(version), "Expected '{}' to not be a valid version", version);
     }
 
     #[test]
     #[should_panic]
     fn test_with_invalid_version_panic() {
         let version = "invalid-version-wow";
-        assert!(
-            is_version(version),
-            "Expected '{}' to not be a valid version",
-            version
-        );
+        assert!(is_version(version), "Expected '{}' to not be a valid version", version);
     }
 
     #[test]
     fn test_with_empty_string() {
         let version = "";
-        assert!(
-            !is_version(version),
-            "Expected '{}' to not be a valid version",
-            version
-        );
+        assert!(!is_version(version), "Expected '{}' to not be a valid version", version);
     }
 }
