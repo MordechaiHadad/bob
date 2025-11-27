@@ -12,6 +12,7 @@ use reqwest::Client;
 use semver::Version;
 use std::cmp::min;
 use std::env;
+use std::fmt::Write;
 use std::path::Path;
 use std::process::Stdio;
 use tokio::fs::File;
@@ -61,8 +62,9 @@ use super::{InstallResult, PostDownloadVersionType};
 /// let config = Config::default();
 /// let result = start(&mut version, &client, &config).await;
 /// ```
+#[allow(clippy::too_many_lines)]
 pub async fn start(
-    version: &mut ParsedVersion,
+    version: &ParsedVersion,
     client: &Client,
     config: &ConfigFile,
 ) -> Result<InstallResult> {
@@ -108,7 +110,7 @@ pub async fn start(
 
         match config.config.enable_nightly_info {
             Some(boolean) if boolean => {
-                print_commits(client, &local_nightly, upstream_nightly).await?
+                print_commits(client, &local_nightly, upstream_nightly).await?;
             }
             None => print_commits(client, &local_nightly, upstream_nightly).await?,
             _ => (),
@@ -132,7 +134,7 @@ pub async fn start(
 
     if let PostDownloadVersionType::Standard(downloaded_archive) = downloaded_archive {
         if version.semver.is_some() && version.semver.as_ref().unwrap() <= &Version::new(0, 4, 4) {
-            unarchive::start(downloaded_archive).await?
+            unarchive::start(&downloaded_archive).await?;
         } else {
             let downloaded_checksum =
                 download_version(client, version, root, &config.config, true).await?;
@@ -147,7 +149,7 @@ pub async fn start(
                     downloaded_checksum.file_name, downloaded_checksum.file_format
                 ));
 
-                let platform = helpers::get_platform_name(&version.semver);
+                let platform = helpers::get_platform_name(version.semver.as_ref());
 
                 if !sha256cmp(
                     &archive_path,
@@ -161,10 +163,10 @@ pub async fn start(
 
                 info!("Checksum matched!");
                 tokio::fs::remove_file(checksum_path).await?;
-                unarchive::start(downloaded_archive).await?
+                unarchive::start(&downloaded_archive).await?;
             } else if let PostDownloadVersionType::None = downloaded_checksum {
                 warn!("No checksum provided, skipping checksum verification");
-                unarchive::start(downloaded_archive).await?
+                unarchive::start(&downloaded_archive).await?;
             }
         }
     }
@@ -250,8 +252,7 @@ async fn handle_rollback(config: &Config) -> Result<()> {
 
     info!("Creating rollback: nightly-{id}");
     filesystem::copy_dir_async("nightly", format!("nightly-{id}")).await?;
-
-    json_struct.tag_name += &format!("-{id}");
+    let _ = write!(json_struct.tag_name, "-{id}");
 
     let json_file = serde_json::to_string(&json_struct)?;
     fs::write(format!("nightly-{id}/bob.json"), json_file).await?;
@@ -311,7 +312,7 @@ async fn print_commits(
 /// This function sends a request to download the specified version of Neovim based on the version type.
 /// If the version type is Normal, Nightly, or Latest, it sends a request to download the version.
 /// If the version type is Hash, it handles building from the source.
-/// If the version type is NightlyRollback, it does nothing.
+/// If the version type is `NightlyRollback`, it does nothing.
 ///
 /// # Arguments
 ///
@@ -389,7 +390,7 @@ async fn download_version(
                 pbw.finish(root, file_type.clone().into());
 
                 Ok(PostDownloadVersionType::Standard(LocalVersion {
-                    file_name: version.tag_name.to_owned(),
+                    file_name: version.tag_name.clone(),
                     file_format: file_type.to_string(),
                     path: root.display().to_string(),
                     semver: version.semver.clone(),
@@ -508,6 +509,7 @@ fn file_type_ext(version: &ParsedVersion, get_sha256sum: bool) -> std::borrow::C
 /// let config = Config::default();
 /// let result = handle_building_from_source(&version, &config).await;
 /// ```
+#[allow(clippy::too_many_lines)]
 #[rustfmt::skip]
 async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -> Result<PostDownloadVersionType> {
     cfg_if::cfg_if! {
@@ -560,7 +562,7 @@ async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -
             std::io::ErrorKind::NotFound => {
                 fs::create_dir(dirname).await?;
             }
-            _ => return Err(anyhow!("unknown error: {}", error)),
+            _ => return Err(anyhow!("unknown error: {error}")),
         }
     }
 
@@ -575,24 +577,24 @@ async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -
                     .await?;
             }
 
-            _ => return Err(anyhow!("unknown error: {}", error)),
+            _ => return Err(anyhow!("unknown error: {error}")),
         }
-    };
+    }
 
     {
 
     // check if repo has a remote
     let remote = Command::new("git").arg("remote").arg("get-url").arg("origin").stdout(Stdio::null())
         .spawn()?.wait().await?;
-    if !remote.success() {
-        // add neovim's remote
-        Command::new("git").arg("remote").arg("add").arg("origin").arg("https://github.com/neovim/neovim.git")
-            .spawn()?.wait().await?;
-    } else {
-        // set neovim's remote otherwise
+    if remote.success() {
+        // set neovim's remote
         Command::new("git").arg("remote").arg("set-url").arg("origin").arg("https://github.com/neovim/neovim.git")
             .spawn()?.wait().await?;
-    };
+    } else {
+        // add neovim's remote otherwise
+        Command::new("git").arg("remote").arg("add").arg("origin").arg("https://github.com/neovim/neovim.git")
+            .spawn()?.wait().await?;
+    }
     // fetch version from origin
     let fetch_successful = Command::new("git").arg("fetch").arg("--depth").arg("1").arg("origin").arg(&version.non_parsed_string)
         .spawn()?.wait().await?.success();
@@ -672,7 +674,7 @@ where
 ///
 /// # Behavior
 ///
-/// The function constructs the download URL based on the provided `version` and `config.github_mirror`. If `config.github_mirror` is `None`, it defaults to "https://github.com".
+/// The function constructs the download URL based on the provided `version` and `config.github_mirror`. If `config.github_mirror` is `None`, it defaults to `<https://github.com>`.
 ///
 /// It then sends a GET request to the constructed URL with the header "user-agent" set to "bob".
 ///
@@ -702,13 +704,13 @@ async fn send_request(
     version: &ParsedVersion,
     get_sha256sum: bool,
 ) -> Result<reqwest::Response, reqwest::Error> {
-    let platform = helpers::get_platform_name(&version.semver);
+    let platform = helpers::get_platform_name(version.semver.as_ref());
     let file_type = crate::FILETYPE_EXT;
 
-    let url = config
-        .github_mirror
-        .as_ref()
-        .map_or_else(|| "https://github.com".to_string(), |val| val.to_string());
+    let url = config.github_mirror.as_ref().map_or_else(
+        || "https://github.com".to_string(),
+        std::string::ToString::to_string,
+    );
 
     let version_tag = &version.tag_name;
     let request_url = if get_sha256sum {

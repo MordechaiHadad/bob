@@ -65,7 +65,7 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
         .map(|entry| entry.path())
         .collect();
 
-    let versions: Vec<RemoteVersion> = deserialize_response(response)?;
+    let versions: Vec<RemoteVersion> = deserialize_response(&response)?;
     let filtered_versions: Vec<RemoteVersion> = versions
         .into_iter()
         .filter(|v| v.name.starts_with('v'))
@@ -109,9 +109,8 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
         if let Err(e) = write_result {
             if e.kind() == io::ErrorKind::BrokenPipe {
                 return Ok(());
-            } else {
-                return Err(e.into());
             }
+            return Err(e.into());
         }
 
         if version_installed {

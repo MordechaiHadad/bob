@@ -255,17 +255,15 @@ pub async fn start(config: ConfigFile) -> Result<()> {
             handlers::use_handler::start(version, !no_install, &client, config).await?;
         }
         Cli::Install { version } => {
-            let mut version = parse_version_type(&client, &version).await?;
+            let version = parse_version_type(&client, &version).await?;
+            let tag_name: &str = version.tag_name.as_str();
 
-            match handlers::install_handler::start(&mut version, &client, &config).await? {
+            match handlers::install_handler::start(&version, &client, &config).await? {
                 InstallResult::InstallationSuccess(location) => {
-                    info!(
-                        "{} has been successfully installed in {location}",
-                        version.tag_name
-                    );
+                    info!("{tag_name} has been successfully installed in {location}",);
                 }
                 InstallResult::VersionAlreadyInstalled => {
-                    info!("{} is already installed", version.tag_name);
+                    info!("{tag_name} is already installed");
                 }
                 InstallResult::NightlyIsUpdated => {
                     info!("Nightly up to date!");
@@ -285,14 +283,14 @@ pub async fn start(config: ConfigFile) -> Result<()> {
         Cli::Erase => erase_handler::start(config.config).await?,
         Cli::List => list_handler::start(config.config).await?,
         Cli::Complete { shell } => {
-            clap_complete::generate(shell, &mut Cli::command(), "bob", &mut std::io::stdout())
+            clap_complete::generate(shell, &mut Cli::command(), "bob", &mut std::io::stdout());
         }
         Cli::Update(data) => {
             update_handler::start(data, &client, config).await?;
         }
         Cli::ListRemote => list_remote_handler::start(config.config, client).await?,
         Cli::Run { version, args } => {
-            run_handler::start(&version, &args, &client, &config.config).await?
+            run_handler::start(&version, &args, &client, &config.config).await?;
         }
     }
 

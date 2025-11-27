@@ -11,7 +11,9 @@ use helpers::{processes::handle_nvim_process, version};
 use std::{env, process::exit};
 use tracing::{Level, error, warn};
 
-pub(crate) use crate::consts::*;
+pub(crate) use crate::consts::{
+    ENVIRONMENT_VAR_REGEX, FILETYPE_EXT, HASH_REGEX, NIGHTLY_REGEX, VERSION_REGEX,
+};
 
 #[tokio::main]
 async fn main() -> Result<()> {
