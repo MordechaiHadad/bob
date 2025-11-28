@@ -57,12 +57,11 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
         "stable" | "latest" => {
             info!("Fetching latest version");
             let stable_version = get_upstream_stable(client).await?;
-            let cloned_version = stable_version.tag_name.clone();
             Ok(ParsedVersion {
-                tag_name: stable_version.tag_name,
+                tag_name: stable_version.clone(),
                 version_type: VersionType::Latest,
                 non_parsed_string: version.to_string(),
-                semver: Some(Version::parse(&cloned_version.replace('v', ""))?),
+                semver: Some(Version::parse(&stable_version.replace('v', ""))?),
             })
         }
         "head" | "git" | "HEAD" => {

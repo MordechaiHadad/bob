@@ -6,12 +6,11 @@ use std::{
 
 use anyhow::Result;
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
 use yansi::Paint;
 
 use crate::{
     config::Config,
-    github_requests::{deserialize_response, get_upstream_stable, make_github_request},
+    github_requests::{GitHubTag, get_upstream_stable, get_upstream_tags},
     helpers::{self, directories},
 };
 
@@ -45,11 +44,6 @@ use crate::{
 /// ```
 pub async fn start(config: Config, client: Client) -> Result<()> {
     let downloads_dir = directories::get_downloads_directory(&config).await?;
-    let response = make_github_request(
-        &client,
-        "https://api.github.com/repos/neovim/neovim/tags?per_page=50",
-    )
-    .await?;
 
     let mut local_versions: Vec<PathBuf> = fs::read_dir(downloads_dir)?
         .filter_map(Result::ok)
@@ -65,8 +59,8 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
         .map(|entry| entry.path())
         .collect();
 
-    let versions: Vec<RemoteVersion> = deserialize_response(&response)?;
-    let filtered_versions: Vec<RemoteVersion> = versions
+    let tags = get_upstream_tags(&client).await?;
+    let filtered_versions: Vec<GitHubTag> = tags
         .into_iter()
         .filter(|v| v.name.starts_with('v'))
         .collect();
@@ -82,7 +76,7 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
                 .is_some_and(|str| str.contains(&version.name))
         });
 
-        let stable_version_string = if stable_version.tag_name == version.name {
+        let stable_version_string = if stable_version == version.name {
             " (stable)"
         } else {
             ""
@@ -135,23 +129,3 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
     Ok(())
 }
 
-/// Represents a remote version of Neovim.
-///
-/// This struct is used to deserialize the response from the GitHub API request that gets the tags of the Neovim repository.
-/// Each tag represents a version of Neovim, and the `name` field of the `RemoteVersion` struct represents the name of the version.
-///
-/// # Fields
-///
-/// * `name` - A `String` that represents the name of the version.
-///
-/// # Example
-///
-/// ```rust
-/// let remote_version = RemoteVersion {
-///     name: "v0.5.0".to_string(),
-/// };
-/// ```
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-struct RemoteVersion {
-    pub name: String,
-}

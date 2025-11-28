@@ -114,6 +114,30 @@ pub struct CommitAuthor {
     pub name: String,
 }
 
+/// Represents a release from the GitHub API.
+///
+/// This struct is used to deserialize the response from the GitHub releases API,
+/// specifically to get the commit SHA that a release tag points to.
+#[derive(Serialize, Deserialize, Debug)]
+struct StableRelease {
+    pub target_commitish: String,
+}
+
+/// Represents a tag from the GitHub tags API.
+///
+/// This struct contains the tag name and the commit information.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GitHubTag {
+    pub name: String,
+    pub commit: TagCommit,
+}
+
+/// Represents the commit information within a GitHub tag.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TagCommit {
+    pub sha: String,
+}
+
 /// Represents an error response from the GitHub API.
 ///
 /// This struct contains information about an error response from the GitHub API, including the error message and the URL of the documentation related to the error.
@@ -215,12 +239,7 @@ pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
     deserialize_response(&response)
 }
 
-/// Asynchronously searches for the stable version of Neovim.
-///
-/// This function takes a reference to a `Client` as an argument and makes a GitHub API request to get the releases of the Neovim repository.
-/// It then deserializes the response into a vector of `UpstreamVersion`.
-/// It finds the release that has the tag name "stable" and the release that has the same `target_commitish` as the stable release but does not have the tag name "stable".
-/// The function returns the tag name of the found release.
+/// Fetches tags from the Neovim repository on GitHub.
 ///
 /// # Arguments
 ///
@@ -228,8 +247,43 @@ pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
 ///
 /// # Returns
 ///
-/// This function returns a `Result` that contains a `String` representing the tag name of the stable version if the operation was successful.
-/// If the operation failed, the function returns `Err` with a description of the error.
+/// * `Result<Vec<GitHubTag>>` - A `Result` that contains a `Vec<GitHubTag>` if successful.
+///
+/// # Errors
+///
+///  This function will return an error if the request to the GitHub API fails or if the response cannot be deserialized into a `Vec<GitHubTag>>`.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use reqwest::Client;
+/// use bob::github_requests::get_upstream_tags;
+/// let client = Client::new();
+/// let tags = get_upstream_tags(&Client::new()).await?;
+/// ```
+pub async fn get_upstream_tags(client: &Client) -> Result<Vec<GitHubTag>> {
+    let response = make_github_request(
+        client,
+        "https://api.github.com/repos/neovim/neovim/tags?per_page=50",
+    )
+    .await?;
+
+    deserialize_response(&response)
+}
+
+/// Fetches the upstream stable version from the GitHub API.
+///
+/// # Arguments
+///
+/// * `client` - A reference to a `Client` used to make the GitHub API request.
+///
+/// # Returns
+///
+/// * `String` - Returns the latest stable tag name (ie. version) as a string
+///
+/// # Errors
+///
+///  This function will return an error if the request to the GitHub API fails or if the response cannot be deserialized into a `Vec<GitHubTag>>`.
 ///
 /// # Example
 ///
@@ -237,17 +291,26 @@ pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
 /// use reqwest::Client;
 /// use bob::github_requests::get_upstream_stable;
 /// let client = Client::new();
-/// let upstream_version = get_upstream_stable(&Client::new()).await?;
-/// assert!(upstream_version.is_ok());
+/// let stable_version = get_upstream_stable(&Client::new()).await?;
+/// println!("Stable version: {}", stable_version);
 /// ```
-pub async fn get_upstream_stable(client: &Client) -> Result<UpstreamVersion> {
-    let response = make_github_request(
+pub async fn get_upstream_stable(client: &Client) -> Result<String> {
+    let stable_response = make_github_request(
         client,
-        "https://api.github.com/repos/neovim/neovim/releases/latest",
+        "https://api.github.com/repos/neovim/neovim/releases/tags/stable",
     )
     .await?;
+    let stable_release: StableRelease = deserialize_response(&stable_response)?;
+    let stable_commit_sha = stable_release.target_commitish;
 
-    deserialize_response(response)
+    let tags = get_upstream_tags(client).await?;
+
+    let version_tag = tags
+        .into_iter()
+        .find(|tag| tag.commit.sha == stable_commit_sha && tag.name != "stable")
+        .ok_or_else(|| anyhow!("Could not find version tag for stable release"))?;
+
+    Ok(version_tag.name)
 }
 
 /// Fetches the commits for the nightly version from the GitHub API.
