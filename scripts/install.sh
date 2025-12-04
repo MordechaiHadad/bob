@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
+if ! command -v unzip &> /dev/null; then
+    echo "Error: 'unzip' is required but not installed."
+    exit 1
+fi
+
 # Detect OS and Architecture
 OS="$(uname -s)"
 ARCH="$(uname -m)"
