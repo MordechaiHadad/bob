@@ -83,11 +83,11 @@ For further information refer to the [Neovim wiki](https://github.com/neovim/neo
 
 ### Install with the bundled script (recommended)
 
-```bash
+```sh
+# on Unix
 curl -fsSL https://raw.githubusercontent.com/MordechaiHadad/bob/master/scripts/install.sh | bash
-```
 
-```powershell
+# on Windows (PowerShell)
 powershell -c "irm https://raw.githubusercontent.com/MordechaiHadad/bob/master/scripts/install.ps1 | iex"
 ```
 
