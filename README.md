@@ -10,6 +10,13 @@
 
 Bob is a cross-platform and easy-to-use Neovim version manager, allowing for easy switching between versions right from the command line.
 
+## 🎥 See in Action
+
+[![Use Bob To Easily Manage and Switch Between Neovim Versions](https://img.youtube.com/vi/jm9vWxovkrY/maxresdefault.jpg)](https://www.youtube.com/watch?v=jm9vWxovkrY)
+
+*Video tutorial by [Marco Peluso](https://www.youtube.com/channel/UCPIdAOR2dHuUGzADe7f3vnA)*
+
+
 ## 🌟 Showcase
 
 <img src="./resources/tapes/demo.gif">
