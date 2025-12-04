@@ -247,7 +247,7 @@ pub async fn get_upstream_stable(client: &Client) -> Result<UpstreamVersion> {
     )
     .await?;
 
-    deserialize_response(response)
+    deserialize_response(&response)
 }
 
 /// Fetches the commits for the nightly version from the GitHub API.
