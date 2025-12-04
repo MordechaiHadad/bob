@@ -11,8 +11,8 @@ use yansi::Paint;
 
 use crate::{
     config::Config,
-    github_requests::{deserialize_response, make_github_request},
-    helpers::{self, directories, version::search_stable_version},
+    github_requests::{deserialize_response, get_upstream_stable, make_github_request},
+    helpers::{self, directories},
 };
 
 /// Asynchronously starts the process of listing remote versions of Neovim.
@@ -47,7 +47,7 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
     let downloads_dir = directories::get_downloads_directory(&config).await?;
     let response = make_github_request(
         &client,
-        "https://api.github.com/repos/neovim/neovim/tags?per_page=50",
+        "https://api.github.com/repos/neovim/neovim/tags?per_page=100",
     )
     .await?;
 
@@ -71,7 +71,7 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
         .filter(|v| v.name.starts_with('v'))
         .collect();
 
-    let stable_version = search_stable_version(&client).await?;
+    let stable_version = get_upstream_stable(&client).await?;
 
     let mut buffer = Vec::with_capacity(1024);
 
@@ -82,7 +82,7 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
                 .is_some_and(|str| str.contains(&version.name))
         });
 
-        let stable_version_string = if stable_version == version.name {
+        let stable_version_string = if stable_version.tag_name == version.name {
             " (stable)"
         } else {
             ""

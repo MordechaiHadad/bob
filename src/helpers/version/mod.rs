@@ -2,10 +2,11 @@ pub mod nightly;
 pub mod types;
 
 use self::types::{ParsedVersion, VersionType};
+use crate::github_requests::get_upstream_stable;
 use crate::helpers::directories;
 use crate::{
     config::Config,
-    github_requests::{RepoCommit, UpstreamVersion, deserialize_response},
+    github_requests::{RepoCommit, deserialize_response},
 };
 use anyhow::{Context, Result, anyhow};
 use reqwest::Client;
@@ -55,10 +56,10 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
         }),
         "stable" | "latest" => {
             info!("Fetching latest version");
-            let stable_version = search_stable_version(client).await?;
-            let cloned_version = stable_version.clone();
+            let stable_version = get_upstream_stable(client).await?;
+            let cloned_version = stable_version.tag_name.clone();
             Ok(ParsedVersion {
-                tag_name: stable_version,
+                tag_name: stable_version.tag_name,
                 version_type: VersionType::Latest,
                 non_parsed_string: version.to_string(),
                 semver: Some(Version::parse(&cloned_version.replace('v', ""))?),
@@ -260,50 +261,6 @@ pub async fn is_version_used(version: &str, config: &Config) -> bool {
         Ok(value) => value.starts_with(version),
         Err(_) => false,
     }
-}
-
-/// Asynchronously searches for the stable version of Neovim.
-///
-/// This function takes a reference to a `Client` as an argument and makes a GitHub API request to get the releases of the Neovim repository.
-/// It then deserializes the response into a vector of `UpstreamVersion`.
-/// It finds the release that has the tag name "stable" and the release that has the same `target_commitish` as the stable release but does not have the tag name "stable".
-/// The function returns the tag name of the found release.
-///
-/// # Arguments
-///
-/// * `client` - A reference to a `Client` used to make the GitHub API request.
-///
-/// # Returns
-///
-/// This function returns a `Result` that contains a `String` representing the tag name of the stable version if the operation was successful.
-/// If the operation failed, the function returns `Err` with a description of the error.
-///
-/// # Example
-///
-/// ```rust
-/// let client = Client::new();
-/// let stable_version = search_stable_version(&client).await?;
-/// ```
-pub async fn search_stable_version(client: &Client) -> Result<String> {
-    let response = client
-        .get("https://api.github.com/repos/neovim/neovim/releases?per_page=15")
-        .header("user-agent", "bob")
-        .header("Accept", "application/vnd.github.v3+json")
-        .send()
-        .await?
-        .text()
-        .await?;
-
-    let versions: Vec<UpstreamVersion> = deserialize_response(&response)?;
-    let stable_release = versions
-        .iter()
-        .find(|v| v.tag_name == "stable")
-        .ok_or(anyhow!("Cannot find stable release"))?;
-    let stable_pin_release = versions
-        .iter()
-        .find(|v| v.tag_name != "stable" && v.target_commitish == stable_release.target_commitish)
-        .ok_or(anyhow!("Cannot find version of stable release"))?;
-    Ok(stable_pin_release.tag_name.clone())
 }
 
 /// Fetches the latest commit from the Neovim repository on GitHub.
