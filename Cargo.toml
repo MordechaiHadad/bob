@@ -1,7 +1,7 @@
 [package]
 name = "bob-nvim"
 edition = "2024"
-version = "4.1.5"
+version = "4.1.6"
 description = "A version manager for neovim"
 readme = "README.md"
 keywords = ["neovim", "version-manager"]
