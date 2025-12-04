@@ -70,6 +70,9 @@ rm -rf "$INSTALL_DIR"
 mkdir -p "$INSTALL_DIR"
 mv "$SOURCE_DIR"/* "$INSTALL_DIR/"
 
+# Ensure the bob binary is executable
+chmod +x "$INSTALL_DIR/bob"
+
 # Link to bin (for PATH)
 mkdir -p "$BIN_DIR"
 ln -sf "$INSTALL_DIR/bob" "$BIN_DIR/bob"
