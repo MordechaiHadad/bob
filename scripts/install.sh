@@ -36,37 +36,27 @@ if [ -z "$DOWNLOAD_URL" ]; then
     exit 1
 fi
 
-INSTALL_DIR="$HOME/.local/share/bob"
+INSTALL_DIR="$HOME/.local/share/bob_bin"
 BIN_DIR="$HOME/.local/bin"
 ZIP_FILE="/tmp/bob_install.zip"
 
 echo "Downloading from $DOWNLOAD_URL..."
 curl -fsSL "$DOWNLOAD_URL" -o "$ZIP_FILE"
 
-TEMP_EXTRACT="/tmp/bob_extract_$$"
-mkdir -p "$TEMP_EXTRACT"
-
-echo "Installing..."
-unzip -q "$ZIP_FILE" -d "$TEMP_EXTRACT"
-
-BOB_BIN=$(find "$TEMP_EXTRACT" -type f -name "bob" | head -n 1)
-
-if [ -z "$BOB_BIN" ]; then
-    echo "Error: Could not find 'bob' executable in zip."
-    exit 1
-fi
-
-SOURCE_DIR=$(dirname "$BOB_BIN")
-
-rm -rf "$INSTALL_DIR"
+"
 mkdir -p "$INSTALL_DIR"
-mv "$SOURCE_DIR"/* "$INSTALL_DIR/"
 
+# Unzip
+echo "Installing..."
+unzip -q "$ZIP_FILE" -d "$INSTALL_DIR"
+chmod +x "$INSTALL_DIR/bob"
+
+# Link to bin
 mkdir -p "$BIN_DIR"
 ln -sf "$INSTALL_DIR/bob" "$BIN_DIR/bob"
 
+# Cleanup
 rm "$ZIP_FILE"
-rm -rf "$TEMP_EXTRACT"
 
 echo "✅ Bob installed successfully to $BIN_DIR/bob"
 # Check if in PATH
