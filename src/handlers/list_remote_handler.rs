@@ -47,7 +47,7 @@ pub async fn start(config: Config, client: Client) -> Result<()> {
     let downloads_dir = directories::get_downloads_directory(&config).await?;
     let response = make_github_request(
         &client,
-        "https://api.github.com/repos/neovim/neovim/tags?per_page=50",
+        "https://api.github.com/repos/neovim/neovim/tags?per_page=100",
     )
     .await?;
 
