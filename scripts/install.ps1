@@ -26,11 +26,24 @@ if (-not $asset) {
 Write-Host "Downloading $($asset.name)..."
 Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zipPath
 
-# Install
-Write-Host "Extracting to $installDir..."
+Write-Host "Extracting..."
+$tempExtract = "$env:TEMP\bob_extract_tmp"
+if (Test-Path $tempExtract) { Remove-Item -Recurse -Force $tempExtract }
+Expand-Archive -Path $zipPath -DestinationPath $tempExtract -Force
+
 if (Test-Path $installDir) { Remove-Item -Recurse -Force $installDir }
-Expand-Archive -Path $zipPath -DestinationPath $installDir -Force
+New-Item -ItemType Directory -Force -Path $installDir | Out-Null
+
+$bobExe = Get-ChildItem -Path $tempExtract -Filter "bob.exe" -Recurse | Select-Object -First 1
+if ($bobExe) {
+    Move-Item -Path "$($bobExe.Directory.FullName)\*" -Destination $installDir -Force
+} else {
+    Write-Error "Error: bob.exe not found in the downloaded archive."
+    exit 1
+}
+
 Remove-Item $zipPath
+Remove-Item -Recurse -Force $tempExtract
 
 Write-Host "✅ Bob installed successfully!"
 
