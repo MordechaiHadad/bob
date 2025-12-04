@@ -1,14 +1,10 @@
 $ErrorActionPreference = 'Stop'
 
-# 1. Determine Architecture
-# Note: The JSON only has x86_64 for Windows currently. 
-# If arm64 is added later, we can uncomment the logic.
 $arch = "x86_64" 
-# if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { $arch = "arm64" }
 
 $assetName = "bob-windows-$arch.zip"
 $apiUrl = "https://api.github.com/repos/MordechaiHadad/bob/releases/latest"
-$installDir = "$env:LOCALAPPDATA\bob"
+$installDir = "$env:LOCALAPPDATA\bob_bin"
 $zipPath = "$env:TEMP\bob.zip"
 
 Write-Host "Fetching latest release info..."
