@@ -81,11 +81,24 @@ For further information refer to the [Neovim wiki](https://github.com/neovim/neo
 
 ## 🔧 Installation
 
+### Install with the bundled script (recommended)
+
+```sh
+# on Unix
+curl -fsSL https://raw.githubusercontent.com/MordechaiHadad/bob/master/scripts/install.sh | bash
+
+# on Windows (PowerShell)
+powershell -c "irm https://raw.githubusercontent.com/MordechaiHadad/bob/master/scripts/install.ps1 | iex"
+```
+
+Each script downloads the latest release for your platform and links the `bob` binary into a user-local `bin` directory. If the installer warns about your `PATH`, add the printed directory to make `bob` callable from any shell.
+
 ### Install from releases
 
 1. Download the bob release suitable for your platform: either `bob-{platform}-x86_64.zip` for the standard version or `bob-{platform}-x86_64-openssl.zip` for the OpenSSL version.
 2. Unzip it
 3. Run it with `bob`
+4. Linux users can also grab the AppImage artifacts (e.g., `bob-linux-x86_64-appimage.zip` or `bob-linux-arm-appimage.zip`) and follow the same unpack-and-run steps.
 
 ### Install with pacman
 
