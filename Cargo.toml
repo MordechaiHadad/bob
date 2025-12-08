@@ -50,10 +50,11 @@ features = ["signal"]
 [target.'cfg(unix)'.dependencies]
 flate2 = "1.1.5"
 tar    = "0.4"
+tar    = "0.4.44"
 
 [target."cfg(windows)".dependencies]
-winreg = "0.10.1"
-zip    = "2.2.0"
+winreg = "0.55.0"
+zip    = "7.0.0"
 
 
 [profile.dev]
