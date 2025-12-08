@@ -1,14 +1,13 @@
 [package]
-name         = "bob-nvim"
-edition      = "2024"
-version      = "4.1.6"
-description  = "A version manager for neovim"
-readme       = "README.md"
-keywords     = ["neovim", "version-manager"]
-categories   = ["command-line-utilities"]
-license      = "MIT"
-repository   = "https://github.com/MordechaiHadad/bob"
-rust-version = "1.85"
+name        = "bob-nvim"
+edition     = "2024"
+version     = "4.1.6"
+description = "A version manager for neovim"
+readme      = "README.md"
+keywords    = ["neovim", "version-manager"]
+categories  = ["command-line-utilities"]
+license     = "MIT"
+repository  = "https://github.com/MordechaiHadad/bob"
 
 
 [[bin]]
@@ -31,35 +30,35 @@ chrono                = { version = "0.4.23", features = ["serde"] }
 clap_complete         = "4.1"
 clap_complete_nushell = "4.5.8"
 clap                  = { version = "4.0.15", features = ["derive"] }
-dialoguer             = { version = "0.11.0" }
+dialoguer             = "0.12.0"
 futures-util          = { version = "0.3.14" }
 indicatif             = "0.18.0"
 regex                 = "1.5"
-reqwest               = { version = "0.12", features = ["stream", "rustls-tls"] }
+reqwest               = { version = "0.12.24", features = ["stream", "rustls-tls"] }
 semver                = "1.0.22"
 serde_json            = "1.0"
 serde                 = { version = "1.0", features = ["derive"] }
 sha2                  = "0.10.8"
-sysinfo               = "0.35.2"
+sysinfo               = "0.37.2"
 tokio                 = { version = "1.16.1", features = ["full"] }
-yansi                 = "0.5.1"
-toml                  = "0.8.8"
+yansi                 = "1.0.1"
+toml                  = "0.9.8"
 tracing               = "0.1.41"
 tracing-subscriber    = "0.3.20"
 what-the-path         = "^0.1.3"
 
 
 [target.'cfg(unix)'.dependencies.nix]
-version  = "0.28.0"
+version  = "0.30.1"
 features = ["signal"]
 
 [target.'cfg(unix)'.dependencies]
-flate2 = "1.1.5"
+flate2 = "1.0.26"
 tar    = "0.4"
 
 [target."cfg(windows)".dependencies]
-winreg = "0.10.1"
-zip    = "2.2.0"
+winreg = "0.55.0"
+zip    = "6.0.0"
 
 
 [profile.dev]
