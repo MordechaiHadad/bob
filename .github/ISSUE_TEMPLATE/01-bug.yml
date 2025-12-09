@@ -1,0 +1,104 @@
+name: "Bug Report"
+description: "File a bug report to help us improve"
+title: "[BUG]: "
+labels: ["bug"]
+# labels: ["bug", "triage"]
+assignees: []
+body:
+  - type: input
+    id: "bob_version"
+    attributes:
+      label: "Bob Version"
+      description: "Run `bob --version` and paste the output here."
+      placeholder: "ex: bob 1.0.0"
+    validations:
+      required: true
+  - type: "input"
+    id: "rust_version"
+    attributes:
+      label: "Rust Version"
+      description: "Run `rustc --version` and paste the output here. (Optional if you're not building `bob` from source.)"
+      placeholder: "ex: rustc 1.75.0 (82e1608df 2023-12-21)"
+    validations:
+      required: false
+  - type: input
+    id: "os_arch"
+    attributes:
+      label: "Operating System and Architecture"
+      description: "Please provide your OS and architecture. (You can find this by running `uname -a` on Linux/macOS or `systeminfo` on Windows.)"
+      placeholder: "ex: Ubuntu 22.04, x86_64"
+    validations:
+      required: true
+  # Alternative: use dropdowns for OS and architecture (uncomment and replace the input above if preferred)
+  #  - type: dropdown
+  #    id: os
+  #    attributes:
+  #      label: Operating System
+  #      options:
+  #        - Windows
+  #        - Linux
+  #        - macOS
+  #        - Other
+  #    validations:
+  #      required: true
+  #  - type: dropdown
+  #    id: arch
+  #    attributes:
+  #      label: Architecture
+  #      options:
+  #        - x86_64
+  #        - aarch64
+  #        - armv7
+  #        - Other
+  #    validations:
+  #      required: true
+  - type: textarea
+    id: "description"
+    attributes:
+      label: "Describe the Bug"
+      description: "A clear and concise description of what the bug is."
+      placeholder: "Tell us what happened."
+    validations:
+      required: true
+  - type: textarea
+    id: "steps"
+    attributes:
+      label: "Steps to Reproduce"
+      description: "Steps to reproduce the behavior."
+      placeholder: |
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+    validations:
+      required: true
+  - type: textarea
+    id: "behavior"
+    attributes:
+      label: "Expected vs Actual Behavior"
+      description: "A clear and concise description of what you expected to happen versus what actually happened."
+      placeholder: |
+        The expected behavior was...
+
+        The actual behavior was...
+
+    validations:
+      required: true
+  - type: textarea
+    id: "logs"
+    attributes:
+      label: "Logs/Errors"
+      description: |
+        Please provide any relevant logs or error messages.
+        For long logs, wrap them in a collapsible section using Markdown:
+        <details><summary>Click to expand logs</summary>
+        Paste your log here
+        </details>
+      placeholder: "Paste logs or errors here, using the collapsible format if lengthy."
+  - type: textarea
+    id: "config"
+    attributes:
+      label: "Config File (if relevant)"
+      description: "If relevant, please paste the contents of your config file. The default location is `~/.config/bob/config.json`. If not relevant or unchanged, you can enter 'No custom config'."
+      placeholder: 'Paste config here, or "No custom config"'
+      render: json

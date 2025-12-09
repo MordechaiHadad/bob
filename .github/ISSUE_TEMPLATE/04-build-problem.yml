@@ -1,0 +1,80 @@
+name: Build Problem
+description: Report a problem with building Bob or Neovim versions
+title: "[BUILD]: "
+labels: [build-problem]
+assignees: []
+body:
+  - type: textarea
+    id: "description"
+    attributes:
+      label: "Describe the Build Problem"
+      description: "A clear and concise description of the build issue you are encountering."
+      placeholder: "Tell us what happened during the build process."
+    validations:
+      required: true
+  - type: textarea
+    id: "os-arch-distro"
+    attributes:
+      label: "OS, Architecture, and Distro (if Linux)"
+      description: |
+        Please provide your operating system, architecture, and Linux distribution if applicable.
+        You can find this by running `uname -a` on Linux/macOS or `systeminfo` on Windows.
+      placeholder: "ex: Linux Ubuntu 22.04, x86_64"
+    validations:
+      required: true
+  - type: dropdown
+    id: "compiler"
+    attributes:
+      label: "Compiler"
+      description: "Which compiler are you using?"
+      options:
+        - "GCC"
+        - "Clang"
+        - "MSVC"
+        - "Other"
+    validations:
+      required: true
+  - type: input
+    id: "rust-version"
+    attributes:
+      label: "Rust Version"
+      description: "Run `rustc --version` and paste the output here."
+      placeholder: "ex: rustc 1.75.0 (82e1608df 2023-12-21)"
+    validations:
+      required: true
+  - type: textarea
+    id: "diagnosis"
+    attributes:
+      label: "Diagnosis Attempt"
+      description: |
+        Please attempt to diagnose whether the build failure is with Bob itself or with downloading/building a Neovim version.
+        Try using `bob use <version>` with a nightly version (which builds from the git repo) and a stable non-nightly version (e.g., 0.11.0).
+        Describe what happened in each case.
+      placeholder: |
+        ex: When using nightly: 
+        ... 
+
+        ex: When using stable 0.11.0: 
+        ...
+
+    validations:
+      required: true
+  - type: textarea
+    id: "logs"
+    attributes:
+      label: "Logs/Error Messages"
+      description: |
+        Please provide any relevant logs or error messages.
+        For long logs, wrap them in a collapsible section using Markdown:
+        <details><summary>Click to expand logs</summary>
+        Paste your log here
+        </details>
+      placeholder: "Paste logs or errors here, using the collapsible format if lengthy."
+  - type: textarea
+    id: "build_output"
+    attributes:
+      label: "Build Output (if applicable)"
+      description: |
+        If applicable, paste the build output here.
+        For long outputs, use a collapsible section as above.
+      placeholder: "Paste build output here."
