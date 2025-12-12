@@ -40,7 +40,10 @@ body:
       required: false
     attributes:
       label: "Linux Distribution (if applicable)"
-      description: "If you selected Linux above, please specify your distribution (e.g., Ubuntu 22.04, Fedora 38)."
+      description: |
+        If you selected Linux above, please specify your distribution
+        You can get this by running either `lsb_release -a`, `cat /etc/os-release`, or `uname -a`.
+        (e.g., Ubuntu 22.04, Fedora 38).
       placeholder: "ex: Ubuntu 22.04"
       value: "N/A"
   - type: dropdown
