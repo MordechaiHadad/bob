@@ -2,7 +2,6 @@ name: "Bug Report"
 description: "File a bug report to help us improve"
 title: "[BUG]: "
 labels: ["bug"]
-# labels: ["bug", "triage"]
 assignees: []
 body:
   - type: input
@@ -64,7 +63,6 @@ body:
       options:
         - x86_64
         - aarch64
-        - armv7
         - Other (mention in description)
   - type: textarea
     id: "description"
