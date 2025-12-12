@@ -1,0 +1,126 @@
+name: Build Problem
+description: Report a problem with building Bob or Neovim versions
+title: "[BUILD]: "
+labels: [build-problem]
+assignees: []
+body:
+  - type: textarea
+    id: "description"
+    validations:
+      required: true
+    attributes:
+      label: "Describe the Build Problem"
+      description: "A clear and concise description of the build issue you are encountering."
+      placeholder: "ex: When trying to build the program, I encountered the following issue:\n"
+  # - type: textarea
+  #   id: "os-arch-distro"
+  #   validations:
+  #     required: true
+  #   attributes:
+  #     label: "OS, Architecture, and Distro (if Linux)"
+  #     description: |
+  #       Please provide your operating system, architecture, and Linux distribution if applicable.
+  #       You can find this by running `uname -a` on Linux/macOS or `systeminfo` on Windows.
+  #     placeholder: "ex: Linux Ubuntu 22.04, x86_64"
+  - type: dropdown
+    id: "os"
+    validations:
+      required: true
+    attributes:
+      label: "Operating System"
+      description: "Please select your operating system."
+      options:
+        - Windows
+        - Linux
+        - macOS
+        - Other (mention in description)
+  - type: input
+    id: "distro"
+    validations:
+      required: false
+    attributes:
+      label: "Linux Distribution (if applicable)"
+      description: |
+        If you selected Linux above, please specify your distribution
+        You can get this by running either `lsb_release -a`, `cat /etc/os-release`, or `uname -a`.
+        (e.g., Ubuntu 22.04, Fedora 38).
+      placeholder: "ex: Ubuntu 22.04"
+      value: "N/A"
+  - type: dropdown
+    id: "arch"
+    validations:
+      required: true
+    attributes:
+      label: "Architecture"
+      description: "Please select your system architecture."
+      options:
+        - x86_64
+        - aarch64
+        - Other (mention in description)
+  - type: dropdown
+    id: "compiler"
+    validations:
+      required: true
+    attributes:
+      label: "Compiler"
+      description: "Which compiler are you using?"
+      options:
+        - "GCC"
+        - "Clang"
+        - "MSVC"
+        - "Other"
+  - type: input
+    id: "rust-version"
+    validations:
+      required: true
+    attributes:
+      label: "Rust Version"
+      description: "Run `rustc --version` and paste the output here."
+      placeholder: "ex: rustc 1.75.0 (82e1608df 2023-12-21)"
+      value: "rustc --version _run_for_version_"
+  - type: textarea
+    id: "diagnosis"
+    validations:
+      required: true
+    attributes:
+      label: "Diagnosis Attempt"
+      description: |
+        Please attempt to diagnose whether the build failure is with Bob itself or with downloading/building a Neovim version.
+        Try using `bob use <version>` with a nightly version (which builds from the git repo) and a stable non-nightly version (e.g., 0.11.0).
+        Describe what happened in each case.
+      placeholder: |
+        ex:
+        When using nightly:
+        [ ... ]
+        When using stable 0.11.0:
+        [ ... ]
+  - type: textarea
+    id: "logs"
+    validations:
+      required: false
+    attributes:
+      label: "Logs/Error Messages"
+      description: |
+        Please provide any relevant logs or error messages.
+        For long logs, wrap them in a collapsible section using Markdown:
+        ```
+        <details>
+          <summary>
+            Click to expand logs
+          </summary>
+        Paste your log here
+        </details>
+        ```
+      placeholder: "Paste logs or errors here, using the collapsible format if lengthy."
+      value: "The error that occurred was:\n\n```\n\n```"
+  - type: textarea
+    id: "build_output"
+    validations:
+      required: false
+    attributes:
+      label: "Build Output (if applicable)"
+      description: |
+        If applicable, paste the build output here.
+        For long outputs, use a collapsible section as above.
+      placeholder: "Paste build output here."
+      value: "The build output showed as:\n```\n\n```"

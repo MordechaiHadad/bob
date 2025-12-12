@@ -1,0 +1,42 @@
+name: "Documentation Issue"
+description: "Report an issue or suggest improvements to the documentation"
+title: "[DOCS]: "
+labels: ["documentation"]
+assignees: []
+body:
+  - type: textarea
+    id: "description"
+    validations:
+      required: true
+    attributes:
+      label: "Describe the Documentation Issue"
+      description: "A clear and concise description of the issue with the documentation."
+      placeholder: "ex: The section on [...] is unclear because [...]"
+  - type: input
+    id: "location"
+    validations:
+      required: false
+    attributes:
+      label: "Location in Documentation"
+      description: |
+        If available -
+        Provide the URL, file path, or section where the issue is found.
+      placeholder: "ex: https://example.com/docs/installation or README.md#installation"
+  - type: textarea
+    id: "proposed_changes"
+    validations:
+      required: false
+    attributes:
+      label: "Proposed Changes"
+      description: "Describe any suggested fixes or improvements."
+      placeholder: "ex: It would be better if we added an example like [...]"
+      value: "It would be better if we "
+  - type: textarea
+    id: "context"
+    validations:
+      required: false
+    attributes:
+      label: "Additional Context"
+      description: "Add any other context, screenshots, or details about the documentation issue here."
+      placeholder: "ex: Links, images, or more details"
+      value: "N/A"
