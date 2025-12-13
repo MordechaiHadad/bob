@@ -368,7 +368,7 @@ Nushell completions are commonly stored in `($nu.data-dir)/completions`. Run:
 
 ```nu
 mkdir ($nu.data-dir | path join "completions")
-bob complete nu | save -f ($nu.data-dir | path join "completions/bob.nu")
+bob complete nushell | save -f ($nu.data-dir | path join "completions/bob.nu")
 ```
 
 To generate the completion file. Then, in order to automatically load the completions on startup, add:
