@@ -1,214 +1,154 @@
-name: Continuous Integration
+name: "Continuous Integration"
 on: [push, pull_request]
-
+env:
+  RUST_TOOLCHAIN: nightly
+  RUST_PROFILE: minimal
+  RUST_TOOLCHAIN_OVERRIDE: true
 jobs:
-    clippy:
-        strategy:
-            matrix:
-                os: [macos-latest, windows-latest, ubuntu-latest, ubuntu-24.04-arm]
-        runs-on: ${{matrix.os}}
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-            - name: Install toolchain
-              uses: actions-rs/toolchain@v1
-              with:
-                  toolchain: stable
-                  profile: minimal
-                  override: true
-            - name: Check the lints
-              uses: actions-rs/cargo@v1
-              with:
-                  command: clippy
-                  args: --verbose -- -D warnings
+  clippy:
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{matrix.os}}
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+      - name: "Install toolchain"
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          profile: ${{ env.RUST_PROFILE }}
+          override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
+      - name: "Check the lints"
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --verbose -- -D warnings
+  test:
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{matrix.os}}
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+      - name: "Install toolchain"
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          profile: ${{ env.RUST_PROFILE }}
+          override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
+      - name: "Run the tests"
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --locked --verbose
+  formatting:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+      - name: "Install toolchain"
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          profile: ${{ env.RUST_PROFILE }}
+          override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
+      - name: "Ensure nightly rustfmt installed"
+        run: rustup component add rustfmt --toolchain nightly
+      - name: "Run Cargo fmt"
+        run: cargo +nightly fmt --all -- --check --verbose
+  security_audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+      - name: "Install toolchain"
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          profile: ${{ env.RUST_PROFILE }}
+          override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
+      - name: "Install cargo-audit"
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: cargo-audit
+      - name: "Run security audit"
+        uses: actions-rs/cargo@v1
+        with:
+          command: audit
+          args: --deny warnings
+  build:
+    needs: [clippy, formatting, test, security_audit]
+    strategy:
+      matrix:
+        os:
+          - {NAME: linux, OS: ubuntu-latest, ARCH: x86_64, PATH: target/optimized/bob, TARGET: ""}
+          - {NAME: linux, OS: ubuntu-24.04-arm, ARCH: arm, PATH: target/optimized/bob, TARGET: ""}
+          - {NAME: macos, OS: macos-latest, ARCH: x86_64, PATH: target/x86_64-apple-darwin/optimized/bob, TARGET: "x86_64-apple-darwin"}
+          - {NAME: windows, OS: windows-latest, ARCH: x86_64, PATH: build_out, TARGET: ""}
+          - {NAME: macos, OS: macos-latest, ARCH: arm, PATH: target/optimized/bob, TARGET: ""}
+        tls:
+          - {NAME: Rustls, SUFFIX: "", ARGS: ""}
+          - {NAME: OpenSSL, SUFFIX: "-openssl", ARGS: "--no-default-features --features native-tls"}
+    runs-on: ${{matrix.os.OS}}
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Install Rust"
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          profile: ${{ env.RUST_PROFILE }}
+          override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
+      - name: "Add Rust target for cross-compilation"
+        if: matrix.os.TARGET != ''
+        run: rustup target add ${{ matrix.os.TARGET }}
+      - name: "Install OpenSSL libraries"
+        run: sudo apt update && sudo apt install libssl-dev
+        if: matrix.os.OS == 'ubuntu-latest' && matrix.tls.NAME == 'OpenSSL'
+      - uses: Swatinem/rust-cache@v1
+      - name: "Build Bob"
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --locked --profile optimized ${{ matrix.tls.ARGS }} ${{ matrix.os.TARGET != '' && format('--target {0}', matrix.os.TARGET) || '' }}
+      - name: "Install AppImage tools"
+        if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
+        run: |
+          sudo apt update && sudo apt install -y libfuse2 # Needed by AppImage/linuxdeploy
 
-    test:
-        strategy:
-            matrix:
-                os: [macos-latest, windows-latest, ubuntu-latest, ubuntu-24.04-arm]
-        runs-on: ${{matrix.os}}
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-            - name: Install toolchain
-              uses: actions-rs/toolchain@v1
-              with:
-                  toolchain: stable
-                  profile: minimal
-                  override: true
-            - name: Run the tests
-              uses: actions-rs/cargo@v1
-              with:
-                  command: test
-                  args: --locked --verbose
+          # Determine the correct architecture for linuxdeploy download
+          DOWNLOAD_ARCH=${{ matrix.os.ARCH }}
+          if [[ "${{ matrix.os.ARCH }}" == "arm" ]]; then
+            DOWNLOAD_ARCH="aarch64"
+          fi
 
-    formatting:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-            - name: Install toolchain
-              uses: actions-rs/toolchain@v1
-              with:
-                  toolchain: stable
-                  profile: minimal
-                  override: true
-            - name: Check the formatting
-              uses: actions-rs/cargo@v1
-              with:
-                  command: fmt
-                  args: --all -- --check --verbose
-
-    security_audit:
-      runs-on: ubuntu-latest
-      steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-            - name: Install toolchain
-              uses: actions-rs/toolchain@v1
-              with:
-                  toolchain: stable
-                  profile: minimal
-                  override: true
-            - name: Install cargo-audit
-              uses: actions-rs/cargo@v1
-              with:
-                  command: install
-                  args: cargo-audit
-            - name: Run security audit
-              uses: actions-rs/cargo@v1
-              with:
-                  command: audit
-                  args: --deny warnings
-
-    build:
-        needs: [clippy, formatting, test, security_audit]
-        strategy:
-            matrix:
-                os:
-                    - {
-                          NAME: linux,
-                          OS: ubuntu-latest,
-                          ARCH: x86_64,
-                          PATH: target/optimized/bob,
-                          TARGET: "",
-                      }
-                    - {
-                          NAME: linux,
-                          OS: ubuntu-24.04-arm,
-                          ARCH: arm,
-                          PATH: target/optimized/bob,
-                          TARGET: "",
-                      }
-                    - {
-                          NAME: macos,
-                          OS: macos-latest,
-                          ARCH: x86_64,
-                          PATH: target/x86_64-apple-darwin/optimized/bob,
-                          TARGET: "x86_64-apple-darwin",
-                      }
-                    - {
-                          NAME: windows,
-                          OS: windows-latest,
-                          ARCH: x86_64,
-                          PATH: build,
-                          TARGET: "",
-                      }
-                    - {
-                          NAME: macos,
-                          OS: macos-latest,
-                          ARCH: arm,
-                          PATH: target/optimized/bob,
-                          TARGET: "",
-                      }
-                tls:
-                    - { NAME: Rustls, SUFFIX: "", ARGS: "" }
-                    - {
-                          NAME: OpenSSL,
-                          SUFFIX: "-openssl",
-                          ARGS: "--no-default-features --features native-tls",
-                      }
-        runs-on: ${{matrix.os.OS}}
-        steps:
-            - uses: actions/checkout@v4
-            - name: Install Rust
-              uses: actions-rs/toolchain@v1
-              with:
-                  toolchain: stable
-                  profile: minimal
-                  override: true
-            - name: Add Rust target for cross-compilation
-              if: matrix.os.TARGET != ''
-              run: rustup target add ${{ matrix.os.TARGET }}
-            - name: Install OpenSSL libraries
-              run: sudo apt update && sudo apt install libssl-dev
-              if: matrix.os.OS == 'ubuntu-latest' && matrix.tls.NAME == 'OpenSSL'
-            - uses: Swatinem/rust-cache@v1
-            - name: Build Bob
-              uses: actions-rs/cargo@v1
-              with:
-                  command: build
-                  args: --locked --profile optimized ${{ matrix.tls.ARGS }} ${{ matrix.os.TARGET != '' && format('--target {0}', matrix.os.TARGET) || '' }}
-            - name: Install AppImage tools
-              if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
-              run: |
-                  sudo apt update && sudo apt install -y libfuse2 # Needed by AppImage/linuxdeploy
-                  
-                  # Determine the correct architecture for linuxdeploy download
-                  DOWNLOAD_ARCH=${{ matrix.os.ARCH }}
-                  if [[ "${{ matrix.os.ARCH }}" == "arm" ]]; then
-                    DOWNLOAD_ARCH="aarch64"
-                  fi
-                  
-                  echo "Downloading linuxdeploy tools for architecture: $DOWNLOAD_ARCH"
-                  wget -c "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-$DOWNLOAD_ARCH.AppImage" -O linuxdeploy
-                  wget -c "https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-$DOWNLOAD_ARCH.AppImage" -O linuxdeploy-plugin-appimage
-                  chmod +x linuxdeploy linuxdeploy-plugin-appimage
-
-            - name: Prepare AppDir
-              if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
-              run: |
-                  mkdir -p AppDir/usr/bin AppDir/usr/share/icons/hicolor/256x256/apps AppDir/usr/share/applications
-                  cp target/optimized/bob AppDir/usr/bin/
-                  cp resources/bob-icon.png AppDir/usr/share/icons/hicolor/256x256/apps/bob.png
-                  cat <<EOF > AppDir/bob.desktop
-                  [Desktop Entry]
-                  Name=Bob Neovim Manager
-                  Exec=bob
-                  Icon=bob
-                  Type=Application
-                  Categories=Utility;Development;
-                  Comment=A cross-platform Neovim version manager
-                  EOF
-                  cp AppDir/bob.desktop AppDir/usr/share/applications/
-                  
-                  # Verify the file exists right before linuxdeploy
-                  ls -l AppDir/usr/bin/bob 
-
-                  export UPD_INFO="gh-releases-zsync|Matsuuu|bob|latest|bob-${{ matrix.os.ARCH }}.AppImage.zsync"
-                  export OUTPUT="bob-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}.AppImage"
-                  
-                  # Change --executable path to be relative to CWD
-                  ./linuxdeploy --appdir AppDir --executable AppDir/usr/bin/bob --desktop-file AppDir/bob.desktop --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/bob.png --output appimage
-
-            - name: Setup Bob build directory
-              run: |
-                  mkdir build
-                  copy .\\bin\\vcruntime140.dll .\\build
-                  copy .\\target\\optimized\\bob.exe .\\build
-              if: matrix.os.OS == 'windows-latest'
-            - name: Upload Bob binary
-              uses: actions/upload-artifact@v4
-              with:
-                  name: "bob-${{ matrix.os.NAME }}-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}"
-                  path: ${{ matrix.os.PATH }}
-                  if-no-files-found: error
-                  retention-days: 7
-            - name: Upload Bob AppImage
-              if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
-              uses: actions/upload-artifact@v4
-              with:
-                  name: "bob-${{ matrix.os.NAME }}-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}-appimage"
-                  path: "bob-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}.AppImage*" 
-                  if-no-files-found: error
-                  retention-days: 7
+          echo "Downloading linuxdeploy tools for architecture: $DOWNLOAD_ARCH"
+          wget -c "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-$DOWNLOAD_ARCH.AppImage" -O linuxdeploy
+          wget -c "https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-$DOWNLOAD_ARCH.AppImage" -O linuxdeploy-plugin-appimage
+          chmod +x linuxdeploy linuxdeploy-plugin-appimage
+      - name: "Prepare AppDir"
+        if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
+        run: "mkdir -p AppDir/usr/bin AppDir/usr/share/icons/hicolor/256x256/apps AppDir/usr/share/applications\ncp target/optimized/bob AppDir/usr/bin/\ncp resources/bob-icon.png AppDir/usr/share/icons/hicolor/256x256/apps/bob.png\ncat <<EOF > AppDir/bob.desktop\n[Desktop Entry]\nName=Bob Neovim Manager\nExec=bob\nIcon=bob\nType=Application\nCategories=Utility;Development;\nComment=A cross-platform Neovim version manager\nEOF\ncp AppDir/bob.desktop AppDir/usr/share/applications/\n\n# Verify the file exists right before linuxdeploy\nls -l AppDir/usr/bin/bob \n\nexport UPD_INFO=\"gh-releases-zsync|Matsuuu|bob|latest|bob-${{ matrix.os.ARCH }}.AppImage.zsync\"\nexport OUTPUT=\"bob-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}.AppImage\"\n\n# Change --executable path to be relative to CWD\n./linuxdeploy --appdir AppDir --executable AppDir/usr/bin/bob --desktop-file AppDir/bob.desktop --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/bob.png --output appimage\n"
+      - name: "Setup Bob build directory"
+        run: |
+          mkdir ${{ matrix.os.PATH }}
+          copy .\\bin\\vcruntime140.dll .\\${{ matrix.os.PATH }}
+          copy .\\target\\optimized\\bob.exe ".\\${{ matrix.os.PATH }}"
+        if: matrix.os.OS == 'windows-latest'
+      - name: "Upload Bob binary"
+        uses: actions/upload-artifact@v4
+        with:
+          name: "bob-${{ matrix.os.NAME }}-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}"
+          path: ${{ matrix.os.PATH }}
+          if-no-files-found: error
+          retention-days: 7
+      - name: "Upload Bob AppImage"
+        if: matrix.os.NAME == 'linux' && matrix.tls.NAME == 'Rustls'
+        uses: actions/upload-artifact@v4
+        with:
+          name: "bob-${{ matrix.os.NAME }}-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}-appimage"
+          path: "bob-${{ matrix.os.ARCH }}${{ matrix.tls.SUFFIX }}.AppImage*"
+          if-no-files-found: error
+          retention-days: 7

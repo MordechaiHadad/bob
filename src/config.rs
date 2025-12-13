@@ -1,16 +1,16 @@
+use std::env;
+use std::path::PathBuf;
+
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::{env, path::PathBuf};
-use tokio::{
-    fs::{self, File},
-    io::AsyncWriteExt,
-};
+use tokio::fs::{self, File};
+use tokio::io::AsyncWriteExt;
 
 use crate::ENVIRONMENT_VAR_REGEX;
 
 #[derive(Debug, Clone)]
 pub struct ConfigFile {
-    pub path: PathBuf,
+    pub path:   PathBuf,
     pub format: ConfigFormat,
     pub config: Config,
 }
@@ -48,17 +48,11 @@ impl ConfigFile {
         let config_file = crate::helpers::directories::get_config_file()?;
         let (config, format) = match fs::read_to_string(&config_file).await {
             Ok(content) => {
-                let ext = config_file
-                    .extension()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("json");
+                let ext = config_file.extension().and_then(|s| s.to_str()).unwrap_or("json");
 
                 let mut config = match ext {
                     "toml" => (toml::from_str::<Config>(&content)?, ConfigFormat::Toml),
-                    _ => (
-                        serde_json::from_str::<Config>(&content)?,
-                        ConfigFormat::Json,
-                    ),
+                    _ => (serde_json::from_str::<Config>(&content)?, ConfigFormat::Json),
                 };
 
                 handle_envars(&mut config.0)?;
@@ -135,23 +129,23 @@ pub enum ConfigFormat {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub enable_nightly_info: Option<bool>,
+    pub enable_nightly_info:        Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub enable_release_build: Option<bool>,
+    pub enable_release_build:       Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub downloads_location: Option<String>,
+    pub downloads_location:         Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub installation_location: Option<String>,
+    pub installation_location:      Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version_sync_file_location: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub github_mirror: Option<String>,
+    pub github_mirror:              Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub rollback_limit: Option<u8>,
+    pub rollback_limit:             Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub add_neovim_binary_to_path: Option<bool>,
+    pub add_neovim_binary_to_path:  Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ignore_running_instances: Option<bool>,
+    pub ignore_running_instances:   Option<bool>,
 }
 
 // Going to leave this as a manual implementation for now, unless I can
@@ -160,15 +154,15 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Config {
-            enable_nightly_info: None,
-            enable_release_build: None,
-            downloads_location: None,
-            installation_location: None,
+            enable_nightly_info:        None,
+            enable_release_build:       None,
+            downloads_location:         None,
+            installation_location:      None,
             version_sync_file_location: None,
-            github_mirror: None,
-            rollback_limit: None,
-            add_neovim_binary_to_path: None,
-            ignore_running_instances: None,
+            github_mirror:              None,
+            rollback_limit:             None,
+            add_neovim_binary_to_path:  None,
+            ignore_running_instances:   None,
         }
     }
 }
@@ -195,18 +189,18 @@ impl EnvVarProcessor for Option<String> {
     ///
     /// * `Result<()>` - Returns `Ok(())` if the processing is successful. Error cases include when the environment variable cannot be found or if the regex fails to match.
     fn process(&mut self) -> Result<()> {
-        if let Some(value) = self {
-            if ENVIRONMENT_VAR_REGEX.is_match(value) {
-                let mut extract = ENVIRONMENT_VAR_REGEX.find(value).map_or("", |m| m.as_str());
+        if let Some(value) = self
+            && ENVIRONMENT_VAR_REGEX.is_match(value)
+        {
+            let mut extract = ENVIRONMENT_VAR_REGEX.find(value).map_or("", |m| m.as_str());
 
-                if extract.chars().count() >= 2 && extract.starts_with('$') {
-                    extract = &extract[1..];
-                }
-
-                let var = env::var(extract).expect("Failed to get environment variable");
-
-                *value = value.replace(&format!("${extract}"), &var);
+            if extract.chars().count() >= 2 && extract.starts_with('$') {
+                extract = &extract[1..];
             }
+
+            let var = env::var(extract).expect("Failed to get environment variable");
+
+            *value = value.replace(&format!("${extract}"), &var);
         }
         Ok(())
     }

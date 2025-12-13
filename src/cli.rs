@@ -1,18 +1,25 @@
-use crate::{
-    config::ConfigFile,
-    handlers::{
-        self, InstallResult, erase_handler, list_handler, list_remote_handler, rollback_handler,
-        run_handler, sync_handler, uninstall_handler, update_handler,
-    },
-    helpers::processes::is_neovim_running,
-    version::parse_version_type,
-};
 use anyhow::Result;
 use clap::{Args, CommandFactory, Parser, ValueEnum};
 use clap_complete::shells;
 use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
 use reqwest::{Client, Error};
 use tracing::info;
+
+use crate::config::ConfigFile;
+use crate::handlers::{
+    self,
+    InstallResult,
+    erase_handler,
+    list_handler,
+    list_remote_handler,
+    rollback_handler,
+    run_handler,
+    sync_handler,
+    uninstall_handler,
+    update_handler,
+};
+use crate::helpers::processes::is_neovim_running;
+use crate::version::parse_version_type;
 
 /// Creates a new `reqwest::Client` with default headers.
 ///
@@ -38,15 +45,10 @@ fn create_reqwest_client() -> Result<Client, Error> {
     let mut headers = HeaderMap::new();
 
     if let Ok(github_token) = github_token {
-        headers.insert(
-            AUTHORIZATION,
-            HeaderValue::from_str(&format!("Bearer {github_token}")).unwrap(),
-        );
+        headers.insert(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {github_token}")).unwrap());
     }
 
-    let client = reqwest::Client::builder()
-        .default_headers(headers)
-        .build()?;
+    let client = reqwest::Client::builder().default_headers(headers).build()?;
 
     Ok(client)
 }
@@ -198,11 +200,7 @@ impl clap_complete::Generator for Shell {
             .expect("failed to write completion file");
     }
 
-    fn try_generate(
-        &self,
-        cmd: &clap::Command,
-        buf: &mut dyn std::io::Write,
-    ) -> Result<(), std::io::Error> {
+    fn try_generate(&self, cmd: &clap::Command, buf: &mut dyn std::io::Write) -> Result<(), std::io::Error> {
         match self {
             Shell::Bash => shells::Bash.try_generate(cmd, buf),
             Shell::Elvish => shells::Elvish.try_generate(cmd, buf),
@@ -246,10 +244,7 @@ pub async fn start(config: ConfigFile) -> Result<()> {
     }
 
     match cli {
-        Cli::Use {
-            version,
-            no_install,
-        } => {
+        Cli::Use { version, no_install } => {
             let version = parse_version_type(&client, &version).await?;
 
             handlers::use_handler::start(version, !no_install, &client, config).await?;
@@ -279,8 +274,8 @@ pub async fn start(config: ConfigFile) -> Result<()> {
             info!("Starting uninstallation process");
             uninstall_handler::start(version.as_deref(), config.config).await?;
         }
-        Cli::Rollback => rollback_handler::start(config.config).await?,
         Cli::Erase => erase_handler::start(config.config).await?,
+        Cli::Rollback => rollback_handler::start(config.config).await?,
         Cli::List => list_handler::start(config.config).await?,
         Cli::Complete { shell } => {
             clap_complete::generate(shell, &mut Cli::command(), "bob", &mut std::io::stdout());
@@ -289,9 +284,7 @@ pub async fn start(config: ConfigFile) -> Result<()> {
             update_handler::start(data, &client, config).await?;
         }
         Cli::ListRemote => list_remote_handler::start(config.config, client).await?,
-        Cli::Run { version, args } => {
-            run_handler::start(&version, &args, &client, &config.config).await?;
-        }
+        Cli::Run { version, args } => run_handler::start(&version, &args, &client, &config.config).await?,
     }
 
     Ok(())
