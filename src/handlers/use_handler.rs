@@ -51,6 +51,37 @@ pub async fn start(
     client: &Client,
     config: ConfigFile,
 ) -> Result<()> {
+    // Handle system version
+    if version.version_type == VersionType::System {
+        // Check if system nvim exists
+        if helpers::system::find_system_nvim(&config.config)
+            .await?
+            .is_none()
+        {
+            return Err(anyhow!(
+                "System nvim not found in PATH. Please install nvim on your system first."
+            ));
+        }
+
+        let is_version_used =
+            helpers::version::is_version_used(&version.tag_name, &config.config).await;
+
+        copy_nvim_proxy(&config).await?;
+
+        if is_version_used {
+            info!("System version is already in use!");
+            return Ok(());
+        }
+
+        switch(&config.config, &version).await?;
+
+        let installation_dir = get_installation_directory(&config.config).await?;
+        add_to_path(installation_dir, config).await?;
+
+        info!("You can now use the system nvim!");
+        return Ok(());
+    }
+
     let is_version_used =
         helpers::version::is_version_used(&version.tag_name, &config.config).await;
 

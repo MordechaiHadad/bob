@@ -126,9 +126,11 @@ For the OpenSSL version:
 
 A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
 
+Bob also supports a special `system` version that allows you to use the Neovim binary installed on your system (via package managers like Homebrew, apt, etc.) without Bob managing it.
+
 ---
 
-- `bob use |nightly|stable|latest|<version-string>|<commit-hash>|`
+- `bob use |nightly|stable|latest|system|<version-string>|<commit-hash>|`
 
 `--no-install` flag will prevent bob from auto invoking install command when using `use`
 
@@ -136,7 +138,7 @@ Switch to the specified version, by default will auto-invoke install command if 
 
 ---
 
-- `bob run |nightly|stable|latest|<version-string>|<commit-hash>| [args...]`
+- `bob run |nightly|stable|latest|system|<version-string>|<commit-hash>| [args...]`
 
 Run a specific installed Neovim version with the provided arguments. `[args...]` are passed directly to the Neovim instance.
 
@@ -147,6 +149,8 @@ Example: `bob run nightly --clean my_file.txt`
 - `bob install |nightly|stable|latest|<version-string>|<commit-hash>|`
 
 Install the specified version, can also be used to update out-of-date nightly version.
+
+**Note**: The `system` version cannot be installed via Bob as it refers to your system-installed Neovim. Use your system's package manager to install or update it.
 
 ---
 
@@ -177,7 +181,7 @@ Erase any change bob ever made including Neovim installation, Neovim version dow
 
 - `bob list`
 
-List all installed and used versions.
+List all installed and used versions. If a system-installed Neovim is detected in your PATH (excluding Bob's own shim and managed versions), it will be shown as `system` with status "Available" or "Used".
 
 ---
 

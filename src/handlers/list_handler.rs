@@ -5,7 +5,7 @@ use yansi::Paint;
 
 use crate::{
     config::Config,
-    helpers::{self, directories, version::nightly::produce_nightly_vec},
+    helpers::{self, directories, system::find_system_nvim, version::nightly::produce_nightly_vec},
 };
 
 /// Starts the list handler.
@@ -35,7 +35,11 @@ pub async fn start(config: Config) -> Result<()> {
         .map(|entry| entry.path())
         .collect();
 
-    if paths.is_empty() {
+    let has_system = find_system_nvim(&config).await?.is_some();
+    let is_system_used = helpers::version::is_version_used("system", &config).await;
+    let show_system = has_system || is_system_used;
+
+    if paths.is_empty() && !show_system {
         info!("There are no versions installed");
         return Ok(());
     }
@@ -61,6 +65,44 @@ pub async fn start(config: Config) -> Result<()> {
         "─".repeat(version_max_len + (padding * 2)),
         "─".repeat(status_max_len + (padding * 2))
     );
+
+    // Show system version
+    if show_system {
+        let version_name = "system";
+        let version_pr = (version_max_len - version_name.len()) + padding;
+        let status_pr = padding + status_max_len;
+
+        if is_system_used {
+            if has_system {
+                println!(
+                    "│{}{version_name}{}│{}{}{}│",
+                    " ".repeat(padding),
+                    " ".repeat(version_pr),
+                    " ".repeat(padding),
+                    Paint::green("Used"),
+                    " ".repeat(status_pr - 4)
+                );
+            } else {
+                println!(
+                    "│{}{version_name}{}│{}{}{}│",
+                    " ".repeat(padding),
+                    " ".repeat(version_pr),
+                    " ".repeat(padding),
+                    Paint::red("Missing"),
+                    " ".repeat(status_pr - 7)
+                );
+            }
+        } else if has_system {
+            println!(
+                "│{}{version_name}{}│{}{}{}│",
+                " ".repeat(padding),
+                " ".repeat(version_pr),
+                " ".repeat(padding),
+                Paint::cyan("Available"),
+                " ".repeat(status_pr - 9)
+            );
+        }
+    }
 
     for path in paths {
         if !path.is_dir() {

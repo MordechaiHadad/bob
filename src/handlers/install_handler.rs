@@ -68,6 +68,12 @@ pub async fn start(
     client: &Client,
     config: &ConfigFile,
 ) -> Result<InstallResult> {
+    if version.version_type == VersionType::System {
+        return Err(anyhow!(
+            "Cannot install 'system' version. This refers to the nvim binary available in your system PATH."
+        ));
+    }
+
     if version.version_type == VersionType::NightlyRollback {
         return Ok(InstallResult::GivenNightlyRollback);
     }
@@ -130,6 +136,9 @@ pub async fn start(
         }
         VersionType::Hash => handle_building_from_source(version, &config.config).await,
         VersionType::NightlyRollback => Ok(PostDownloadVersionType::None),
+        VersionType::System => {
+            return Err(anyhow!("Cannot install 'system' version."));
+        }
     }?;
 
     if let PostDownloadVersionType::Standard(downloaded_archive) = downloaded_archive {
@@ -413,6 +422,9 @@ async fn download_version(
         }
         VersionType::Hash => handle_building_from_source(version, config).await,
         VersionType::NightlyRollback => Ok(PostDownloadVersionType::None),
+        VersionType::System => {
+            Err(anyhow!("Cannot download 'system' version."))
+        }
     }
 }
 

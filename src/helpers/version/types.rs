@@ -63,6 +63,7 @@ pub enum VersionType {
     Nightly,
     Hash,
     NightlyRollback,
+    System,
 }
 
 /// Represents a local nightly version of the software.

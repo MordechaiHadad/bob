@@ -1,11 +1,12 @@
 use crate::config::Config;
 use anyhow::{Result, anyhow};
+use std::path::PathBuf;
 use std::time::Duration;
 use sysinfo::System;
 use tokio::{process::Command, time::sleep};
 
 use crate::helpers::{
-    directories, get_platform_name,
+    directories, get_platform_name, system,
     version::{self},
 };
 
@@ -89,6 +90,16 @@ pub async fn handle_subprocess(process: &mut Command) -> Result<()> {
 pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()> {
     let downloads_dir = directories::get_downloads_directory(config).await?;
     let used_version = version::get_current_version(config).await?;
+
+    // Handle system version
+    if used_version == "system" {
+        let system_nvim = system::find_system_nvim(config)
+            .await?
+            .ok_or_else(|| anyhow!("System nvim not found"))?;
+
+        return execute_nvim_command(system_nvim, args).await;
+    }
+
     let version = semver::Version::parse(&used_version.replace('v', "")).ok();
     let platform = get_platform_name(version.as_ref());
 
@@ -116,7 +127,41 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
         }
     }
 
-    let mut child = std::process::Command::new(location);
+    execute_nvim_command(location, args).await
+}
+
+/// Executes a Neovim command with the given arguments.
+///
+/// This function spawns a Neovim process and waits for it to complete.
+/// On Unix systems, it uses `exec` to replace the current process with Neovim.
+/// On Windows, it spawns a new process and monitors its execution.
+///
+/// # Arguments
+///
+/// * `nvim_path` - The path to the Neovim binary to execute.
+/// * `args` - A slice of `String` arguments to be passed to the Neovim process.
+///
+/// # Returns
+///
+/// This function returns a `Result` that indicates whether the operation was successful.
+///
+/// # Errors
+///
+/// This function will return an error if:
+///
+/// * The Neovim process exits with a non-zero status code.
+/// * The Neovim process is terminated by a signal.
+/// * The function fails to wait on the child process.
+///
+/// # Example
+///
+/// ```rust
+/// let nvim_path = PathBuf::from("/usr/bin/nvim");
+/// let args = vec!["-v".to_string()];
+/// execute_nvim_command(nvim_path, &args).await?;
+/// ```
+async fn execute_nvim_command(nvim_path: PathBuf, args: &[String]) -> Result<()> {
+    let mut child = std::process::Command::new(nvim_path);
     child.args(args);
 
     // On Unix, replace the current process with nvim

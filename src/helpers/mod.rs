@@ -2,6 +2,7 @@ pub mod checksum;
 pub mod directories;
 pub mod filesystem;
 pub mod processes;
+pub mod system;
 pub mod unarchive;
 pub mod version;
 use semver::Version;

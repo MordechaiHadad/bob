@@ -1,7 +1,8 @@
 use crate::cli::Update;
 use crate::config::ConfigFile;
 use crate::helpers::version::is_version_installed;
-use anyhow::Result;
+use crate::helpers::version::types::VersionType;
+use anyhow::{Result, anyhow};
 use reqwest::Client;
 use tracing::{info, warn};
 
@@ -81,6 +82,13 @@ pub async fn start(data: Update, client: &Client, config: ConfigFile) -> Result<
     }
 
     let version = crate::version::parse_version_type(client, &data.version.unwrap()).await?;
+
+    // Handle system version
+    if version.version_type == VersionType::System {
+        return Err(anyhow!(
+            "Cannot update 'system' version. Please use your system package manager (e.g., apt, brew, pacman) to update Neovim."
+        ));
+    }
 
     if !is_version_installed(&version.tag_name, &config.config).await? {
         warn!("{} is not installed.", version.non_parsed_string);

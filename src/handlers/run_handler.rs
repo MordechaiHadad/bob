@@ -4,6 +4,7 @@ use tokio::process::Command;
 
 use crate::config::Config;
 use crate::helpers;
+use crate::helpers::version::types::VersionType;
 
 /// Starts the process of running a specific version of Neovim with the provided arguments.
 ///
@@ -23,6 +24,20 @@ use crate::helpers;
 pub async fn start(version: &str, args: &[String], client: &Client, config: &Config) -> Result<()> {
     // Parse the specified version
     let version = crate::version::parse_version_type(client, version).await?;
+
+    // Handle system version
+    if version.version_type == VersionType::System {
+        let system_nvim = helpers::system::find_system_nvim(config)
+            .await?
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "System nvim not found in PATH. Please install nvim on your system first."
+                )
+            })?;
+
+        return run_nvim_with_args(system_nvim, args).await;
+    }
+
     let downloads_dir = helpers::directories::get_downloads_directory(config).await?;
     let version_path = downloads_dir.join(&version.tag_name);
 
@@ -50,6 +65,20 @@ pub async fn start(version: &str, args: &[String], client: &Client, config: &Con
     }
 
     // Run the specific version with the provided args
+    run_nvim_with_args(bin_path, args).await
+}
+
+/// Runs a Neovim binary with the provided arguments.
+///
+/// # Arguments
+///
+/// * `bin_path` - Path to the Neovim binary to execute
+/// * `args` - Arguments to pass to Neovim
+///
+/// # Returns
+///
+/// * `Result<()>` - Returns a `Result` that indicates whether the operation was successful or not.
+async fn run_nvim_with_args(bin_path: std::path::PathBuf, args: &[String]) -> Result<()> {
     let mut cmd = Command::new(bin_path);
     cmd.args(args);
     helpers::processes::handle_subprocess(&mut cmd).await

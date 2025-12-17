@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    helpers::{self, directories},
+    helpers::{self, directories, version::types::VersionType},
 };
 use anyhow::{Result, anyhow};
 use dialoguer::{
@@ -48,6 +48,14 @@ pub async fn start(version: Option<&str>, config: Config) -> Result<()> {
     };
 
     let version = helpers::version::parse_version_type(&client, version).await?;
+
+    // Handle system version
+    if version.version_type == VersionType::System {
+        return Err(anyhow!(
+            "Cannot uninstall 'system' version. This refers to your system-installed Neovim. Use your system package manager (e.g., apt, brew, pacman) to uninstall it."
+        ));
+    }
+
     if helpers::version::is_version_used(&version.non_parsed_string, &config).await {
         warn!("Switch to a different version before proceeding");
         return Ok(());

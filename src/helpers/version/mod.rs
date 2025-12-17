@@ -48,6 +48,12 @@ use tracing::info;
 /// ```
 pub async fn parse_version_type(client: &Client, version: &str) -> Result<ParsedVersion> {
     match version {
+        "system" => Ok(ParsedVersion {
+            tag_name: version.to_string(),
+            version_type: VersionType::System,
+            non_parsed_string: version.to_string(),
+            semver: None,
+        }),
         "nightly" => Ok(ParsedVersion {
             tag_name: version.to_string(),
             version_type: VersionType::Nightly,
