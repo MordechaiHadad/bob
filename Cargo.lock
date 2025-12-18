@@ -171,6 +171,7 @@ dependencies = [
  "sha2",
  "sysinfo",
  "tar",
+ "tempfile",
  "tokio",
  "toml",
  "tracing",
