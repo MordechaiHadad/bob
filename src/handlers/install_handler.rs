@@ -422,9 +422,7 @@ async fn download_version(
         }
         VersionType::Hash => handle_building_from_source(version, config).await,
         VersionType::NightlyRollback => Ok(PostDownloadVersionType::None),
-        VersionType::System => {
-            Err(anyhow!("Cannot download 'system' version."))
-        }
+        VersionType::System => Err(anyhow!("Cannot download 'system' version.")),
     }
 }
 
