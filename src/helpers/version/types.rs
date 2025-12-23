@@ -34,7 +34,7 @@ pub struct ParsedVersion {
 
 /// Represents the type of (a) software version.
 ///
-/// This enum is used to distinguish between different types of software versions, such as normal versions, the latest version, nightly versions, versions identified by a hash, and nightly versions that have been rolled back.
+/// This enum is used to distinguish between different types of software versions, such as normal versions, the latest version, nightly versions, versions identified by a hash, nightly versions that have been rolled back, and system versions.
 ///
 /// # Variants
 ///
@@ -43,6 +43,7 @@ pub struct ParsedVersion {
 /// * `Nightly` - Represents a nightly version.
 /// * `Hash` - Represents a version identified by a hash.
 /// * `NightlyRollback` - Represents a nightly version that has been rolled back.
+/// * `System` - Represents a system-installed version.
 ///
 /// # Example
 ///
@@ -54,15 +55,22 @@ pub struct ParsedVersion {
 ///     VersionType::Nightly => println!("This is a nightly version."),
 ///     VersionType::Hash => println!("This is a version identified by a hash."),
 ///     VersionType::NightlyRollback => println!("This is a nightly version that has been rolled back."),
+///     VersionType::System => println!("This is a system-installed version."),
 /// }
 /// ```
 #[derive(PartialEq, Eq, Debug)]
 pub enum VersionType {
+    /// Represents a normal version.
     Normal,
+    /// Represents the latest version.
     Latest,
+    /// Represents a nightly version.
     Nightly,
+    /// Represents a version identified by a hash.
     Hash,
+    /// Represents a nightly version that has been rolled back.
     NightlyRollback,
+    /// Represents a system-installed version.
     System,
 }
 

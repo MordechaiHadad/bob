@@ -1,3 +1,9 @@
+//! System-level utilities for finding Neovim installations.
+//!
+//! This module provides functionality to locate system-installed Neovim binaries
+//! that are not managed by bob. It searches through the PATH environment variable
+//! while filtering out bob's own installation and download directories.
+
 use crate::config::Config;
 use crate::helpers::directories;
 use anyhow::Result;
@@ -5,6 +11,8 @@ use std::path::PathBuf;
 
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
+
+const PATH_ENV: &str = "PATH";
 
 /// Finds the system nvim binary in PATH that is not managed by bob.
 ///
@@ -26,7 +34,7 @@ use std::os::unix::fs::PermissionsExt;
 /// let system_nvim = find_system_nvim(&config).await?;
 /// ```
 pub async fn find_system_nvim(config: &Config) -> Result<Option<PathBuf>> {
-    let path_env = std::env::var("PATH").unwrap_or_default();
+    let path_env = std::env::var(PATH_ENV).unwrap_or_default();
     let installation_dir = directories::get_installation_directory(config).await?;
     let downloads_dir = directories::get_downloads_directory(config).await?;
 

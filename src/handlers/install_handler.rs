@@ -68,20 +68,9 @@ pub async fn start(
     client: &Client,
     config: &ConfigFile,
 ) -> Result<InstallResult> {
-    if version.version_type == VersionType::System {
-        return Err(anyhow!(
-            "Cannot install 'system' version. This refers to the nvim binary available in your system PATH."
-        ));
-    }
-
-    if version.version_type == VersionType::NightlyRollback {
-        return Ok(InstallResult::GivenNightlyRollback);
-    }
-
-    if let Some(version) = &version.semver {
-        if version <= &Version::new(0, 2, 2) {
-            return Err(anyhow!("Versions below 0.2.2 are not supported"));
-        }
+    // Early validation checks
+    if let Some(early_result) = validate_version(version)? {
+        return Ok(early_result);
     }
 
     let root = directories::get_downloads_directory(&config.config).await?;
@@ -103,101 +92,229 @@ pub async fn start(
     };
 
     if is_version_installed && version.version_type == VersionType::Nightly {
-        info!("Looking for nightly updates");
-
-        let upstream_nightly = nightly_version.as_ref().unwrap();
-        let local_nightly = helpers::version::nightly::get_local_nightly(&config.config).await?;
-
-        if upstream_nightly.published_at == local_nightly.published_at {
+        let is_updated =
+            handle_nightly_update_check(client, &config.config, nightly_version.as_ref().unwrap())
+                .await?;
+        if is_updated {
             return Ok(InstallResult::NightlyIsUpdated);
         }
-
-        handle_rollback(&config.config).await?;
-
-        match config.config.enable_nightly_info {
-            Some(boolean) if boolean => {
-                print_commits(client, &local_nightly, upstream_nightly).await?;
-            }
-            None => print_commits(client, &local_nightly, upstream_nightly).await?,
-            _ => (),
-        }
     }
 
-    let downloaded_archive = match version.version_type {
-        VersionType::Normal | VersionType::Latest => {
-            download_version(client, version, root, &config.config, false).await
-        }
-        VersionType::Nightly => {
-            if config.config.enable_release_build == Some(true) {
-                handle_building_from_source(version, &config.config).await
-            } else {
-                download_version(client, version, root, &config.config, false).await
-            }
-        }
-        VersionType::Hash => handle_building_from_source(version, &config.config).await,
-        VersionType::NightlyRollback => Ok(PostDownloadVersionType::None),
-        VersionType::System => {
-            return Err(anyhow!("Cannot install 'system' version."));
-        }
-    }?;
+    let downloaded_archive = download_by_strategy(client, version, root, &config.config).await?;
 
     if let PostDownloadVersionType::Standard(downloaded_archive) = downloaded_archive {
-        if version.semver.is_some() && version.semver.as_ref().unwrap() <= &Version::new(0, 4, 4) {
-            unarchive::start(&downloaded_archive).await?;
-        } else {
-            let downloaded_checksum =
-                download_version(client, version, root, &config.config, true).await?;
-            let archive_path = root.join(format!(
-                "{}.{}",
-                downloaded_archive.file_name, downloaded_archive.file_format
-            ));
-
-            if let PostDownloadVersionType::Standard(downloaded_checksum) = downloaded_checksum {
-                let checksum_path = root.join(format!(
-                    "{}.{}",
-                    downloaded_checksum.file_name, downloaded_checksum.file_format
-                ));
-
-                let platform = helpers::get_platform_name(version.semver.as_ref());
-
-                if !sha256cmp(
-                    &archive_path,
-                    &checksum_path,
-                    &format!("{}.{}", platform, downloaded_archive.file_format),
-                )? {
-                    tokio::fs::remove_file(archive_path).await?;
-                    tokio::fs::remove_file(checksum_path).await?;
-                    return Err(anyhow!("Checksum mismatch!"));
-                }
-
-                info!("Checksum matched!");
-                tokio::fs::remove_file(checksum_path).await?;
-                unarchive::start(&downloaded_archive).await?;
-            } else if let PostDownloadVersionType::None = downloaded_checksum {
-                warn!("No checksum provided, skipping checksum verification");
-                unarchive::start(&downloaded_archive).await?;
-            }
-        }
+        verify_and_extract(client, version, root, &config.config, &downloaded_archive).await?;
     }
 
-    if let VersionType::Nightly = version.version_type {
+    if matches!(version.version_type, VersionType::Nightly) {
         if let Some(nightly_version) = nightly_version {
-            let nightly_string = serde_json::to_string(&nightly_version)?;
-
-            let downloads_dir = root.join("nightly").join("bob.json");
-            let mut json_file = File::create(downloads_dir).await?;
-
-            if let Err(error) = json_file.write_all(nightly_string.as_bytes()).await {
-                return Err(anyhow!(
-                    "Failed to create file nightly/bob.json, reason: {error}"
-                ));
-            }
+            save_nightly_metadata(&nightly_version, root).await?;
         }
     }
 
     Ok(InstallResult::InstallationSuccess(
         root.display().to_string(),
     ))
+}
+
+/// Validates the version and returns early results if needed.
+///
+/// # Arguments
+///
+/// * `version` - A reference to the parsed version.
+///
+/// # Returns
+///
+/// * `Ok(Some(InstallResult))` - Return early with this result
+/// * `Ok(None)` - Continue with installation
+/// * `Err` - An error occurred during validation
+fn validate_version(version: &ParsedVersion) -> Result<Option<InstallResult>> {
+    if version.version_type == VersionType::System {
+        return Err(anyhow!(
+            "Cannot install 'system' version. This refers to the nvim binary available in your system PATH."
+        ));
+    }
+
+    if version.version_type == VersionType::NightlyRollback {
+        return Ok(Some(InstallResult::GivenNightlyRollback));
+    }
+
+    if let Some(ver) = &version.semver {
+        if ver <= &Version::new(0, 2, 2) {
+            return Err(anyhow!("Versions below 0.2.2 are not supported"));
+        }
+    }
+
+    Ok(None)
+}
+
+/// Downloads the version using the appropriate strategy based on version type.
+///
+/// # Arguments
+///
+/// * `client` - A reference to the HTTP client.
+/// * `version` - A reference to the parsed version.
+/// * `root` - A reference to the root path.
+/// * `config` - A reference to the configuration object.
+///
+/// # Returns
+///
+/// * `Result<PostDownloadVersionType>` - The downloaded archive information
+async fn download_by_strategy(
+    client: &Client,
+    version: &ParsedVersion,
+    root: &Path,
+    config: &Config,
+) -> Result<PostDownloadVersionType> {
+    match version.version_type {
+        VersionType::Normal | VersionType::Latest => {
+            download_version(client, version, root, config, false).await
+        }
+        VersionType::Nightly => {
+            if config.enable_release_build == Some(true) {
+                handle_building_from_source(version, config).await
+            } else {
+                download_version(client, version, root, config, false).await
+            }
+        }
+        VersionType::Hash => handle_building_from_source(version, config).await,
+        VersionType::NightlyRollback => Ok(PostDownloadVersionType::None),
+        VersionType::System => Err(anyhow!("Cannot install 'system' version.")),
+    }
+}
+
+/// Saves nightly metadata to disk.
+///
+/// # Arguments
+///
+/// * `nightly_version` - A reference to the upstream nightly version.
+/// * `root` - A reference to the root path.
+///
+/// # Returns
+///
+/// * `Result<()>` - Returns Ok if metadata was saved successfully
+async fn save_nightly_metadata(nightly_version: &UpstreamVersion, root: &Path) -> Result<()> {
+    let nightly_string = serde_json::to_string(nightly_version)?;
+    let downloads_dir = root.join("nightly").join("bob.json");
+    let mut json_file = File::create(downloads_dir).await?;
+
+    json_file
+        .write_all(nightly_string.as_bytes())
+        .await
+        .map_err(|error| anyhow!("Failed to create file nightly/bob.json, reason: {error}"))?;
+
+    Ok(())
+}
+
+/// Checks if nightly needs updating and handles the update process.
+///
+/// # Arguments
+///
+/// * `client` - A reference to the HTTP client.
+/// * `config` - A reference to the configuration object.
+/// * `upstream_nightly` - A reference to the upstream nightly version.
+///
+/// # Returns
+///
+/// * `Ok(true)` - Nightly is already up to date, no installation needed
+/// * `Ok(false)` - Nightly needs updating, continue with installation
+/// * `Err` - An error occurred during the check
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// * There is a failure in getting the local nightly version.
+/// * There is a failure in handling the rollback.
+/// * There is a failure in printing commits.
+async fn handle_nightly_update_check(
+    client: &Client,
+    config: &Config,
+    upstream_nightly: &UpstreamVersion,
+) -> Result<bool> {
+    info!("Looking for nightly updates");
+
+    let local_nightly = helpers::version::nightly::get_local_nightly(config).await?;
+
+    if upstream_nightly.published_at == local_nightly.published_at {
+        return Ok(true); // Nightly is up to date
+    }
+
+    handle_rollback(config).await?;
+
+    match config.enable_nightly_info {
+        Some(boolean) if boolean => {
+            print_commits(client, &local_nightly, upstream_nightly).await?;
+        }
+        None => print_commits(client, &local_nightly, upstream_nightly).await?,
+        _ => (),
+    }
+
+    Ok(false) // Continue with installation
+}
+
+/// Verifies checksum and extracts the downloaded archive.
+///
+/// # Arguments
+///
+/// * `client` - A reference to the HTTP client.
+/// * `version` - A reference to the parsed version.
+/// * `root` - A reference to the root path.
+/// * `config` - A reference to the configuration object.
+/// * `downloaded_archive` - A reference to the downloaded archive information.
+///
+/// # Returns
+///
+/// * `Result<()>` - Returns Ok if verification and extraction succeeded
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// * There is a failure in downloading the checksum.
+/// * There is a failure in verifying the checksum.
+/// * There is a failure in extracting the archive.
+async fn verify_and_extract(
+    client: &Client,
+    version: &ParsedVersion,
+    root: &Path,
+    config: &Config,
+    downloaded_archive: &LocalVersion,
+) -> Result<()> {
+    if version.semver.is_some() && version.semver.as_ref().unwrap() <= &Version::new(0, 4, 4) {
+        unarchive::start(downloaded_archive).await?;
+    } else {
+        let downloaded_checksum = download_version(client, version, root, config, true).await?;
+        let archive_path = root.join(format!(
+            "{}.{}",
+            downloaded_archive.file_name, downloaded_archive.file_format
+        ));
+
+        if let PostDownloadVersionType::Standard(downloaded_checksum) = downloaded_checksum {
+            let checksum_path = root.join(format!(
+                "{}.{}",
+                downloaded_checksum.file_name, downloaded_checksum.file_format
+            ));
+
+            let platform = helpers::get_platform_name(version.semver.as_ref());
+
+            if !sha256cmp(
+                &archive_path,
+                &checksum_path,
+                &format!("{}.{}", platform, downloaded_archive.file_format),
+            )? {
+                tokio::fs::remove_file(archive_path).await?;
+                tokio::fs::remove_file(checksum_path).await?;
+                return Err(anyhow!("Checksum mismatch!"));
+            }
+
+            info!("Checksum matched!");
+            tokio::fs::remove_file(checksum_path).await?;
+            unarchive::start(downloaded_archive).await?;
+        } else if matches!(downloaded_checksum, PostDownloadVersionType::None) {
+            warn!("No checksum provided, skipping checksum verification");
+            unarchive::start(downloaded_archive).await?;
+        }
+    }
+    Ok(())
 }
 
 /// Asynchronously handles the rollback for the nightly version(s) of Neovim.

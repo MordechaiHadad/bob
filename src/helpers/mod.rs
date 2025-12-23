@@ -1,9 +1,16 @@
+/// Checksum verification utilities.
 pub mod checksum;
+/// Directory management and path resolution.
 pub mod directories;
+/// Filesystem operations and helpers.
 pub mod filesystem;
+/// Process execution and management utilities.
 pub mod processes;
+/// System-level utilities for finding Neovim installations.
 pub mod system;
+/// Archive extraction utilities.
 pub mod unarchive;
+/// Version parsing, management, and comparison utilities.
 pub mod version;
 use semver::Version;
 

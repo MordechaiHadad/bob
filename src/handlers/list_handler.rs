@@ -42,10 +42,14 @@ pub async fn start(config: Config) -> Result<()> {
 /// Represents the status of a version.
 #[derive(Debug, Clone, PartialEq)]
 enum VersionStatus {
+    /// Version is currently in use.
     Used,
-    Missing,   // System version that doesn't exist
-    Available, // System version not in use
-    Installed, // Downloaded version not in use
+    /// System version that is selected but not available on the system.
+    Missing,
+    /// System version not in use.
+    Available,
+    /// Downloaded version not in use.
+    Installed,
 }
 
 impl VersionStatus {
