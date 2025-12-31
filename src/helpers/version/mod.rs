@@ -144,20 +144,22 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
 /// let version_sync_file_location = get_version_sync_file_location(&config).await.unwrap();
 /// println!("The version sync file is located at {:?}", version_sync_file_location);
 /// ```
-pub async fn get_version_sync_file_location(config: &Config) -> Option<PathBuf> {
-    if let Some(path) = &config.version_sync_file_location {
-        let path = Path::new(path);
+pub async fn get_version_sync_file_location<P>(version_sync_file_location: Option<P>) -> Option<PathBuf>
+where
+    P: AsRef<Path>,
+{
+    if let Some(ref path) = version_sync_file_location {
         if let Err(path_err) = tokio::fs::metadata(path).await {
             let mut file = File::create(path).await.context(format!(
                 "The path provided, \"{}\", does not exist. Please check the path and try again. The error was: {}",
-                path.parent().unwrap().display(),
+                path.as_ref().parent().unwrap().display(),
                 path_err
             )).ok()?;
             file.write_all(b"").await.ok()?;
             file.flush().await.ok()?;
-            return Some(PathBuf::from(path));
+            return Some(path.as_ref().to_path_buf());
         }
-        return Some(PathBuf::from(path));
+        return Some(path.as_ref().to_path_buf());
     }
     None
 }
@@ -392,7 +394,7 @@ mod version_mod_tests {
 
         config.version_sync_file_location = Some("test_version_sync_file_location".to_string());
 
-        let res = get_version_sync_file_location(&config).await;
+        let res = get_version_sync_file_location(config.version_sync_file_location.as_ref()).await;
 
         assert!(res.is_some());
         let res = res.unwrap();

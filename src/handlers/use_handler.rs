@@ -139,7 +139,9 @@ pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
     };
 
     fs::write("used", &file_version).await?;
-    if let Some(version_sync_file_location) = helpers::version::get_version_sync_file_location(config).await {
+    if let Some(version_sync_file_location) =
+        helpers::version::get_version_sync_file_location(config.version_sync_file_location.as_ref()).await
+    {
         // Write the used version to version_sync_file_location only if it's different
         let stored_version = fs::read_to_string(&version_sync_file_location).await?;
         if stored_version != version.non_parsed_string {
