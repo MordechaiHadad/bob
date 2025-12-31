@@ -488,7 +488,8 @@ async fn handle_building_from_source(
     version: &ParsedVersion,
     config: &Config,
 ) -> Result<PostDownloadVersionType> {
-    if cfg!(windows) && env::var("VisualStudioVersion").is_err() {
+    const VISUAL_STUDIO_VERSION_ENV: &str = "VisualStudioVersion";
+    if cfg!(windows) && env::var(VISUAL_STUDIO_VERSION_ENV).is_err() {
         return Err(anyhow!("Please make sure you are using Developer PowerShell/Command Prompt for VS"));
     }
 
