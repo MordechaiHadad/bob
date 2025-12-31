@@ -357,9 +357,8 @@ async fn download_version(
                 while let Some(item) = response_bytes.next().await {
                     let chunk = item.map_err(|_| anyhow!("hello"))?;
                     file.write_all(&chunk).await?;
-                    let new = min(downloaded + (chunk.len() as u64), total_size);
-                    downloaded = new;
-                    pbw.set_position(new);
+                    downloaded = min(downloaded + (chunk.len() as u64), total_size);
+                    pbw.set_position(downloaded);
                 }
 
                 file.flush().await?;
