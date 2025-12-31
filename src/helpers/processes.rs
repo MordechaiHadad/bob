@@ -143,6 +143,18 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
     }
 }
 
+/// Simplisitic function to check if Neovim is currently running.
+///
+/// ## Developer note:
+///
+/// This function checks across the entire system process list for any process
+/// containing "nvim" in its name (case insensitive).
+/// This means that other users running Neovim on the same system will affect this check.
+///
+/// # Returns
+///
+/// This function returns a boolean indicating whether Neovim is currently running (`true`) or not
+/// (`false`).
 pub fn is_neovim_running() -> bool {
     System::new_all()
         .processes()
