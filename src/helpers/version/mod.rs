@@ -144,7 +144,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
 /// let version_sync_file_location = get_version_sync_file_location(&config).await.unwrap();
 /// println!("The version sync file is located at {:?}", version_sync_file_location);
 /// ```
-pub async fn get_version_sync_file_location(config: &Config) -> Result<Option<PathBuf>> {
+pub async fn get_version_sync_file_location(config: &Config) -> Option<PathBuf> {
     if let Some(path) = &config.version_sync_file_location {
         let path = Path::new(path);
         if let Err(path_err) = tokio::fs::metadata(path).await {
@@ -152,14 +152,14 @@ pub async fn get_version_sync_file_location(config: &Config) -> Result<Option<Pa
                 "The path provided, \"{}\", does not exist. Please check the path and try again. The error was: {}",
                 path.parent().unwrap().display(),
                 path_err
-            ))?;
-            file.write_all(b"").await?;
-            file.flush().await?;
-            return Ok(Some(PathBuf::from(path)));
+            )).ok()?;
+            file.write_all(b"").await.ok()?;
+            file.flush().await.ok()?;
+            return Some(PathBuf::from(path));
         }
-        return Ok(Some(PathBuf::from(path)));
+        return Some(PathBuf::from(path));
     }
-    Ok(None)
+    None
 }
 
 /// Checks if a specific version of Neovim is installed.
@@ -394,9 +394,9 @@ mod version_mod_tests {
 
         let res = get_version_sync_file_location(&config).await;
 
-        assert!(res.is_ok());
-        let res = res.unwrap();
         assert!(res.is_some());
+        let res = res.unwrap();
+        assert_eq!(res, PathBuf::from("test_version_sync_file_location"));
 
         tokio::sync::Barrier::new(1).wait().await;
         tokio::fs::remove_file("test_version_sync_file_location")

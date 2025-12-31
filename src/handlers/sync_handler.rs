@@ -37,7 +37,7 @@ use crate::helpers::version;
 /// ```
 pub async fn start(client: &Client, config: ConfigFile) -> Result<()> {
     let version_sync_file_location = version::get_version_sync_file_location(&config.config)
-        .await?
+        .await
         .ok_or_else(|| anyhow!("version_sync_file_location needs to be set to use bob sync"))?;
 
     let version = fs::read_to_string(&version_sync_file_location).await?;
