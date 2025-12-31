@@ -156,8 +156,8 @@ jobs:
         run: |
           export OUTPUT_ARTIFACT_DIR=${{ env.OUTPUT_ARTIFACT_DIR }}
           mkdir ${{ env.OUTPUT_ARTIFACT_DIR }}
-          copy .\\bin\\vcruntime140.dll .\\${OUTPUT_ARTIFACT_DIR}
-          copy .\\target\\optimized\\bob.exe .\\${OUTPUT_ARTIFACT_DIR}
+          cp .\\bin\\vcruntime140.dll .\\${OUTPUT_ARTIFACT_DIR}
+          cp .\\target\\optimized\\bob.exe .\\${OUTPUT_ARTIFACT_DIR}
         if: matrix.sys.OS == 'windows-latest'
       - name: Upload Bob binary
         uses: actions/upload-artifact@v4
