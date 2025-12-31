@@ -135,10 +135,10 @@ fn expand(downloaded_file: &LocalVersion) -> Result<()> {
         if file.is_dir() {
             fs::create_dir_all(outpath)?;
         } else {
-            if let Some(parent) = outpath.parent() {
-                if !parent.exists() {
-                    fs::create_dir_all(parent)?;
-                }
+            if let Some(parent) = outpath.parent()
+                && !parent.exists()
+            {
+                fs::create_dir_all(parent)?;
             }
             let mut outfile = fs::File::create(outpath)?;
             io::copy(&mut file, &mut outfile)?;
