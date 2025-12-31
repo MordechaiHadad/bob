@@ -179,10 +179,9 @@ mod list_handler_is_version_tests {
         ];
 
         cases_expected.iter().for_each(|(case, expected)| {
-            if *expected {
-                assert!(is_version(case))
-            } else {
-                assert!(!is_version(case))
+            match *expected {
+                true => assert!(is_version(case), "Expected '{}' to be a valid version", case),
+                false => assert!(!is_version(case), "Expected '{}' to not be a valid version", case),
             }
         });
 

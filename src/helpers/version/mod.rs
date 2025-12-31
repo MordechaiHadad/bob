@@ -327,10 +327,9 @@ mod version_mod_tests {
         ];
 
         version_expected.iter().for_each(|(case, expected)| {
-            if *expected {
-                assert!(is_hash(case));
-            } else {
-                assert!(!is_hash(case))
+            match *expected {
+                true => assert!(is_hash(case), "Expected true case failed for input: {}", case),
+                false => assert!(!is_hash(case), "Expected false case failed for input: {}", case),
             }
         });
 
