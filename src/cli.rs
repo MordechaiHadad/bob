@@ -58,9 +58,10 @@ enum Cli {
     /// Switch to the specified version, by default will auto-invoke
     /// install command if the version is not installed already
     Use {
-        /// Version to switch to |nightly|stable|<version-string>|<commit-hash>|
+        /// Version to switch to |nightly|stable|<version-string>|<commit-hash>|<owner>/<repo>@<ref>|
         ///
         /// A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
+        /// Fork format: <owner>/<repo>@<ref> where <ref> is a branch, tag, or commit (e.g., user/neovim@my-branch)
         version: String,
 
         /// Whether not to auto-invoke install command
@@ -71,9 +72,10 @@ enum Cli {
     /// Install the specified version, can also be used to update
     /// out-of-date nightly version
     Install {
-        /// Version to be installed |nightly|stable|<version-string>|<commit-hash>|
+        /// Version to be installed |nightly|stable|<version-string>|<commit-hash>|<owner>/<repo>@<ref>|
         ///
         /// A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
+        /// Fork format: <owner>/<repo>@<ref> where <ref> is a branch, tag, or commit (e.g., user/neovim@feature-x)
         version: String,
     },
 
@@ -84,9 +86,10 @@ enum Cli {
     /// Uninstall the specified version
     #[clap(alias = "remove", visible_alias = "rm")]
     Uninstall {
-        /// Optional Version to be uninstalled |nightly|stable|<version-string>|<commit-hash>|
+        /// Optional Version to be uninstalled |nightly|stable|<version-string>|<commit-hash>|<owner>/<repo>@<ref>|
         ///
         /// A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
+        /// Fork format: <owner>/<repo>@<ref> where <ref> is a branch, tag, or commit (e.g., user/neovim@feature-x)
         ///
         /// If no Version is provided a prompt is used to select the versions to be uninstalled
         version: Option<String>,
@@ -117,7 +120,9 @@ enum Cli {
 
     #[clap(trailing_var_arg = true)]
     Run {
-        /// Optional version to run |nightly|stable|<version-string>|<commit-hash>|
+        /// Optional version to run |nightly|stable|<version-string>|<commit-hash>|<owner>/<repo>@<ref>|
+        ///
+        /// Fork format: <owner>/<repo>@<ref> where <ref> is a branch, tag, or commit (e.g., user/neovim@feature-x)
         version: String,
 
         /// Arguments to pass to Neovim (flags, files, commands, etc.)

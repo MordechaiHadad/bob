@@ -54,6 +54,20 @@ pub static ENVIRONMENT_VAR_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\$([A-Z_]+)").expect("Failed to compile static ENVIRONMENT_VAR_REGEX")
 });
 
+/// Fork regex to match fork installations in the format `owner/repo@ref`.
+/// Where `owner` is the GitHub username, `repo` is the repository name, and `ref` is a branch or commit hash.
+///
+/// # Example
+///
+/// ```rust
+/// assert!(FORK_REGEX.is_match("username/neovim@feature-branch"));
+/// assert!(FORK_REGEX.is_match("username/neovim@abc1234"));
+/// ```
+pub static FORK_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^([a-zA-Z0-9_-]+)/([a-zA-Z0-9_-]+)@([^\s]+)$")
+        .expect("Failed to compile static FORK_REGEX")
+});
+
 /// # Unix platform-specific compile time constant for the filetype extension of the Neovim binary extension.
 ///
 /// For Windows, it returns "zip".
@@ -101,3 +115,87 @@ pub const FILETYPE_EXT: &str = "tar.gz";
 /// ```
 #[cfg(target_family = "windows")]
 pub const FILETYPE_EXT: &str = "zip";
+
+#[cfg(test)]
+mod fork_regex_tests {
+    use super::*;
+
+    #[test]
+    fn test_fork_regex_with_valid_formats() {
+        let valid_cases = [
+            "username/neovim@feature-branch",
+            "user-name/repo-name@branch-name",
+            "user_name/repo_name@branch_name",
+            "user123/repo456@branch789",
+            "username/neovim@abc1234",
+            "username/neovim@v1.0.0",
+            "username/neovim@refs/heads/main",
+            "octo-cat/my-nvim@feature/new-thing",
+        ];
+
+        for case in valid_cases {
+            assert!(
+                FORK_REGEX.is_match(case),
+                "Expected '{}' to match fork regex",
+                case
+            );
+        }
+    }
+
+    #[test]
+    fn test_fork_regex_with_invalid_formats() {
+        let invalid_cases = [
+            "username/neovim",            // Missing @ref
+            "username@neovim",            // Wrong separator
+            "neovim@branch",              // Missing repo
+            "@branch",                    // Missing owner and repo
+            "username/",                  // Missing repo and ref
+            "/neovim@branch",             // Missing owner
+            "username/@branch",           // Missing repo
+            "user name/neovim@branch",    // Space in owner
+            "username/neo vim@branch",    // Space in repo
+            "username/neovim@branch asd", // Trailing @
+            "",                           // Empty string
+            "justtext",                   // No format
+        ];
+
+        for case in invalid_cases {
+            assert!(
+                !FORK_REGEX.is_match(case),
+                "Expected '{}' to not match fork regex",
+                case
+            );
+        }
+    }
+
+    #[test]
+    fn test_fork_regex_captures_components() {
+        let fork_string = "myuser/myrepo@mybranch";
+        let captures = FORK_REGEX.captures(fork_string).unwrap();
+
+        assert_eq!(captures.get(1).unwrap().as_str(), "myuser");
+        assert_eq!(captures.get(2).unwrap().as_str(), "myrepo");
+        assert_eq!(captures.get(3).unwrap().as_str(), "mybranch");
+    }
+
+    #[test]
+    fn test_fork_regex_with_complex_ref() {
+        let fork_string = "user/repo@refs/heads/feature/new-branch";
+        assert!(FORK_REGEX.is_match(fork_string));
+
+        let captures = FORK_REGEX.captures(fork_string).unwrap();
+        assert_eq!(
+            captures.get(3).unwrap().as_str(),
+            "refs/heads/feature/new-branch"
+        );
+    }
+
+    #[test]
+    fn test_fork_regex_with_commit_hash_ref() {
+        let fork_string = "user/repo@abc123def456";
+        assert!(FORK_REGEX.is_match(fork_string));
+
+        let captures = FORK_REGEX.captures(fork_string).unwrap();
+        assert_eq!(captures.get(3).unwrap().as_str(), "abc123def456");
+    }
+}

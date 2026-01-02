@@ -128,7 +128,7 @@ A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0
 
 ---
 
-- `bob use |nightly|stable|latest|<version-string>|<commit-hash>|`
+- `bob use |nightly|stable|latest|<version-string>|<commit-hash>|<owner>/<repo>@<ref>|`
 
 `--no-install` flag will prevent bob from auto invoking install command when using `use`
 
@@ -136,7 +136,7 @@ Switch to the specified version, by default will auto-invoke install command if 
 
 ---
 
-- `bob run |nightly|stable|latest|<version-string>|<commit-hash>| [args...]`
+- `bob run |nightly|stable|latest|<version-string>|<commit-hash>|<owner>/<repo>@<ref>| [args...]`
 
 Run a specific installed Neovim version with the provided arguments. `[args...]` are passed directly to the Neovim instance.
 
@@ -144,7 +144,7 @@ Example: `bob run nightly --clean my_file.txt`
 
 ---
 
-- `bob install |nightly|stable|latest|<version-string>|<commit-hash>|`
+- `bob install |nightly|stable|latest|<version-string>|<commit-hash>|<owner>/<repo>@<ref>|`
 
 Install the specified version, can also be used to update out-of-date nightly version.
 
@@ -156,7 +156,7 @@ If Config::version_sync_file_location is set, the version in that file will be p
 
 ---
 
-- `bob uninstall [|nightly|stable|latest|<version-string>|<commit-hash>|]`
+- `bob uninstall [|nightly|stable|latest|<version-string>|<commit-hash>|<owner>/<repo>@<ref>|]`
 
 Uninstall the specified version. If no version is specified a prompt is used to select all the versions
 to be uninstalled.

@@ -53,6 +53,9 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
             version_type: VersionType::Nightly,
             non_parsed_string: version.to_string(),
             semver: None,
+            fork_owner: None,
+            fork_repo: None,
+            fork_ref: None,
         }),
         "stable" | "latest" => {
             info!("Fetching latest version");
@@ -63,6 +66,9 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                 version_type: VersionType::Latest,
                 non_parsed_string: version.to_string(),
                 semver: Some(Version::parse(&cloned_version.replace('v', ""))?),
+                fork_owner: None,
+                fork_repo: None,
+                fork_ref: None,
             })
         }
         "head" | "git" | "HEAD" => {
@@ -73,10 +79,28 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                 version_type: VersionType::Hash,
                 non_parsed_string: latest_commit,
                 semver: None,
+                fork_owner: None,
+                fork_repo: None,
+                fork_ref: None,
             })
         }
         _ => {
-            if crate::VERSION_REGEX.is_match(version) {
+            if crate::FORK_REGEX.is_match(version) {
+                let captures = crate::FORK_REGEX.captures(version).unwrap();
+                let owner = captures.get(1).unwrap().as_str().to_string();
+                let repo = captures.get(2).unwrap().as_str().to_string();
+                let fork_ref = captures.get(3).unwrap().as_str().to_string();
+
+                return Ok(ParsedVersion {
+                    tag_name: version.to_string(),
+                    version_type: VersionType::Fork,
+                    non_parsed_string: version.to_string(),
+                    semver: None,
+                    fork_owner: Some(owner),
+                    fork_repo: Some(repo),
+                    fork_ref: Some(fork_ref),
+                });
+            } else if crate::VERSION_REGEX.is_match(version) {
                 let mut returned_version = version.to_string();
                 if !version.contains('v') {
                     returned_version.insert(0, 'v');
@@ -90,6 +114,9 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                         Version::parse(&cloned_version.replace('v', ""))
                             .context("Unable to parse version string in parse_version_type")?,
                     ),
+                    fork_owner: None,
+                    fork_repo: None,
+                    fork_ref: None,
                 });
             } else if crate::HASH_REGEX.is_match(version) {
                 return Ok(ParsedVersion {
@@ -97,6 +124,9 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                     version_type: VersionType::Hash,
                     non_parsed_string: version.to_string(),
                     semver: None,
+                    fork_owner: None,
+                    fork_repo: None,
+                    fork_ref: None,
                 });
             }
 
@@ -106,15 +136,19 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                     version_type: VersionType::NightlyRollback,
                     non_parsed_string: version.to_string(),
                     semver: None,
+                    fork_owner: None,
+                    fork_repo: None,
+                    fork_ref: None,
                 });
             }
 
             Err(anyhow!(
                 "Please provide a proper version string. Valid options are:
 
-                    • stable|latest|nightly - Latest stable, most recent, or nightly build
-                    • [v]x.x.x              - Specific version (e.g., 0.6.0 or v0.6.0)
-                    • <commit-hash>         - Specific commit hash"
+                    • stable|latest|nightly     - Latest stable, most recent, or nightly build
+                    • [v]x.x.x                  - Specific version (e.g., 0.6.0 or v0.6.0)
+                    • <commit-hash>             - Specific commit hash
+                    • owner/repo@ref            - Install from fork at branch or hash"
             ))
         }
     }
@@ -369,5 +403,117 @@ mod version_is_hash_tests {
     fn test_is_hash_with_long_hash() {
         let version = "abc123abc123abc123abc123abc123abc123abc123";
         assert!(!is_hash(version));
+    }
+}
+
+#[cfg(test)]
+mod fork_version_parsing_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_parse_fork_version_with_branch() {
+        let client = Client::new();
+        let version = "myuser/neovim@feature-branch";
+
+        let result = parse_version_type(&client, version).await;
+        assert!(result.is_ok());
+
+        let parsed = result.unwrap();
+        assert_eq!(parsed.version_type, VersionType::Fork);
+        assert_eq!(parsed.fork_owner, Some("myuser".to_string()));
+        assert_eq!(parsed.fork_repo, Some("neovim".to_string()));
+        assert_eq!(parsed.fork_ref, Some("feature-branch".to_string()));
+        assert_eq!(parsed.tag_name, version);
+        assert_eq!(parsed.non_parsed_string, version);
+        assert!(parsed.semver.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_parse_fork_version_with_commit_hash() {
+        let client = Client::new();
+        let version = "user123/repo456@abc1234def5678";
+
+        let result = parse_version_type(&client, version).await;
+        assert!(result.is_ok());
+
+        let parsed = result.unwrap();
+        assert_eq!(parsed.version_type, VersionType::Fork);
+        assert_eq!(parsed.fork_owner, Some("user123".to_string()));
+        assert_eq!(parsed.fork_repo, Some("repo456".to_string()));
+        assert_eq!(parsed.fork_ref, Some("abc1234def5678".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_parse_fork_version_with_underscores_and_hyphens() {
+        let client = Client::new();
+        let version = "user-name_123/repo_name-456@my-branch_v2";
+
+        let result = parse_version_type(&client, version).await;
+        assert!(result.is_ok());
+
+        let parsed = result.unwrap();
+        assert_eq!(parsed.version_type, VersionType::Fork);
+        assert_eq!(parsed.fork_owner, Some("user-name_123".to_string()));
+        assert_eq!(parsed.fork_repo, Some("repo_name-456".to_string()));
+        assert_eq!(parsed.fork_ref, Some("my-branch_v2".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_parse_fork_version_with_complex_ref() {
+        let client = Client::new();
+        let version = "owner/repo@refs/heads/feature/new-api";
+
+        let result = parse_version_type(&client, version).await;
+        assert!(result.is_ok());
+
+        let parsed = result.unwrap();
+        assert_eq!(parsed.version_type, VersionType::Fork);
+        assert_eq!(
+            parsed.fork_ref,
+            Some("refs/heads/feature/new-api".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_parse_non_fork_versions_still_work() {
+        let client = Client::new();
+
+        // Test nightly
+        let nightly = parse_version_type(&client, "nightly").await.unwrap();
+        assert_eq!(nightly.version_type, VersionType::Nightly);
+        assert!(nightly.fork_owner.is_none());
+        assert!(nightly.fork_repo.is_none());
+        assert!(nightly.fork_ref.is_none());
+
+        // Test version string
+        let version = parse_version_type(&client, "0.9.5").await.unwrap();
+        assert_eq!(version.version_type, VersionType::Normal);
+        assert!(version.fork_owner.is_none());
+        assert!(version.fork_repo.is_none());
+        assert!(version.fork_ref.is_none());
+
+        // Test hash
+        let hash = parse_version_type(&client, "abc123def456").await.unwrap();
+        assert_eq!(hash.version_type, VersionType::Hash);
+        assert!(hash.fork_owner.is_none());
+        assert!(hash.fork_repo.is_none());
+        assert!(hash.fork_ref.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_parse_invalid_fork_format() {
+        let client = Client::new();
+
+        // Missing @ref
+        let result = parse_version_type(&client, "username/neovim").await;
+        assert!(result.is_err());
+
+        // Wrong separator
+        let result = parse_version_type(&client, "username@neovim").await;
+        assert!(result.is_err());
+
+        // Missing repo
+        let result = parse_version_type(&client, "neovim@branch").await;
+        assert!(result.is_err());
     }
 }

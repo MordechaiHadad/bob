@@ -128,7 +128,9 @@ pub async fn start(
                 download_version(client, version, root, &config.config, false).await
             }
         }
-        VersionType::Hash => handle_building_from_source(version, &config.config).await,
+        VersionType::Hash | VersionType::Fork => {
+            handle_building_from_source(version, &config.config).await
+        }
         VersionType::NightlyRollback => Ok(PostDownloadVersionType::None),
     }?;
 
@@ -411,7 +413,7 @@ async fn download_version(
                 ))
             }
         }
-        VersionType::Hash => handle_building_from_source(version, config).await,
+        VersionType::Hash | VersionType::Fork => handle_building_from_source(version, config).await,
         VersionType::NightlyRollback => Ok(PostDownloadVersionType::None),
     }
 }
@@ -583,20 +585,38 @@ async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -
 
     {
 
+    // Determine repository URL based on whether it's a fork or the main neovim repo
+    let repo_url = if version.version_type == VersionType::Fork {
+        format!(
+            "https://github.com/{}/{}.git",
+            version.fork_owner.as_ref().unwrap(),
+            version.fork_repo.as_ref().unwrap()
+        )
+    } else {
+        "https://github.com/neovim/neovim.git".to_string()
+    };
+
+    // Determine the ref to fetch
+    let fetch_ref = if version.version_type == VersionType::Fork {
+        version.fork_ref.as_ref().unwrap()
+    } else {
+        &version.non_parsed_string
+    };
+
     // check if repo has a remote
     let remote = Command::new("git").arg("remote").arg("get-url").arg("origin").stdout(Stdio::null())
         .spawn()?.wait().await?;
     if remote.success() {
-        // set neovim's remote
-        Command::new("git").arg("remote").arg("set-url").arg("origin").arg("https://github.com/neovim/neovim.git")
+        // set repository remote
+        Command::new("git").arg("remote").arg("set-url").arg("origin").arg(&repo_url)
             .spawn()?.wait().await?;
     } else {
-        // add neovim's remote otherwise
-        Command::new("git").arg("remote").arg("add").arg("origin").arg("https://github.com/neovim/neovim.git")
+        // add repository remote otherwise
+        Command::new("git").arg("remote").arg("add").arg("origin").arg(&repo_url)
             .spawn()?.wait().await?;
     }
     // fetch version from origin
-    let fetch_successful = Command::new("git").arg("fetch").arg("--depth").arg("1").arg("origin").arg(&version.non_parsed_string)
+    let fetch_successful = Command::new("git").arg("fetch").arg("--depth").arg("1").arg("origin").arg(fetch_ref)
         .spawn()?.wait().await?.success();
 
     if !fetch_successful {
@@ -617,7 +637,7 @@ async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -
     fs::create_dir("build").await?;
 
     let downloads_location = directories::get_downloads_directory(config).await?;
-    let folder_name = downloads_location.join(&version.tag_name[0..7]);
+    let folder_name = downloads_location.join( if version.version_type == VersionType::Fork { &version.tag_name } else { &version.tag_name[0..7] } );
 
     let build_type = match config.enable_release_build {
         Some(true) => "Release",

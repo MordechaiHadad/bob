@@ -67,6 +67,9 @@ pub async fn start(config: Config) -> Result<()> {
                 version_type: helpers::version::types::VersionType::Normal,
                 non_parsed_string: String::default(),
                 semver: None,
+                fork_owner: None,
+                fork_repo: None,
+                fork_ref: None,
             },
         )
         .await?;

@@ -5,8 +5,45 @@ use yansi::Paint;
 
 use crate::{
     config::Config,
-    helpers::{self, directories, version::nightly::produce_nightly_vec},
+    helpers::{self, directories},
 };
+
+/// Recursively finds all version directories in the downloads directory.
+///
+/// This function searches through the directory tree starting from `current_dir`,
+/// looking for directories that contain a valid Neovim installation (indicated by
+/// the presence of a `bin` subdirectory).
+///
+/// # Arguments
+///
+/// * `current_dir` - The current directory being searched
+///
+/// # Returns
+///
+/// * `Result<Vec<PathBuf>>` - A vector of paths to version directories with their
+///   relative paths from the base directory
+fn find_version_dirs(current_dir: &PathBuf) -> Result<Vec<PathBuf>> {
+    let mut version_dirs = Vec::new();
+
+    if let Ok(entries) = fs::read_dir(current_dir) {
+        for entry in entries.filter_map(Result::ok) {
+            let path = entry.path();
+
+            if !path.is_dir() {
+                continue;
+            }
+
+            let nvim_exe = path.join("bin").join("nvim");
+            if nvim_exe.exists() && nvim_exe.is_file() {
+                version_dirs.push(path);
+            } else if let Ok(mut subdirs) = find_version_dirs(&path) {
+                version_dirs.append(&mut subdirs);
+            }
+        }
+    }
+
+    Ok(version_dirs)
+}
 
 /// Starts the list handler.
 ///
@@ -30,17 +67,34 @@ use crate::{
 pub async fn start(config: Config) -> Result<()> {
     let downloads_dir = directories::get_downloads_directory(&config).await?;
 
-    let paths: Vec<PathBuf> = fs::read_dir(downloads_dir)?
-        .filter_map(Result::ok)
-        .map(|entry| entry.path())
-        .collect();
+    // Recursively find all version directories
+    let paths = find_version_dirs(&downloads_dir)?;
 
     if paths.is_empty() {
         info!("There are no versions installed");
         return Ok(());
     }
 
-    let version_max_len = if has_rollbacks(&config).await? { 16 } else { 7 };
+    let relative_paths = paths
+        .iter()
+        .map(|path| path.strip_prefix(&downloads_dir).unwrap())
+        .filter(|path| !path.starts_with("neovim-git/build"))
+        .map(|path| path.to_str().unwrap())
+        .collect::<Vec<&str>>();
+
+    // Calculate the maximum version name length dynamically
+    let version_max_len = relative_paths
+        .iter()
+        .filter_map(|path| {
+            if !is_version(path) {
+                return None;
+            }
+            Some(path.len())
+        })
+        .max()
+        .unwrap_or(7)
+        .max(7); // Ensure at least 7 for the "Version" header
+
     let status_max_len = 9;
     let padding = 2;
 
@@ -62,17 +116,7 @@ pub async fn start(config: Config) -> Result<()> {
         "─".repeat(status_max_len + (padding * 2))
     );
 
-    for path in paths {
-        if !path.is_dir() {
-            continue;
-        }
-
-        let path_name = path.file_name().unwrap().to_str().unwrap();
-
-        if !is_version(path_name) {
-            continue;
-        }
-
+    for path_name in relative_paths {
         let version_pr = (version_max_len - path_name.len()) + padding;
         let status_pr = padding + status_max_len;
 
@@ -106,34 +150,10 @@ pub async fn start(config: Config) -> Result<()> {
     Ok(())
 }
 
-/// Checks if there are any rollbacks available.
-///
-/// This function produces a vector of nightly versions and checks if it is empty.
-///
-/// # Arguments
-///
-/// * `config` - A reference to the configuration object.
-///
-/// # Returns
-///
-/// * `Result<bool>` - Returns a `Result` that contains `true` if there are rollbacks available, or `false` otherwise. Returns an error if there is a failure in producing the vector of nightly versions.
-///
-/// # Example
-///
-/// ```rust
-/// let config = Config::default();
-/// let has_rollbacks = has_rollbacks(&config).await?;
-/// assert_eq!(has_rollbacks, true);
-/// ```
-async fn has_rollbacks(config: &Config) -> Result<bool> {
-    let list = produce_nightly_vec(config).await?;
-
-    Ok(!list.is_empty())
-}
-
 /// Checks if a given string is a valid version.
 ///
-/// This function checks if the given string is "stable", contains "nightly", or matches the version or hash regex.
+/// This function checks if the given string is "stable", contains "nightly", matches the version or hash regex,
+/// or is a fork version (contains forward slashes).
 ///
 /// # Arguments
 ///
@@ -155,10 +175,9 @@ fn is_version(name: &str) -> bool {
         "stable" => true,
         nightly_name if nightly_name.contains("nightly") => true,
         name => {
-            if crate::VERSION_REGEX.is_match(name) {
-                return true;
-            }
-            crate::HASH_REGEX.is_match(name)
+            crate::FORK_REGEX.is_match(name)
+                || crate::VERSION_REGEX.is_match(name)
+                || crate::HASH_REGEX.is_match(name)
         }
     }
 }
@@ -175,6 +194,9 @@ mod list_handler_is_version_tests {
             ("nightly-2023-10-01", true),
             ("invalid-version", false),
             ("", false),
+            ("user/repo@branch", true),  // fork version
+            ("owner/fork@main", true),   // fork version
+            ("user/repo/branch", false), // invalid fork format (missing @)
         ];
 
         cases_expected

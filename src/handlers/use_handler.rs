@@ -124,7 +124,9 @@ pub async fn start(
 pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
     std::env::set_current_dir(helpers::directories::get_downloads_directory(config).await?)?;
 
-    let file_version: String = if version.version_type == VersionType::Hash {
+    let file_version: String = if version.version_type == VersionType::Fork {
+        version.non_parsed_string.clone()
+    } else if version.version_type == VersionType::Hash {
         if version.non_parsed_string.len() <= 7 {
             let mut current_dir = env::current_dir()?;
             current_dir.push(&version.non_parsed_string);

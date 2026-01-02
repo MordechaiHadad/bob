@@ -13,6 +13,9 @@ use std::path::PathBuf;
 /// * `version_type: VersionType` - The type of the parsed version.
 /// * `non_parsed_string: String` - The non-parsed string of the parsed version.
 /// * `semver: Option<Version>` - The semantic version of the parsed version, or `None` if the version is not a semantic version.
+/// * `fork_owner: Option<String>` - The owner of the fork repository, or `None` if not a fork.
+/// * `fork_repo: Option<String>` - The name of the fork repository, or `None` if not a fork.
+/// * `fork_ref: Option<String>` - The branch or commit reference for the fork, or `None` if not a fork.
 ///
 /// # Example
 ///
@@ -22,6 +25,9 @@ use std::path::PathBuf;
 ///     version_type: VersionType::Normal,
 ///     non_parsed_string: "version-1.0.0".to_string(),
 ///     semver: Some(Version::parse("1.0.0").unwrap()),
+///     fork_owner: None,
+///     fork_repo: None,
+///     fork_ref: None,
 /// };
 /// println!("The parsed version is {:?}", parsed_version);
 /// ```
@@ -30,6 +36,9 @@ pub struct ParsedVersion {
     pub version_type: VersionType,
     pub non_parsed_string: String,
     pub semver: Option<Version>,
+    pub fork_owner: Option<String>,
+    pub fork_repo: Option<String>,
+    pub fork_ref: Option<String>,
 }
 
 /// Represents the type of (a) software version.
@@ -43,6 +52,7 @@ pub struct ParsedVersion {
 /// * `Nightly` - Represents a nightly version.
 /// * `Hash` - Represents a version identified by a hash.
 /// * `NightlyRollback` - Represents a nightly version that has been rolled back.
+/// * `Fork` - Represents a version from a fork repository.
 ///
 /// # Example
 ///
@@ -54,6 +64,7 @@ pub struct ParsedVersion {
 ///     VersionType::Nightly => println!("This is a nightly version."),
 ///     VersionType::Hash => println!("This is a version identified by a hash."),
 ///     VersionType::NightlyRollback => println!("This is a nightly version that has been rolled back."),
+///     VersionType::Fork => println!("This is a version from a fork repository."),
 /// }
 /// ```
 #[derive(PartialEq, Eq, Debug)]
@@ -63,6 +74,7 @@ pub enum VersionType {
     Nightly,
     Hash,
     NightlyRollback,
+    Fork,
 }
 
 /// Represents a local nightly version of the software.
