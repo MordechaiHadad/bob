@@ -22,7 +22,22 @@ run_task = { name = ["build"], parallel = false }
 [tasks.br]
 run_task = { name = ["build_release"], parallel = false }
 
+[tasks.bo]
+run_task = { name = ["build_optimized"], parallel = false }
+
+[tasks.ba]
+run_task = { name = [
+  "build_workspace",
+  "build",
+  "build_release_workspace",
+  "build_release",
+  "build_optimized",
+], parallel = false }
+
 [tasks.a]
+# We can assume that if both the build (debug build) and the release build pass,
+# then in CI/CD that building "optimized" (which is just a release build with extra flags)
+# would also pass, so we skip it here to save time.
 run_task = { name = [
   "build_workspace",
   "build",
@@ -37,6 +52,9 @@ run_task = { name = ["run"], parallel = false }
 
 [tasks.rr]
 run_task = { name = ["run_release"], parallel = false }
+
+[tasks.ro]
+run_task = { name = ["run_optimized"], parallel = false }
 
 [tasks.bw]
 run_task = { name = ["build_workspace"], parallel = false }
