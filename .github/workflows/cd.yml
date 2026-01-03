@@ -5,9 +5,9 @@ on:
       - "v*.*.*"
 env:
   RUST_TOOLCHAIN: nightly
-  RUST_TOOLCHAIN_PROFILE: minimal
   RUST_TOOLCHAIN_OVERRIDE: true
-  OUTPUT_ARTIFACT_DIR: build_out
+  # This is to align with the matrix.sys.PATH for Windows builds
+  OUTPUT_ARTIFACT_DIR: &output_artifact_dir build_out
 jobs:
   check-version:
     runs-on: ubuntu-latest
@@ -33,7 +33,7 @@ jobs:
           - {NAME: linux, OS: ubuntu-latest, ARCH: x86_64, PATH: target/optimized/bob, TARGET: ""}
           - {NAME: linux, OS: ubuntu-24.04-arm, ARCH: arm, PATH: target/optimized/bob, TARGET: ""}
           - {NAME: macos, OS: macos-latest, ARCH: x86_64, PATH: target/x86_64-apple-darwin/optimized/bob, TARGET: "x86_64-apple-darwin"}
-          - {NAME: windows, OS: windows-latest, ARCH: x86_64, PATH: "${{ env.OUTPUT_ARTIFACT_DIR }}", TARGET: ""}
+          - {NAME: windows, OS: windows-latest, ARCH: x86_64, PATH: *output_artifact_dir, TARGET: ""}
           - {NAME: macos, OS: macos-latest, ARCH: arm, PATH: target/optimized/bob, TARGET: ""}
     runs-on: ${{matrix.sys.OS}}
     steps:
@@ -49,12 +49,12 @@ jobs:
         shell: bash
         run: rustup target add ${{ matrix.sys.TARGET }}
       - uses: Swatinem/rust-cache@v1
-      - name: Build Bob
+      - name: "Build Bob"
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: --locked --profile optimized ${{ matrix.sys.TARGET != '' && format('--target {0}', matrix.sys.TARGET) || '' }}
-      - name: Install AppImage tools & cargo-appimage
+      - name: "Install AppImage tools & cargo-appimage"
         if: matrix.sys.NAME == 'linux'
         shell: bash
         run: |
@@ -77,7 +77,7 @@ jobs:
           echo "appimagetool installed at: $(command -v appimagetool)"
 
           cargo install cargo-appimage --locked
-      - name: Build AppImage with cargo-appimage
+      - name: "Build AppImage with cargo-appimage"
         if: matrix.sys.NAME == 'linux'
         shell: bash
         run: |
@@ -93,24 +93,23 @@ jobs:
           fi
 
           echo "Found AppImage: $(ls target/appimage/*.AppImage | head -n1)"
-      - name: Setup Bob build directory
+      - name: "Setup Bob build directory"
         env:
-          OUTPUT_ARTIFACT_DIR: ${{ env.OUTPUT_ARTIFACT_DIR }}
+          OUTPUT_ARTIFACT_DIR: *output_artifact_dir
         shell: bash
         run: |
           export OUTPUT_ARTIFACT_DIR=${{ env.OUTPUT_ARTIFACT_DIR }}
-          mkdir build
-          mkdir ${{ env.OUTPUT_ARTIFACT_DIR }}
-          cp .\\bin\\vcruntime140.dll .\\${OUTPUT_ARTIFACT_DIR}
-          cp .\\target\\optimized\\bob.exe .\\${OUTPUT_ARTIFACT_DIR}
+          mkdir $OUTPUT_ARTIFACT_DIR
+          cp .\\bin\\vcruntime140.dll .\\$OUTPUT_ARTIFACT_DIR
+          cp .\\target\\optimized\\bob.exe .\\$OUTPUT_ARTIFACT_DIR
         if: matrix.sys.OS == 'windows-latest'
-      - name: Upload Bob binary
+      - name: "Upload Bob binary"
         uses: actions/upload-artifact@v4
         with:
           name: "bob-${{ matrix.sys.NAME }}-${{ matrix.sys.ARCH }}"
           path: ${{ matrix.sys.PATH }}
           if-no-files-found: error
-      - name: Upload Bob AppImage
+      - name: "Upload Bob AppImage"
         if: matrix.sys.NAME == 'linux'
         uses: actions/upload-artifact@v4
         with:
@@ -126,11 +125,11 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - name: Download artifacts
+      - name: "Download artifacts"
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-      - name: Prepare Release Assets (Zip binaries, keep AppImages separate)
+      - name: "Prepare Release Assets (Zip binaries, keep AppImages separate)"
         shell: bash
         run: |
           cd artifacts
@@ -146,7 +145,7 @@ jobs:
           find . -mindepth 1 -maxdepth 1 -type d -empty -delete
           echo "Prepared assets:"
           ls -l
-      - name: Release
+      - name: "Release"
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
@@ -163,8 +162,7 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
-          profile: ${{ env.RUST_TOOLCHAIN_PROFILE }}
-          override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
+          targets: ${{ matrix.target }}
       - uses: katyo/publish-crates@v2
         with:
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}

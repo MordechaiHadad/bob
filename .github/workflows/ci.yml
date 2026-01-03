@@ -2,9 +2,9 @@ name: Continuous Integration
 on: [push, pull_request]
 env:
   RUST_TOOLCHAIN: nightly
-  RUST_TOOLCHAIN_PROFILE: minimal
   RUST_TOOLCHAIN_OVERRIDE: true
-  OUTPUT_ARTIFACT_DIR: build_out
+  # This is to align with the matrix.sys.PATH for Windows builds
+  OUTPUT_ARTIFACT_DIR: &output_artifact_dir build_out
 jobs:
   clippy:
     strategy:
@@ -12,15 +12,14 @@ jobs:
         sys: [macos-latest, windows-latest, ubuntu-latest, ubuntu-24.04-arm]
     runs-on: ${{matrix.sys}}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+      - name: "Checkout code"
+        uses: actions/checkout@v6
+      - name: "Install toolchain"
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
-          profile: ${{ env.RUST_TOOLCHAIN_PROFILE }}
-          override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
-      - name: Check the lints
+          targets: ${{ matrix.target }}
+      - name: "Check the lints"
         uses: actions-rs/cargo@v1
         with:
           command: clippy
@@ -31,15 +30,14 @@ jobs:
         sys: [macos-latest, windows-latest, ubuntu-latest, ubuntu-24.04-arm]
     runs-on: ${{matrix.sys}}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+      - name: "Checkout code"
+        uses: actions/checkout@v6
+      - name: "Install toolchain"
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
-          profile: ${{ env.RUST_TOOLCHAIN_PROFILE }}
-          override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
-      - name: Run the tests
+          targets: ${{ matrix.target }}
+      - name: "Run the tests"
         uses: actions-rs/cargo@v1
         with:
           command: test
@@ -47,15 +45,14 @@ jobs:
   formatting:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+      - name: "Checkout code"
+        uses: actions/checkout@v6
+      - name: "Install toolchain"
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
-          profile: ${{ env.RUST_TOOLCHAIN_PROFILE }}
-          override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
-      - name: Check the formatting
+          targets: ${{ matrix.target }}
+      - name: "Check the formatting"
         uses: actions-rs/cargo@v1
         with:
           command: fmt
@@ -63,20 +60,19 @@ jobs:
   security_audit:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+      - name: "Checkout code"
+        uses: actions/checkout@v6
+      - name: "Install toolchain"
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
-          profile: ${{ env.RUST_TOOLCHAIN_PROFILE }}
-          override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
-      - name: Install cargo-audit
+          targets: ${{ matrix.target }}
+      - name: "Install cargo-audit"
         uses: actions-rs/cargo@v1
         with:
           command: install
           args: cargo-audit
-      - name: Run security audit
+      - name: "Run security audit"
         uses: actions-rs/cargo@v1
         with:
           command: audit
@@ -89,28 +85,28 @@ jobs:
           - {NAME: linux, OS: ubuntu-latest, ARCH: x86_64, PATH: target/optimized/bob, TARGET: ""}
           - {NAME: linux, OS: ubuntu-24.04-arm, ARCH: arm, PATH: target/optimized/bob, TARGET: ""}
           - {NAME: macos, OS: macos-latest, ARCH: x86_64, PATH: target/x86_64-apple-darwin/optimized/bob, TARGET: "x86_64-apple-darwin"}
-          - {NAME: windows, OS: windows-latest, ARCH: x86_64, PATH: build, TARGET: ""}
+          - {NAME: windows, OS: windows-latest, ARCH: x86_64, PATH: *output_artifact_dir, TARGET: ""}
           - {NAME: macos, OS: macos-latest, ARCH: arm, PATH: target/optimized/bob, TARGET: ""}
     runs-on: ${{matrix.sys.OS}}
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
+      - name: "Checkout code"
+        uses: actions/checkout@v6
+      - name: "Install Rust toolchain"
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
-          profile: ${{ env.RUST_TOOLCHAIN_PROFILE }}
-          override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
-      - name: Add Rust target for cross-compilation
+          targets: ${{ matrix.target }}
+      - name: "Add Rust target for cross-compilation"
         if: matrix.sys.TARGET != ''
         shell: bash
         run: rustup target add ${{ matrix.sys.TARGET }}
       - uses: Swatinem/rust-cache@v1
-      - name: Build Bob
+      - name: "Build Bob"
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: --locked --profile optimized ${{ matrix.sys.TARGET != '' && format('--target {0}', matrix.sys.TARGET) || '' }}
-      - name: Install AppImage tools & cargo-appimage
+      - name: "Install AppImage tools & cargo-appimage"
         if: matrix.sys.NAME == 'linux'
         shell: bash
         run: |
@@ -133,7 +129,7 @@ jobs:
           echo "appimagetool installed at: $(command -v appimagetool)"
 
           cargo install cargo-appimage --locked
-      - name: Build AppImage with cargo-appimage
+      - name: "Build AppImage with cargo-appimage"
         if: matrix.sys.NAME == 'linux'
         shell: bash
         run: |
@@ -149,24 +145,24 @@ jobs:
           fi
 
           echo "Found AppImage: $(ls target/appimage/*.AppImage | head -n1)"
-      - name: Setup Bob build directory
+      - name: "Setup Bob build directory"
         env:
-          OUTPUT_ARTIFACT_DIR: ${{ env.OUTPUT_ARTIFACT_DIR }}
+          OUTPUT_ARTIFACT_DIR: *output_artifact_dir
         shell: bash
         run: |
           export OUTPUT_ARTIFACT_DIR=${{ env.OUTPUT_ARTIFACT_DIR }}
-          mkdir ${{ env.OUTPUT_ARTIFACT_DIR }}
-          cp .\\bin\\vcruntime140.dll .\\${OUTPUT_ARTIFACT_DIR}
-          cp .\\target\\optimized\\bob.exe .\\${OUTPUT_ARTIFACT_DIR}
+          mkdir $OUTPUT_ARTIFACT_DIR
+          cp .\\bin\\vcruntime140.dll .\\$OUTPUT_ARTIFACT_DIR
+          cp .\\target\\optimized\\bob.exe .\\$OUTPUT_ARTIFACT_DIR
         if: matrix.sys.OS == 'windows-latest'
-      - name: Upload Bob binary
+      - name: "Upload Bob binary"
         uses: actions/upload-artifact@v4
         with:
           name: "bob-${{ matrix.sys.NAME }}-${{ matrix.sys.ARCH }}"
           path: ${{ matrix.sys.PATH }}
           if-no-files-found: error
           retention-days: 7
-      - name: Upload Bob AppImage
+      - name: "Upload Bob AppImage"
         if: matrix.sys.NAME == 'linux'
         uses: actions/upload-artifact@v4
         with:
