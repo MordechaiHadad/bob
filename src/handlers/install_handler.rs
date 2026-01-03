@@ -629,37 +629,28 @@ async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -
         } else {
             let location_arg = format!("CMAKE_INSTALL_PREFIX={}", folder_name.to_string_lossy());
             
-            // Try to build, if either step fails, run distclean and try again once
-            let mut attempts = 0;
-            loop {
-                let make_result = handle_subprocess(Command::new("make").arg(&location_arg).arg(&build_arg)).await;
-                
-                if let Err(e) = make_result {
-                    if attempts == 0 {
-                        warn!("Make build failed, running make distclean and retrying");
-                        handle_subprocess(Command::new("make").arg("distclean")).await?;
-                        attempts += 1;
-                        continue;
-                    } else {
-                        return Err(e);
-                    }
-                }
-                
-                let install_result = handle_subprocess(Command::new("make").arg("install")).await;
-                
-                if let Err(e) = install_result {
-                    if attempts == 0 {
-                        warn!("Make install failed, running make distclean and retrying");
-                        handle_subprocess(Command::new("make").arg("distclean")).await?;
-                        attempts += 1;
-                        continue;
-                    } else {
-                        return Err(e);
-                    }
-                }
-                
-                // Both succeeded
-                break;
+            // First attempt
+            let build_result = handle_subprocess(Command::new("make").arg(&location_arg).arg(&build_arg)).await;
+            let mut install_result: Result<()> = Ok(());
+
+            if build_result.is_ok() {
+                install_result = handle_subprocess(Command::new("make").arg("install")).await;
+            }
+
+            if build_result.is_ok() && install_result.is_ok() {
+                // Success on the first attempt
+            } else {
+                // First attempt failed somewhere
+                let failed_phase = if build_result.is_err() { "build" } else { "install" };
+                warn!("Make {} failed, running make distclean and retrying", failed_phase);
+
+                // Propagation here
+                handle_subprocess(Command::new("make").arg("distclean")).await?;
+
+                // Second/final attempt. We always redo both phases after distclean
+                handle_subprocess(Command::new("make").arg(&location_arg).arg(&build_arg)).await?;
+                handle_subprocess(Command::new("make").arg("install")).await?;
+                // We know other phases succeeded, we're good
             }
         }
     }
