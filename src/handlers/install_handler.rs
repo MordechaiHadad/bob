@@ -611,11 +611,6 @@ async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -
 
     }
 
-    if fs::metadata("build").await.is_ok() {
-        filesystem::remove_dir("build").await?;
-    }
-    fs::create_dir("build").await?;
-
     let downloads_location = directories::get_downloads_directory(config).await?;
     let folder_name = downloads_location.join(&version.tag_name[0..7]);
 

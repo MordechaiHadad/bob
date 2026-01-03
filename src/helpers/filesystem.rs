@@ -1,66 +1,7 @@
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use async_recursion::async_recursion;
-use indicatif::{ProgressBar, ProgressStyle};
 use std::path::Path;
 use tokio::fs;
-
-/// Asynchronously removes a directory and all its contents.
-///
-/// This function takes a string reference as an argument, which represents the directory to be removed.
-/// It first reads the directory and counts the number of entries. Then, it creates a progress bar with the total number of entries.
-/// It iterates over each entry in the directory. If the entry is a directory, it removes the directory and all its contents. If the entry is a file, it removes the file.
-/// After removing each entry, it updates the progress bar.
-/// Finally, it attempts to remove the directory itself. If this operation fails, it returns an error.
-///
-/// # Arguments
-///
-/// * `directory` - A string reference representing the directory to be removed.
-///
-/// # Returns
-///
-/// This function returns a `Result` that indicates whether the operation was successful.
-/// If the operation was successful, the function returns `Ok(())`.
-/// If the operation failed, the function returns `Err` with a description of the error.
-///
-/// # Example
-///
-/// ```rust
-/// let directory = "/path/to/directory";
-/// remove_dir(directory).await;
-/// ```
-pub async fn remove_dir(directory: &str) -> Result<()> {
-    let path = Path::new(directory);
-    let size = path.read_dir()?.count();
-    let read_dir = path.read_dir()?;
-
-    let pb = ProgressBar::new(size.try_into()?);
-    pb.set_style(ProgressStyle::with_template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len} ({per_sec}, {eta})")
-                    .unwrap()
-                    .progress_chars("█  "));
-    pb.set_message(format!("Deleting {}", path.display()));
-
-    let mut removed = 0;
-
-    for entry in read_dir.flatten() {
-        let path = entry.path();
-
-        if path.is_dir() {
-            fs::remove_dir_all(&path).await?;
-        } else {
-            fs::remove_file(&path).await?;
-        }
-        removed += 1;
-        pb.set_position(removed);
-    }
-
-    if let Err(e) = fs::remove_dir(directory).await {
-        return Err(anyhow!("Failed to remove {directory}: {e}"));
-    }
-
-    pb.finish_with_message(format!("Finished removing {}", path.display()));
-
-    Ok(())
-}
 
 /// Asynchronously copies a directory from one location to another.
 ///
