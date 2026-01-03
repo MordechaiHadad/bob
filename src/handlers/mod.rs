@@ -24,6 +24,7 @@ pub enum InstallResult {
     VersionAlreadyInstalled,
     NightlyIsUpdated,
     GivenNightlyRollback,
+    ForkIsUpdated,
 }
 
 /// Represents the type of a version after it has been downloaded.

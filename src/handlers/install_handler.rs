@@ -1,5 +1,7 @@
 use crate::config::{Config, ConfigFile};
-use crate::github_requests::{UpstreamVersion, get_commits_for_nightly, get_upstream_nightly};
+use crate::github_requests::{
+    UpstreamVersion, get_commits_for_nightly, get_fork_commit, get_upstream_nightly,
+};
 use crate::helpers::checksum::sha256cmp;
 use crate::helpers::processes::handle_subprocess;
 use crate::helpers::version::nightly::produce_nightly_vec;
@@ -86,7 +88,12 @@ pub async fn start(
     let is_version_installed =
         helpers::version::is_version_installed(&version.tag_name, &config.config).await?;
 
-    if is_version_installed && version.version_type != VersionType::Nightly {
+    if is_version_installed
+        && !matches!(
+            version.version_type,
+            VersionType::Nightly | VersionType::Fork
+        )
+    {
         return Ok(InstallResult::VersionAlreadyInstalled);
     }
 
@@ -114,6 +121,30 @@ pub async fn start(
             }
             None => print_commits(client, &local_nightly, upstream_nightly).await?,
             _ => (),
+        }
+    }
+
+    if is_version_installed && version.version_type == VersionType::Fork {
+        info!("Checking for fork updates");
+
+        let fork_owner = version.fork_owner.as_ref().unwrap();
+        let fork_repo = version.fork_repo.as_ref().unwrap();
+        let fork_ref = version.fork_ref.as_ref().unwrap();
+
+        // Get remote commit hash
+        let remote_hash = get_fork_commit(client, fork_owner, fork_repo, fork_ref).await?;
+
+        // Read local commit hash from full-hash.txt
+        let local_hash_path = directories::get_downloads_directory(&config.config)
+            .await?
+            .join(&version.tag_name)
+            .join("full-hash.txt");
+
+        if let Ok(local_hash) = fs::read_to_string(&local_hash_path).await {
+            let local_hash = local_hash.trim();
+            if remote_hash == local_hash {
+                return Ok(InstallResult::ForkIsUpdated);
+            }
         }
     }
 
@@ -658,8 +689,9 @@ async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -
         }
     }
 
+    let full_hash = Command::new("git").arg("rev-parse").arg("HEAD").output().await?.stdout;
     let mut file = File::create(folder_name.join("full-hash.txt")).await?;
-    file.write_all(version.non_parsed_string.as_bytes()).await?;
+    file.write_all(&full_hash).await?;
 
     Ok(PostDownloadVersionType::Hash)
 }

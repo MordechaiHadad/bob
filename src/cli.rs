@@ -273,6 +273,9 @@ pub async fn start(config: ConfigFile) -> Result<()> {
                 InstallResult::NightlyIsUpdated => {
                     info!("Nightly up to date!");
                 }
+                InstallResult::ForkIsUpdated => {
+                    info!("{tag_name} is up to date!");
+                }
                 InstallResult::GivenNightlyRollback => (),
             }
         }

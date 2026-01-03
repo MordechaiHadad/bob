@@ -55,7 +55,12 @@ pub async fn start(
         helpers::version::is_version_used(&version.tag_name, &config.config).await;
 
     copy_nvim_proxy(&config).await?;
-    if is_version_used && version.tag_name != "nightly" {
+    if is_version_used
+        && !matches!(
+            version.version_type,
+            VersionType::Nightly | VersionType::Fork
+        )
+    {
         info!("{} is already installed and used!", version.tag_name);
         return Ok(());
     }
@@ -66,6 +71,11 @@ pub async fn start(
                 if let InstallResult::NightlyIsUpdated = success {
                     if is_version_used {
                         info!("Nightly is already updated and used!");
+                        return Ok(());
+                    }
+                } else if let InstallResult::ForkIsUpdated = success {
+                    if is_version_used {
+                        info!("{} is already updated and used!", version.tag_name);
                         return Ok(());
                     }
                 }

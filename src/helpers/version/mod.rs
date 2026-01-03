@@ -225,16 +225,8 @@ pub async fn get_version_sync_file_location(config: &Config) -> Result<Option<Pa
 /// ```
 pub async fn is_version_installed(version: &str, config: &Config) -> Result<bool> {
     let downloads_dir = directories::get_downloads_directory(config).await?;
-    let mut dir = tokio::fs::read_dir(&downloads_dir).await?;
-
-    while let Some(directory) = dir.next_entry().await? {
-        let name = directory.file_name().to_str().unwrap().to_owned();
-        if !version.eq(&name) {
-            continue;
-        }
-        return Ok(true);
-    }
-    Ok(false)
+    let version_dir = downloads_dir.join(version);
+    Ok(version_dir.join("bin").join("nvim").is_file())
 }
 
 /// Retrieves the current version of Neovim being used.

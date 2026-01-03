@@ -291,6 +291,50 @@ pub async fn get_commits_for_nightly(
     deserialize_response(&response)
 }
 
+/// Fetches the commit SHA for a specific ref in a fork repository.
+///
+/// This function sends a GET request to the GitHub API to fetch commit information
+/// for a specific ref (branch, tag, or commit) in a fork repository.
+///
+/// # Parameters
+///
+/// * `client: &Client` - The HTTP client used to send the request.
+/// * `owner: &str` - The owner of the fork repository.
+/// * `repo: &str` - The name of the fork repository.
+/// * `ref_name: &str` - The ref (branch, tag, or commit SHA) to fetch.
+///
+/// # Returns
+///
+/// * `Result<String>` - The full commit SHA, or an error if the request failed.
+///
+/// # Errors
+///
+/// This function will return an error if the request to the GitHub API fails or if
+/// the response cannot be deserialized.
+///
+/// # Example
+///
+/// ```rust
+/// let client = Client::new();
+/// let sha = get_fork_commit(&client, "user", "neovim", "main").await?;
+/// println!("Latest commit SHA: {}", sha);
+/// ```
+pub async fn get_fork_commit(
+    client: &Client,
+    owner: &str,
+    repo: &str,
+    ref_name: &str,
+) -> Result<String> {
+    let response = make_github_request(
+        client,
+        format!("https://api.github.com/repos/{owner}/{repo}/commits/{ref_name}"),
+    )
+    .await?;
+
+    let commit: RepoCommit = deserialize_response(&response)?;
+    Ok(commit.sha)
+}
+
 /// Deserializes a JSON response from the GitHub API.
 ///
 /// This function takes a JSON response as a string and attempts to deserialize it into a specified type `T`. If the response contains a "message" field, it is treated as an error response, and the function will return an error with the message from the response. If the error is related to rate limiting, a specific error message is returned.

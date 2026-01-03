@@ -59,6 +59,7 @@ pub async fn start(data: Update, client: &Client, config: ConfigFile) -> Result<
                 InstallResult::InstallationSuccess(_) => did_update = true,
                 InstallResult::VersionAlreadyInstalled
                 | InstallResult::NightlyIsUpdated
+                | InstallResult::ForkIsUpdated
                 | InstallResult::GivenNightlyRollback => (),
             }
         }
@@ -68,6 +69,7 @@ pub async fn start(data: Update, client: &Client, config: ConfigFile) -> Result<
             match install_handler::start(&nightly, client, &config).await? {
                 InstallResult::InstallationSuccess(_) => did_update = true,
                 InstallResult::NightlyIsUpdated
+                | InstallResult::ForkIsUpdated
                 | InstallResult::VersionAlreadyInstalled
                 | InstallResult::GivenNightlyRollback => (),
             }
@@ -89,6 +91,7 @@ pub async fn start(data: Update, client: &Client, config: ConfigFile) -> Result<
     match install_handler::start(&version, client, &config).await? {
         InstallResult::NightlyIsUpdated => info!("Nightly is already updated!"),
         InstallResult::VersionAlreadyInstalled => info!("Stable is already updated!"),
+        InstallResult::ForkIsUpdated => info!("{} is already updated!", version.tag_name),
         InstallResult::InstallationSuccess(_) | InstallResult::GivenNightlyRollback => (),
     }
     Ok(())
