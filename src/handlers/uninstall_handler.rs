@@ -8,8 +8,9 @@ use dialoguer::{
     console::{Term, style},
     theme::ColorfulTheme,
 };
+use futures_util::stream::{self, StreamExt};
 use reqwest::Client;
-use tokio::fs;
+use tokio::fs as async_fs;
 use tracing::{info, warn};
 
 /// Starts the uninstall process.
@@ -44,7 +45,7 @@ pub async fn start(version: Option<&str>, config: Config) -> Result<()> {
     let client = Client::new();
 
     let Some(version) = version else {
-        return uninstall_selections(&client, &config).await;
+        return uninstall_selections(&config).await;
     };
 
     let version = helpers::version::parse_version_type(&client, version).await?;
@@ -60,7 +61,11 @@ pub async fn start(version: Option<&str>, config: Config) -> Result<()> {
 
     let path = downloads_dir.join(&version.tag_name);
 
-    fs::remove_dir_all(path).await?;
+    async_fs::remove_dir_all(&path).await?;
+
+    // Clean up empty parent directories
+    directories::remove_empty_parents(&path, &downloads_dir)?;
+
     info!(
         "Successfully uninstalled version: {}",
         version.non_parsed_string
@@ -70,11 +75,12 @@ pub async fn start(version: Option<&str>, config: Config) -> Result<()> {
 
 /// Uninstalls selected versions.
 ///
-/// This function reads the versions from the downloads directory, presents a list of installed versions to the user, allows them to select versions to uninstall, and then uninstalls the selected versions.
+/// This function recursively searches the downloads directory for all installed versions,
+/// presents a list of available versions to the user, allows them to select versions to
+/// uninstall, and then uninstalls the selected versions.
 ///
 /// # Arguments
 ///
-/// * `client` - The HTTP client to be used for network requests.
 /// * `config` - The configuration for the uninstall process.
 ///
 /// # Returns
@@ -86,36 +92,42 @@ pub async fn start(version: Option<&str>, config: Config) -> Result<()> {
 /// This function will return an error if:
 ///
 /// * The downloads directory cannot be read.
-/// * The version cannot be parsed from the file name.
-/// * The version is currently in use.
+/// * The version directories cannot be found recursively.
 /// * The user aborts the uninstall process.
 ///
 /// # Example
 ///
 /// ```rust
-/// let client = Client::new();
 /// let config = Config::default();
-/// uninstall_selections(&client, &config).await.unwrap();
+/// uninstall_selections(&config).await.unwrap();
 /// ```
-async fn uninstall_selections(client: &Client, config: &Config) -> Result<()> {
+async fn uninstall_selections(config: &Config) -> Result<()> {
     let downloads_dir = directories::get_downloads_directory(config).await?;
 
-    let mut paths = fs::read_dir(downloads_dir.clone()).await?;
-    let mut installed_versions: Vec<String> = Vec::new();
+    // Recursively find all version directories (build directories are filtered out)
+    let paths = directories::find_version_dirs(&downloads_dir, &downloads_dir)?;
 
-    while let Some(path) = paths.next_entry().await? {
-        let name = path.file_name().to_str().unwrap().to_owned();
-
-        let Ok(version) = helpers::version::parse_version_type(client, &name).await else {
-            warn!("Could not parse version from file name: {}", name);
-            continue;
-        };
-
-        if helpers::version::is_version_used(&version.non_parsed_string, config).await {
-            continue;
-        }
-        installed_versions.push(version.non_parsed_string);
+    if paths.is_empty() {
+        info!("There are no versions installed");
+        return Ok(());
     }
+
+    // Filter out currently used versions and collect version names with their paths
+    let installed_versions = stream::iter(paths)
+        .filter_map(|path| {
+            let downloads_dir = downloads_dir.clone();
+            async move {
+                let version_name = path.strip_prefix(&downloads_dir).unwrap().to_str().unwrap();
+
+                if !helpers::version::is_version_used(version_name, config).await {
+                    Some((version_name.to_owned(), path))
+                } else {
+                    None
+                }
+            }
+        })
+        .collect::<Vec<_>>()
+        .await;
 
     if installed_versions.is_empty() {
         info!("You only have one neovim instance installed");
@@ -128,9 +140,14 @@ async fn uninstall_selections(client: &Client, config: &Config) -> Result<()> {
         ..ColorfulTheme::default()
     };
 
+    let version_names: Vec<&str> = installed_versions
+        .iter()
+        .map(|(name, _)| name.as_str())
+        .collect();
+
     let selections = MultiSelect::with_theme(&theme)
         .with_prompt("Toogle with space the versions you wish to uninstall:")
-        .items(&installed_versions)
+        .items(&version_names)
         .interact_on_opt(&Term::stderr())?;
 
     match &selections {
@@ -145,12 +162,13 @@ async fn uninstall_selections(client: &Client, config: &Config) -> Result<()> {
             }
 
             for &i in ids {
-                let path = downloads_dir.join(&installed_versions[i]);
-                fs::remove_dir_all(path).await?;
-                info!(
-                    "Successfully uninstalled version: {}",
-                    &installed_versions[i]
-                );
+                let (version_name, path) = &installed_versions[i];
+                async_fs::remove_dir_all(path).await?;
+
+                // Clean up empty parent directories
+                directories::remove_empty_parents(path, &downloads_dir)?;
+
+                info!("Successfully uninstalled version: {}", version_name);
             }
         }
         None | Some(_) => info!("Uninstall aborted..."),

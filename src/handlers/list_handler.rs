@@ -1,5 +1,4 @@
 use anyhow::Result;
-use std::{fs, path::PathBuf};
 use tracing::info;
 use yansi::Paint;
 
@@ -7,43 +6,6 @@ use crate::{
     config::Config,
     helpers::{self, directories},
 };
-
-/// Recursively finds all version directories in the downloads directory.
-///
-/// This function searches through the directory tree starting from `current_dir`,
-/// looking for directories that contain a valid Neovim installation (indicated by
-/// the presence of a `bin` subdirectory).
-///
-/// # Arguments
-///
-/// * `current_dir` - The current directory being searched
-///
-/// # Returns
-///
-/// * `Result<Vec<PathBuf>>` - A vector of paths to version directories with their
-///   relative paths from the base directory
-fn find_version_dirs(current_dir: &PathBuf) -> Result<Vec<PathBuf>> {
-    let mut version_dirs = Vec::new();
-
-    if let Ok(entries) = fs::read_dir(current_dir) {
-        for entry in entries.filter_map(Result::ok) {
-            let path = entry.path();
-
-            if !path.is_dir() {
-                continue;
-            }
-
-            let nvim_exe = path.join("bin").join("nvim");
-            if nvim_exe.exists() && nvim_exe.is_file() {
-                version_dirs.push(path);
-            } else if let Ok(mut subdirs) = find_version_dirs(&path) {
-                version_dirs.append(&mut subdirs);
-            }
-        }
-    }
-
-    Ok(version_dirs)
-}
 
 /// Starts the list handler.
 ///
@@ -67,8 +29,8 @@ fn find_version_dirs(current_dir: &PathBuf) -> Result<Vec<PathBuf>> {
 pub async fn start(config: Config) -> Result<()> {
     let downloads_dir = directories::get_downloads_directory(&config).await?;
 
-    // Recursively find all version directories
-    let paths = find_version_dirs(&downloads_dir)?;
+    // Recursively find all version directories (build directories are filtered out)
+    let paths = directories::find_version_dirs(&downloads_dir, &downloads_dir)?;
 
     if paths.is_empty() {
         info!("There are no versions installed");
@@ -78,7 +40,6 @@ pub async fn start(config: Config) -> Result<()> {
     let relative_paths = paths
         .iter()
         .map(|path| path.strip_prefix(&downloads_dir).unwrap())
-        .filter(|path| !path.starts_with("neovim-git/build"))
         .map(|path| path.to_str().unwrap())
         .collect::<Vec<&str>>();
 
