@@ -12,9 +12,9 @@ jobs:
   check-version:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Check version
+      - name: "Checkout code"
+        uses: actions/checkout@v6
+      - name: "Check version"
         id: check_version
         shell: bash
         run: |
@@ -37,14 +37,14 @@ jobs:
           - {NAME: macos, OS: macos-latest, ARCH: arm, PATH: target/optimized/bob, TARGET: ""}
     runs-on: ${{matrix.sys.OS}}
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
+      - name: "Checkout code"
+        uses: actions/checkout@v6
+      - name: "Install Rust toolchain"
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
-          profile: ${{ env.RUST_TOOLCHAIN_PROFILE }}
-          override: ${{ env.RUST_TOOLCHAIN_OVERRIDE }}
-      - name: Add Rust target for cross-compilation
+          targets: ${{ matrix.target }}
+      - name: "Add Rust target for cross-compilation"
         if: matrix.sys.TARGET != ''
         shell: bash
         run: rustup target add ${{ matrix.sys.TARGET }}
@@ -122,8 +122,8 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: "Checkout code"
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Download artifacts
@@ -157,8 +157,10 @@ jobs:
     needs: github-release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+      - name: "Checkout code"
+        uses: actions/checkout@v6
+      - name: "Install toolchain"
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           profile: ${{ env.RUST_TOOLCHAIN_PROFILE }}
