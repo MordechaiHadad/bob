@@ -1,0 +1,14 @@
+include = ["**/*.toml"]
+#exclude = []
+
+#[formatting]
+
+[[rule]]
+include = ["**/Cargo.toml", ".taplo.toml", "Cargo.toml"]
+
+[rule.formatting]
+align_entries        = true
+align_comments       = true
+array_trailing_comma = true
+column_width         = 100   # Try and keep this in sync with rustfmt's max_width, or roughly so
+inline_table_expand  = false

@@ -1,7 +1,8 @@
+use std::path::Path;
+
 use anyhow::{Result, anyhow};
 use async_recursion::async_recursion;
 use indicatif::{ProgressBar, ProgressStyle};
-use std::path::Path;
 use tokio::fs;
 
 /// Asynchronously removes a directory and all its contents.
@@ -89,10 +90,7 @@ pub async fn remove_dir(directory: &str) -> Result<()> {
 /// copy_dir(from, to).await;
 /// ```
 #[async_recursion(?Send)]
-pub async fn copy_dir_async(
-    from: impl AsRef<Path> + 'static,
-    to: impl AsRef<Path> + 'static,
-) -> Result<()> {
+pub async fn copy_dir_async(from: impl AsRef<Path> + 'static, to: impl AsRef<Path> + 'static) -> Result<()> {
     let original_path = from.as_ref().to_owned();
     let destination = to.as_ref().to_owned();
 

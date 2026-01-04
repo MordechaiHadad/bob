@@ -1,22 +1,19 @@
 pub mod nightly;
 pub mod types;
 
-use self::types::{ParsedVersion, VersionType};
-use crate::github_requests::get_upstream_stable;
-use crate::helpers::directories;
-use crate::{
-    config::Config,
-    github_requests::{RepoCommit, deserialize_response},
-};
+use std::path::{Path, PathBuf};
+
 use anyhow::{Context, Result, anyhow};
 use reqwest::Client;
 use semver::Version;
-use std::path::{Path, PathBuf};
-use tokio::{
-    fs::{self, File},
-    io::AsyncWriteExt,
-};
+use tokio::fs::{self, File};
+use tokio::io::AsyncWriteExt;
 use tracing::info;
+
+use self::types::{ParsedVersion, VersionType};
+use crate::config::Config;
+use crate::github_requests::{RepoCommit, deserialize_response, get_upstream_stable};
+use crate::helpers::directories;
 
 /// Parses the version type from a version string.
 ///
@@ -48,31 +45,33 @@ use tracing::info;
 /// ```
 pub async fn parse_version_type(client: &Client, version: &str) -> Result<ParsedVersion> {
     match version {
-        "nightly" => Ok(ParsedVersion {
-            tag_name: version.to_string(),
-            version_type: VersionType::Nightly,
-            non_parsed_string: version.to_string(),
-            semver: None,
-        }),
+        "nightly" => {
+            Ok(ParsedVersion {
+                tag_name:          version.to_string(),
+                version_type:      VersionType::Nightly,
+                non_parsed_string: version.to_string(),
+                semver:            None,
+            })
+        }
         "stable" | "latest" => {
             info!("Fetching latest version");
             let stable_version = get_upstream_stable(client).await?;
             let cloned_version = stable_version.tag_name.clone();
             Ok(ParsedVersion {
-                tag_name: stable_version.tag_name,
-                version_type: VersionType::Latest,
+                tag_name:          stable_version.tag_name,
+                version_type:      VersionType::Latest,
                 non_parsed_string: version.to_string(),
-                semver: Some(Version::parse(&cloned_version.replace('v', ""))?),
+                semver:            Some(Version::parse(&cloned_version.replace('v', ""))?),
             })
         }
         "head" | "git" | "HEAD" => {
             info!("Fetching latest commit");
             let latest_commit = get_latest_commit(client).await?;
             Ok(ParsedVersion {
-                tag_name: latest_commit.chars().take(7).collect(),
-                version_type: VersionType::Hash,
+                tag_name:          latest_commit.chars().take(7).collect(),
+                version_type:      VersionType::Hash,
                 non_parsed_string: latest_commit,
-                semver: None,
+                semver:            None,
             })
         }
         _ => {
@@ -83,29 +82,29 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                 }
                 let cloned_version = returned_version.clone();
                 return Ok(ParsedVersion {
-                    tag_name: returned_version,
-                    version_type: VersionType::Normal,
+                    tag_name:          returned_version,
+                    version_type:      VersionType::Normal,
                     non_parsed_string: version.to_string(),
-                    semver: Some(
+                    semver:            Some(
                         Version::parse(&cloned_version.replace('v', ""))
                             .context("Unable to parse version string in parse_version_type")?,
                     ),
                 });
             } else if crate::HASH_REGEX.is_match(version) {
                 return Ok(ParsedVersion {
-                    tag_name: version.to_string().chars().take(7).collect(),
-                    version_type: VersionType::Hash,
+                    tag_name:          version.to_string().chars().take(7).collect(),
+                    version_type:      VersionType::Hash,
                     non_parsed_string: version.to_string(),
-                    semver: None,
+                    semver:            None,
                 });
             }
 
             if crate::NIGHTLY_REGEX.is_match(version) {
                 return Ok(ParsedVersion {
-                    tag_name: version.to_string(),
-                    version_type: VersionType::NightlyRollback,
+                    tag_name:          version.to_string(),
+                    version_type:      VersionType::NightlyRollback,
                     non_parsed_string: version.to_string(),
-                    semver: None,
+                    semver:            None,
                 });
             }
 
@@ -145,20 +144,24 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
 /// let version_sync_file_location = get_version_sync_file_location(&config).await.unwrap();
 /// println!("The version sync file is located at {:?}", version_sync_file_location);
 /// ```
-pub async fn get_version_sync_file_location(config: &Config) -> Result<Option<PathBuf>> {
-    let path = match &config.version_sync_file_location {
-        Some(path) => {
-            let path = Path::new(path);
-            if tokio::fs::metadata(path).await.is_err() {
-                let mut file = File::create(path).await.context(format!("The path provided, \"{}\", does not exist. Please check the path and try again.", path.parent().unwrap().display()))?;
-                file.write_all(b"").await?;
-            }
-            Some(PathBuf::from(path))
+pub async fn get_version_sync_file_location<P>(version_sync_file_location: Option<P>) -> Option<PathBuf>
+where
+    P: AsRef<Path>,
+{
+    if let Some(ref path) = version_sync_file_location {
+        if let Err(path_err) = tokio::fs::metadata(path).await {
+            let mut file = File::create(path).await.context(format!(
+                "The path provided, \"{}\", does not exist. Please check the path and try again. The error was: {}",
+                path.as_ref().parent().unwrap().display(),
+                path_err
+            )).ok()?;
+            file.write_all(b"").await.ok()?;
+            file.flush().await.ok()?;
+            return Some(path.as_ref().to_path_buf());
         }
-        None => return Ok(None),
-    };
-
-    Ok(path)
+        return Some(path.as_ref().to_path_buf());
+    }
+    None
 }
 
 /// Checks if a specific version of Neovim is installed.
@@ -305,7 +308,8 @@ async fn get_latest_commit(client: &Client) -> Result<String> {
 }
 
 #[cfg(test)]
-mod version_is_hash_tests {
+mod version_mod_tests {
+    use super::*;
 
     pub(crate) fn is_hash(version: &str) -> bool {
         crate::HASH_REGEX.is_match(version)
@@ -322,12 +326,12 @@ mod version_is_hash_tests {
             ("abc123abc123abc123abc123abc123abc123abc123", false),
         ];
 
-        version_expected
-            .iter()
-            .for_each(|(case, expected)| match expected {
-                true => assert!(is_hash(case)),
-                false => assert!(!is_hash(case)),
-            });
+        version_expected.iter().for_each(|(case, expected)| {
+            match *expected {
+                true => assert!(is_hash(case), "Expected true case failed for input: {}", case),
+                false => assert!(!is_hash(case), "Expected false case failed for input: {}", case),
+            }
+        });
 
         version_expected.iter().for_each(|(version, expected)| {
             // dbg!(&version);
@@ -369,5 +373,40 @@ mod version_is_hash_tests {
     fn test_is_hash_with_long_hash() {
         let version = "abc123abc123abc123abc123abc123abc123abc123";
         assert!(!is_hash(version));
+    }
+
+    #[tokio::test]
+    async fn test_version_is_hash_tests() {
+        let mut config = crate::config::Config::default();
+
+        let mut version_file = tokio::fs::File::options()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open("test_version_sync_file_location")
+            .await;
+
+        tokio::io::AsyncWriteExt::write_all(&mut version_file.as_mut().unwrap(), b"")
+            .await
+            .unwrap();
+
+        assert!(version_file.is_ok());
+
+        config.version_sync_file_location = Some("test_version_sync_file_location".to_string());
+
+        let res = get_version_sync_file_location(config.version_sync_file_location.as_ref()).await;
+
+        assert!(res.is_some());
+        let res = res.unwrap();
+        assert_eq!(res, PathBuf::from("test_version_sync_file_location"));
+
+        tokio::sync::Barrier::new(1).wait().await;
+        tokio::fs::remove_file("test_version_sync_file_location")
+            .await
+            .unwrap_or_else(|e| {
+                eprintln!("Could not remove test file: {}", e);
+                std::fs::remove_file("test_version_sync_file_location")
+                    .unwrap_or_else(|e| panic!("Could not remove test file: {}", e))
+            });
     }
 }

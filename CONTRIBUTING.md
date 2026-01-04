@@ -13,10 +13,12 @@ Thanks for wanting to contribute! Bob is community-driven and we appreciate all 
 ## How to Contribute
 
 **Code:**
+
 - Fix bugs or add features
 - Improve performance
 
 **Non-Code:**
+
 - Improve docs
 - Report bugs
 - Suggest features
@@ -34,9 +36,63 @@ Thanks for wanting to contribute! Bob is community-driven and we appreciate all 
 
 Only needed if testing the build-from-source feature. Requires CMake, Git, and platform-specific build tools. See the [Neovim wiki](https://github.com/neovim/neovim/wiki/Building-Neovim).
 
+### Optional (but recommended): Installing and Using `cargo-make`
+
+If you're planning on implementing changes that would warrant the classic "code-compile-change" development cycle,
+the project is setup to use two tools in tandem:
+
+- [Cargo Make](https://github.com/sagiegurari/cargo-make) and,
+- [Taplo TOML formatter](https://taplo.tamasfe.dev/)
+
+Cargo Make can greatly speed up the development cycle and other common actions.
+Taplo is used by the `Makefile.toml` when formatting the project to keep all those contributing using
+the same formatting.
+
+#### If you're on Linux
+
+Use your package manager to search for `cargo-make` and install, if available.
+
+- Example for Arch Linux from the `cargo-make` docs:
+
+```bash
+paru -S cargo-make taplo-cli
+```
+
+#### If you're on Windows
+
+For `cargo-make`:
+
+You can use either `cargo-binstall` or simply `cargo` itself.
+
+```powershell
+cargo binstall cargo-make
+```
+
+or via cargo directly
+
+```powershell
+cargo install --force cargo-make
+```
+
+For `taplo-cli`:
+
+```powershell
+scoop install taplo
+```
+
+Or refer to the Taplo documentation directly.
+
+You can access and use cargo-make via either `cargo-make <reciple>` or `makers <reciple>`.
+
+> Please refer to the top-level `Makefile.toml` for the various aliased commands available to you.
+> Per cycle I've found using alias `makers a` to be the best. It runs formatting, then all tests, and builds
+> the 2 output types (debug and release).
+> There's also `makers r` and `makers rr` for `run` and `run --release` respectively.
+> You can pass arguments to the built binary easily via `makers r -- --help`
+
 ### Get Started
 
-```
+```sh
 # Fork and clone
 git clone https://github.com/YOUR_USERNAME/bob.git
 cd bob
@@ -44,10 +100,16 @@ cd bob
 # Create a branch
 git checkout -b feature/your-feature
 
-# Build
+# Build using cargo-make
+makers a # or cargo-make a
+# or
+# Build using cargo
 cargo build
 
-# Run
+# Run via cargo-make
+makers r -- --help # or cargo-make r -- --help
+# or
+# Run using cargo
 cargo run -- --help
 ```
 
@@ -88,6 +150,7 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 **All PRs must link to an existing, discussed issue.** Don't open PRs out of thin air.
 
 **Workflow:**
+
 1. Open an issue describing the change
 2. Discuss with maintainers
 3. Get approval
@@ -106,6 +169,7 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 ### Bug Reports
 
 Include:
+
 - Bob version (`bob --version`)
 - OS and architecture
 - Rust version (`rustc --version`)
@@ -117,6 +181,7 @@ Include:
 ### Feature Requests
 
 Check existing issues first. Open a new issue explaining:
+
 - What you need and why
 - How it should work
 - Alternative approaches you considered

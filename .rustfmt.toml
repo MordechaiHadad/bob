@@ -1,0 +1,22 @@
+edition = "2024"
+newline_style = "Unix"
+
+max_width = 110
+
+fn_params_layout = "Tall"
+fn_call_width = 100
+
+force_multiline_blocks = true
+group_imports = "StdExternalCrate"
+
+imports_granularity = "Module"
+imports_layout = "HorizontalVertical"
+normalize_doc_attributes = true
+reorder_impl_items = true
+reorder_modules = true
+
+struct_field_align_threshold = 100
+
+#tab_spaces = 2
+#reorder_imports = true
+#line_width = 120

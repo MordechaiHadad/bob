@@ -1,11 +1,11 @@
-use crate::cli::Update;
-use crate::config::ConfigFile;
-use crate::helpers::version::is_version_installed;
 use anyhow::Result;
 use reqwest::Client;
 use tracing::{info, warn};
 
+use crate::cli::Update;
+use crate::config::ConfigFile;
 use crate::handlers::{InstallResult, install_handler};
+use crate::helpers::version::is_version_installed;
 
 /// Starts the update process based on the provided `Update` data, `Client`, and `Config`.
 ///

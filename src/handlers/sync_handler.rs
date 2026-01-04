@@ -3,9 +3,9 @@ use reqwest::Client;
 use tokio::fs;
 use tracing::info;
 
-use crate::{config::ConfigFile, helpers::version};
-
+use crate::config::ConfigFile;
 use crate::handlers::use_handler;
+use crate::helpers::version;
 
 /// Starts the synchronization process.
 ///
@@ -36,9 +36,10 @@ use crate::handlers::use_handler;
 /// start(&client, config).await.unwrap();
 /// ```
 pub async fn start(client: &Client, config: ConfigFile) -> Result<()> {
-    let version_sync_file_location = version::get_version_sync_file_location(&config.config)
-        .await?
-        .ok_or_else(|| anyhow!("version_sync_file_location needs to be set to use bob sync"))?;
+    let version_sync_file_location =
+        version::get_version_sync_file_location(config.config.version_sync_file_location.as_ref())
+            .await
+            .ok_or_else(|| anyhow!("version_sync_file_location needs to be set to use bob sync"))?;
 
     let version = fs::read_to_string(&version_sync_file_location).await?;
     if version.is_empty() {
@@ -52,19 +53,11 @@ pub async fn start(client: &Client, config: ConfigFile) -> Result<()> {
 
     info!(
         "Using version {version} set in {}",
-        version_sync_file_location
-            .into_os_string()
-            .into_string()
-            .unwrap()
+        version_sync_file_location.into_os_string().into_string().unwrap()
     );
 
-    use_handler::start(
-        version::parse_version_type(client, trimmed_version).await?,
-        true,
-        client,
-        config,
-    )
-    .await?;
+    use_handler::start(version::parse_version_type(client, trimmed_version).await?, true, client, config)
+        .await?;
 
     Ok(())
 }

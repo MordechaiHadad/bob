@@ -1,15 +1,17 @@
-use crate::helpers::version::nightly::produce_nightly_vec;
+use std::fmt::Write;
+
 use anyhow::Result;
 use chrono::{Duration, Utc};
-use dialoguer::{Select, console::Term, theme::ColorfulTheme};
+use dialoguer::Select;
+use dialoguer::console::Term;
+use dialoguer::theme::ColorfulTheme;
 use tracing::info;
 
-use crate::{
-    config::Config,
-    handlers::use_handler,
-    helpers::{self, version::types::ParsedVersion},
-};
-use std::fmt::Write;
+use crate::config::Config;
+use crate::handlers::use_handler;
+use crate::helpers;
+use crate::helpers::version::nightly::produce_nightly_vec;
+use crate::helpers::version::types::ParsedVersion;
 
 /// Starts the rollback process.
 ///
@@ -63,10 +65,10 @@ pub async fn start(config: Config) -> Result<()> {
         use_handler::switch(
             &config,
             &ParsedVersion {
-                tag_name: name_list[i].clone(),
-                version_type: helpers::version::types::VersionType::Normal,
+                tag_name:          name_list[i].clone(),
+                version_type:      helpers::version::types::VersionType::Normal,
                 non_parsed_string: String::default(),
-                semver: None,
+                semver:            None,
             },
         )
         .await?;
@@ -87,10 +89,7 @@ pub async fn start(config: Config) -> Result<()> {
         let now = Utc::now();
         let since = now.signed_duration_since(find.data.published_at);
         let humanized = humanize_duration(since);
-        info!(
-            "Successfully rolled back to version '{}' from {} ago",
-            name_list[i], humanized
-        );
+        info!("Successfully rolled back to version '{}' from {} ago", name_list[i], humanized);
     } else {
         info!("Rollback aborted...");
     }
@@ -133,12 +132,7 @@ fn humanize_duration(duration: Duration) -> String {
             let _ = write!(humanized_duration, ",");
         }
         // humanized_duration += &format!("{} week{}", weeks, if weeks > 1 { "s" } else { "" });
-        let _ = write!(
-            humanized_duration,
-            "{} week{}",
-            weeks,
-            if weeks > 1 { "s" } else { "" }
-        );
+        let _ = write!(humanized_duration, "{} week{}", weeks, if weeks > 1 { "s" } else { "" });
         added_duration = true;
     }
     if days != 0 {
@@ -149,12 +143,7 @@ fn humanize_duration(duration: Duration) -> String {
             let _ = write!(humanized_duration, " ");
         }
         // humanized_duration += &format!("{} day{}", days, if days > 1 { "s" } else { "" });
-        let _ = write!(
-            humanized_duration,
-            "{} day{}",
-            days,
-            if days > 1 { "s" } else { "" }
-        );
+        let _ = write!(humanized_duration, "{} day{}", days, if days > 1 { "s" } else { "" });
         added_duration = true;
     }
     if hours != 0 {
@@ -164,12 +153,7 @@ fn humanize_duration(duration: Duration) -> String {
         if !humanized_duration.is_empty() {
             let _ = write!(humanized_duration, " ");
         }
-        let _ = write!(
-            humanized_duration,
-            "{} hour{}",
-            hours,
-            if hours > 1 { "s" } else { "" }
-        );
+        let _ = write!(humanized_duration, "{} hour{}", hours, if hours > 1 { "s" } else { "" });
     }
 
     humanized_duration
