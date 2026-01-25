@@ -201,7 +201,7 @@ List all remote neovim versions available for download.
 
 ## ⚙ Configuration
 
-This section is a bit more advanced and thus the user will have to do the work himself since bob doesn't do that.
+This section is a bit more advanced and thus the user will have to do the work themselves since bob doesn't do that.
 
 Bob's configuration file can be written in either JSON or TOML format. The file should be located at `config_dir/bob/config.json` or `config_dir/bob/config.toml` respectively. However, the location of the configuration file can be customized as explained [below](#config-location), to be more specific:
 
