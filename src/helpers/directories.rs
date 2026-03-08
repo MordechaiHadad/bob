@@ -4,64 +4,10 @@ use std::path::PathBuf;
 
 use crate::config::Config;
 
-/// Returns the home directory path for the current user.
-///
-/// This function checks the target operating system using the `cfg!` macro and constructs the home directory path accordingly.
-/// For Windows, it uses the "USERPROFILE" environment variable.
-/// For macOS, it uses the "/Users/" directory and appends the `SUDO_USER` or "USER" environment variable if they exist and correspond to a valid directory.
-/// For other operating systems, it uses the "/home/" directory and appends the `SUDO_USER` or "USER" environment variable if they exist and correspond to a valid directory.
-/// If none of the above methods work, it uses the "HOME" environment variable.
-///
-/// # Returns
-///
-/// This function returns a `Result` that contains a `PathBuf` representing the home directory path if the operation was successful.
-/// If the operation failed, the function returns `Err` with a description of the error.
-///
-/// # Example
-///
-/// ```rust
-/// let home_dir = get_home_dir()?;
-/// ```
-fn get_home_dir() -> Result<PathBuf> {
-    let mut home_str = PathBuf::new();
-
-    if cfg!(windows) {
-        home_str.push(std::env::var("USERPROFILE")?);
-        return Ok(home_str);
-    }
-
-    if cfg!(target_os = "macos") {
-        home_str.push("/Users/");
-    } else {
-        home_str.push("/home/");
-    }
-
-    if let Ok(value) = std::env::var("SUDO_USER") {
-        home_str.push(&value);
-        if fs::metadata(&home_str).is_ok() {
-            return Ok(home_str);
-        }
-    }
-
-    if let Ok(value) = std::env::var("USER") {
-        home_str.push(&value);
-        if fs::metadata(&home_str).is_ok() {
-            return Ok(home_str);
-        }
-    }
-
-    let home_value = std::env::var("HOME")?;
-    home_str = PathBuf::from(home_value);
-
-    Ok(home_str)
-}
-
 /// Returns the local data directory path for the current user.
 ///
-/// This function first gets the home directory path by calling the `get_home_dir` function.
-/// It then checks the target operating system using the `cfg!` macro and constructs the local data directory path accordingly.
-/// For Windows, it appends "AppData/Local" to the home directory path.
-/// For other operating systems, it appends ".local/share" to the home directory path.
+/// On Unix systems, if running under sudo, it appends ".local/share" (or "Library/Application Support" on macOS) to the real user's home directory.
+/// Otherwise, it relies on the `dirs` crate which respects `XDG_DATA_HOME` on Linux.
 ///
 /// # Returns
 ///
@@ -74,56 +20,77 @@ fn get_home_dir() -> Result<PathBuf> {
 /// let local_data_dir = get_local_data_dir()?;
 /// ```
 fn get_local_data_dir() -> Result<PathBuf> {
-    let mut home_dir = get_home_dir()?;
-    if cfg!(windows) {
-        home_dir.push("AppData\\Local");
-        return Ok(home_dir);
+    #[cfg(unix)]
+    if let Ok(sudo_user) = std::env::var("SUDO_USER") {
+        if let Some(user_info) = users::get_user_by_name(&sudo_user) {
+            let mut home: PathBuf = user_info.home_dir().into();
+            if cfg!(target_os = "macos") {
+                home.push("Library/Application Support");
+            } else {
+                home.push(".local/share");
+            }
+            return Ok(home);
+        }
     }
 
-    home_dir.push(".local/share");
-    Ok(home_dir)
+    dirs::data_local_dir().ok_or_else(|| anyhow!("Could not determine local data directory"))
 }
 
-/// Returns the local data directory path for the current user.
+/// Returns the configuration file path for the current user.
 ///
-/// This function first gets the home directory path by calling the `get_home_dir` function.
-/// It then checks the target operating system using the `cfg!` macro and constructs the local data directory path accordingly.
-/// For Windows, it appends "AppData/Local" to the home directory path.
-/// For other operating systems, it appends ".local/share" to the home directory path.
+/// This function prioritizes the `BOB_CONFIG` environment variable.
+/// On Unix systems, if running under sudo, it appends ".config" (or "Library/Application Support" on macOS) to the real user's home directory.
+/// Otherwise, it relies on the `dirs` crate which respects `XDG_CONFIG_HOME` on Linux.
 ///
 /// # Returns
 ///
-/// This function returns a `Result` that contains a `PathBuf` representing the local data directory path if the operation was successful.
+/// This function returns a `Result` that contains a `PathBuf` representing the config file path if the operation was successful.
 /// If the operation failed, the function returns `Err` with a description of the error.
 ///
 /// # Example
 ///
 /// ```rust
-/// let local_data_dir = get_local_data_dir()?;
+/// let config_file = get_config_file()?;
 /// ```
 pub fn get_config_file() -> Result<PathBuf> {
     if let Ok(value) = std::env::var("BOB_CONFIG") {
         return Ok(PathBuf::from(value));
     }
 
-    let mut home_dir = get_home_dir()?;
+    let mut config_dir = {
+        #[allow(unused_mut)]
+        let mut dir = None;
+        #[cfg(unix)]
+        if let Ok(sudo_user) = std::env::var("SUDO_USER") {
+            if let Some(user_info) = users::get_user_by_name(&sudo_user) {
+                let mut home: PathBuf = user_info.home_dir().into();
+                if cfg!(target_os = "macos") {
+                    home.push("Library/Application Support");
+                } else {
+                    home.push(".config");
+                }
+                dir = Some(home);
+            }
+        }
+        dir
+    };
 
-    if cfg!(windows) {
-        home_dir.push("AppData\\Roaming");
-    } else if cfg!(target_os = "macos") {
-        home_dir.push("Library/Application Support");
-    } else {
-        home_dir.push(".config");
+    if config_dir.is_none() {
+        config_dir = Some(
+            dirs::config_dir().ok_or_else(|| anyhow!("Could not determine config directory"))?,
+        );
     }
 
-    home_dir.push("bob/config.toml");
+    let mut config_dir = config_dir.unwrap();
 
-    if fs::metadata(&home_dir).is_err() {
-        home_dir.pop();
-        home_dir.push("config.json");
+    config_dir.push("bob/config.toml");
+
+    if fs::metadata(&config_dir).is_err() {
+        config_dir.pop();
+        config_dir.push("config.json");
     }
 
-    Ok(home_dir)
+    Ok(config_dir)
 }
 
 /// Asynchronously returns the 'downloads' directory path based on the application configuration.
