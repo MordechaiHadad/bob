@@ -1,6 +1,8 @@
 use anyhow::{Result, anyhow};
 use std::fs;
 use std::path::PathBuf;
+#[cfg(unix)]
+use users::os::unix::UserExt;
 
 use crate::config::Config;
 
