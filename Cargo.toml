@@ -88,7 +88,7 @@ version = "0.28.0"
 features = ["signal"]
 
 [target.'cfg(unix)'.dependencies]
-users = "0.11.0"
+uzers = "0.12.2"
 flate2 = "1.0.26"
 tar = "0.4"
 

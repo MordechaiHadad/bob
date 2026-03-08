@@ -2,7 +2,7 @@ use anyhow::{Result, anyhow};
 use std::fs;
 use std::path::PathBuf;
 #[cfg(unix)]
-use users::os::unix::UserExt;
+use uzers::os::unix::UserExt;
 
 use crate::config::Config;
 
@@ -24,7 +24,7 @@ use crate::config::Config;
 fn get_local_data_dir() -> Result<PathBuf> {
     #[cfg(unix)]
     if let Ok(sudo_user) = std::env::var("SUDO_USER") {
-        if let Some(user_info) = users::get_user_by_name(&sudo_user) {
+        if let Some(user_info) = uzers::get_user_by_name(&sudo_user) {
             let mut home: PathBuf = user_info.home_dir().into();
             if cfg!(target_os = "macos") {
                 home.push("Library/Application Support");
@@ -64,7 +64,7 @@ pub fn get_config_file() -> Result<PathBuf> {
         let mut dir = None;
         #[cfg(unix)]
         if let Ok(sudo_user) = std::env::var("SUDO_USER") {
-            if let Some(user_info) = users::get_user_by_name(&sudo_user) {
+            if let Some(user_info) = uzers::get_user_by_name(&sudo_user) {
                 let mut home: PathBuf = user_info.home_dir().into();
                 if cfg!(target_os = "macos") {
                     home.push("Library/Application Support");
