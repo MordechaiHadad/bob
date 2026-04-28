@@ -151,5 +151,6 @@ jobs:
           name: "Nightly Development Build"
           prerelease: true
           make_latest: true
+          generate_release_notes: true
           files: |
             ./artifacts/*
