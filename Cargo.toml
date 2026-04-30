@@ -12,7 +12,6 @@ rust-version = "1.85"
 
 [dependencies]
 anyhow = "1.0.52"
-cfg-if = "1.0"
 indicatif = "0.18.0"
 rand = "0.8.5"
 serde_json = "1.0"

@@ -5,7 +5,7 @@ use crate::helpers::processes::handle_subprocess;
 use crate::helpers::version::nightly::produce_nightly_vec;
 use crate::helpers::version::types::{LocalVersion, ParsedVersion, VersionType};
 use crate::helpers::{self, directories, filesystem, unarchive};
-use anyhow::{Result, anyhow};
+use anyhow::{Result, anyhow, bail};
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
@@ -512,13 +512,13 @@ fn file_type_ext(version: &ParsedVersion, get_sha256sum: bool) -> std::borrow::C
 #[allow(clippy::too_many_lines)]
 #[rustfmt::skip]
 async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -> Result<PostDownloadVersionType> {
-    cfg_if::cfg_if! {
-        if #[cfg(windows)] {
+    cfg_select! {
+        windows => {
             if env::var("VisualStudioVersion").is_err() {
-                return Err(anyhow!("Please make sure you are using Developer PowerShell/Command Prompt for VS"));
+                bail!("Please make sure you are using Developer PowerShell/Command Prompt for VS");
             }
-
-        } else {
+        }
+        _ => {
             let is_clang_present = match Command::new("clang").output().await {
                 Ok(_) => true,
                 Err(error) => !matches!(error.kind(), std::io::ErrorKind::NotFound)
@@ -528,11 +528,10 @@ async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -
                 Err(error) => !matches!(error.kind(), std::io::ErrorKind::NotFound)
             };
             if !is_gcc_present && !is_clang_present {
-                return Err(anyhow!(
+                bail!(
                     "Clang or GCC have to be installed in order to build neovim from source"
-                ));
+                );
             }
-
         }
     }
 
@@ -540,18 +539,18 @@ async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -
         Ok(_) => (),
         Err(error) => {
             if error.kind() == std::io::ErrorKind::NotFound {
-                return Err(anyhow!(
+                bail!(
                     "Cmake has to be installed in order to build neovim from source"
-                ));
+                );
             }
         }
     }
 
     if let Err(error) = Command::new("git").output().await {
         if error.kind() == std::io::ErrorKind::NotFound {
-            return Err(anyhow!(
+            bail!(
                 "Git has to be installed in order to build neovim from source"
-            ));
+            );
         }
     }
 
@@ -562,7 +561,7 @@ async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -
             std::io::ErrorKind::NotFound => {
                 fs::create_dir(dirname).await?;
             }
-            _ => return Err(anyhow!("unknown error: {error}")),
+            _ => bail!("unknown error: {error}"),
         }
     }
 
@@ -577,7 +576,7 @@ async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -
                     .await?;
             }
 
-            _ => return Err(anyhow!("unknown error: {error}")),
+            _ => bail!("unknown error: {error}"),
         }
     }
 
@@ -600,7 +599,7 @@ async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -
         .spawn()?.wait().await?.success();
 
     if !fetch_successful {
-        return Err(anyhow!("fetching remote failed, try providing the full commit hash"));
+        bail!("fetching remote failed, try providing the full commit hash");
     }
 
     // checkout fetched files
@@ -626,12 +625,11 @@ async fn handle_building_from_source(version: &ParsedVersion, config: &Config) -
 
     let build_arg = format!("CMAKE_BUILD_TYPE={build_type}");
 
-    cfg_if::cfg_if! {
-        if #[cfg(windows)] {
-
+    cfg_select! {
+        windows => {
             windows_deps(build_arg.to_string(), build_type.to_string(), folder_name.to_string_lossy().to_string()).await?;
-
-        } else {
+        }
+        _ => {
             let location_arg = format!("CMAKE_INSTALL_PREFIX={}", folder_name.to_string_lossy());
             handle_subprocess(Command::new("make").arg(&location_arg).arg(&build_arg)).await?;
             handle_subprocess(Command::new("make").arg("install")).await?;
