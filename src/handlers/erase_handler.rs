@@ -1,6 +1,6 @@
-use anyhow::{Result, anyhow};
+use anyhow::{Result, bail};
 use tokio::fs;
-use tracing::info;
+use tracing::{debug, info};
 
 use crate::{
     config::Config,
@@ -47,44 +47,54 @@ pub async fn start(config: Config) -> Result<()> {
     let downloads = directories::get_downloads_directory(&config).await?;
     let mut installation_dir = directories::get_installation_directory(&config).await?;
 
-    cfg_if::cfg_if! {
-        if #[cfg(windows)] {
-            use winreg::RegKey;
-            use winreg::enums::*;
+    let path_env = std::env::var("PATH").unwrap_or_default();
+    if config.add_neovim_binary_to_path.unwrap_or(false)
+        && path_env.contains(installation_dir.display().to_string().as_str())
+    {
+        debug!(
+            "Neovim's installation path is present in the PATH environment variable, attempting to remove it..."
+        );
+        cfg_select! {
+            windows => {
+                use winreg::RegKey;
+                 use winreg::enums::*;
 
-            let current_usr = RegKey::predef(HKEY_CURRENT_USER);
-            let env = current_usr.open_subkey_with_flags("Environment", KEY_READ | KEY_WRITE)?;
-            let usr_path: String = env.get_value("Path")?;
-            if usr_path.contains("neovim") {
-                let usr_path = usr_path.replace(&format!("{}", installation_dir.display()), "");
-                env.set_value("Path", &usr_path)?;
+                 let current_usr = RegKey::predef(HKEY_CURRENT_USER);
+                 let env = current_usr.open_subkey_with_flags("Environment", KEY_READ | KEY_WRITE)?;
+                 let usr_path: String = env.get_value("Path")?;
+                 if usr_path.contains("neovim") {
+                     let usr_path = usr_path.replace(&format!("{}", installation_dir.display()), "");
+                     env.set_value("Path", &usr_path)?;
 
-                info!("Successfully removed neovim's installation PATH from registry");
+                     info!("Successfully removed neovim's installation PATH from registry");
+                 }
             }
-        } else {
-            use what_the_path::shell::Shell;
+            unix => {
+                use what_the_path::shell::Shell;
 
-            let shell = Shell::detect_by_shell_var()?;
+                let shell = Shell::detect_by_shell_var()?;
 
-            match shell {
-                Shell::Fish(fish) => {
-                   if let Ok(files) = fish.get_rcfiles() {
-                       let fish_file = files[0].join("bob.fish");
-                       if !fish_file.exists() { return Ok(()) }
-                       fs::remove_file(fish_file).await?;
-                   }
-                },
-                shell => {
-                    if let Ok(files) = shell.get_rcfiles() {
-                        let env_path = downloads.join("env/env.sh");
-                        let source_string = format!(". \"{}\"", env_path.display());
-                        for file in files {
-                            what_the_path::shell::remove_from_rcfile(file, &source_string)?;
+                match shell {
+                    Shell::Fish(fish) => {
+                       if let Ok(files) = fish.get_rcfiles() {
+                           let fish_file = files[0].join("bob.fish");
+                           if !fish_file.exists() { return Ok(()) }
+                           fs::remove_file(fish_file).await?;
+                       }
+                    },
+                    shell => {
+                        if let Ok(files) = shell.get_rcfiles() {
+                            let env_path = downloads.join("env/env.sh");
+                            let source_string = format!(". \"{}\"", env_path.display());
+                            for file in files {
+                                what_the_path::shell::remove_from_rcfile(file, &source_string)?;
+                            }
+
                         }
-
                     }
                 }
             }
+            _ => ()
         }
     }
 
@@ -102,7 +112,7 @@ pub async fn start(config: Config) -> Result<()> {
         // doesn't exist damn...
         info!("Successfully removed neovim downloads folder");
     } else {
-        return Err(anyhow!("There's nothing to erase"));
+        bail!("There's nothing to erase")
     }
 
     Ok(())
