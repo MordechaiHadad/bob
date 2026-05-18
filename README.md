@@ -406,6 +406,12 @@ Bob is used as the underlying Neovim version manager by several projects in the 
 - [nvim-lazyman](https://github.com/doctorfree/nvim-lazyman): A configuration manager that supports over 100+ Neovim setups. It uses Bob to seamlessly install and manage the required Neovim binary versions for each configuration.
 - [Topgrade](https://github.com/topgrade-rs/topgrade): A universal system upgrade tool. Topgrade automatically detects Bob installations and keeps your Neovim versions up-to-date alongside your other system packages.
 
+## 💼 Consulting
+
+I help teams ship cross-platform Rust binaries and internal developer tooling.  
+Currently open to contracts in platform engineering, DevEx, and CLI/release automation.  
+
+[See my work →](https://github.com/MordechaiHadad) · [Get in touch](mailto:mordechai.hadad01@gmail.com)
 
 ## :heart: Credits And Inspiration
 
