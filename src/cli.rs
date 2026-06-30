@@ -31,9 +31,7 @@ struct Clients {
 
 fn create_clients() -> Result<Clients> {
     let github = GitHubClient::new()?;
-    let download = Client::builder()
-        .user_agent("bob")
-        .build()?;
+    let download = Client::builder().user_agent("bob").build()?;
 
     Ok(Clients { github, download })
 }

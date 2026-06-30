@@ -1,7 +1,7 @@
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
-use octocrab::models::repos::{Release, Tag};
 use octocrab::Octocrab;
+use octocrab::models::repos::{Release, Tag};
 
 use serde::{Deserialize, Serialize};
 

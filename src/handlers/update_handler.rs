@@ -51,7 +51,12 @@ use crate::handlers::{InstallResult, install_handler};
 /// * [`crate::version::parse_version_type`](src/version.rs)
 /// * [`is_version_installed`](src/helpers/version.rs)
 /// * [`install_handler::start`](src/handlers/install_handler.rs)
-pub async fn start(data: Update, github: &GitHubClient, download: &Client, config: ConfigFile) -> Result<()> {
+pub async fn start(
+    data: Update,
+    github: &GitHubClient,
+    download: &Client,
+    config: ConfigFile,
+) -> Result<()> {
     if data.version.is_none() || data.all {
         let mut did_update = false;
 

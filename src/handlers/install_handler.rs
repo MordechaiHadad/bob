@@ -294,7 +294,9 @@ async fn print_commits(
     local: &NightlyInfo,
     upstream: &NightlyInfo,
 ) -> Result<()> {
-    let commits = github.get_commits_between(&local.published_at, &upstream.published_at).await?;
+    let commits = github
+        .get_commits_between(&local.published_at, &upstream.published_at)
+        .await?;
 
     for commit in commits {
         println!(

@@ -2,9 +2,9 @@ pub mod nightly;
 pub mod types;
 
 use self::types::{ParsedVersion, VersionType};
+use crate::config::Config;
 use crate::github_requests::GitHubClient;
 use crate::helpers::directories;
-use crate::config::Config;
 use anyhow::{Context, Result, anyhow};
 use semver::Version;
 use std::path::{Path, PathBuf};
@@ -42,10 +42,7 @@ use tracing::info;
 /// let parsed_version = parse_version_type(&client, version).await.unwrap();
 /// println!("The parsed version is {:?}", parsed_version);
 /// ```
-pub async fn parse_version_type(
-    github: &GitHubClient,
-    version: &str,
-) -> Result<ParsedVersion> {
+pub async fn parse_version_type(github: &GitHubClient, version: &str) -> Result<ParsedVersion> {
     match version {
         "nightly" => Ok(ParsedVersion {
             tag_name: version.to_string(),
