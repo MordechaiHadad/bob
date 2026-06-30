@@ -301,7 +301,7 @@ async fn print_commits(
     for commit in commits {
         println!(
             "| {} {}\n",
-            Paint::blue(commit.commit.author.unwrap().name).bold(),
+            Paint::blue(commit.commit.author.as_ref().map_or("Unknown", |a| &a.name)).bold(),
             commit.commit.message.replace('\n', "\n| ")
         );
     }

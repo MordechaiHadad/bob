@@ -30,7 +30,7 @@ impl GitHubClient {
             .releases()
             .get_by_tag("nightly")
             .await?;
-        Ok(release.into())
+        Ok(release.try_into()?)
     }
 
     pub async fn get_latest_release(&self) -> Result<Release> {
@@ -98,12 +98,17 @@ pub struct NightlyInfo {
     pub published_at: DateTime<Utc>,
 }
 
-impl From<Release> for NightlyInfo {
-    fn from(release: Release) -> Self {
-        Self {
+impl TryFrom<Release> for NightlyInfo {
+    type Error = anyhow::Error;
+
+    fn try_from(release: Release) -> Result<Self> {
+        let tag_name = release.tag_name.clone();
+        Ok(Self {
             tag_name: release.tag_name,
             target_commitish: Some(release.target_commitish),
-            published_at: release.published_at.unwrap_or_else(Utc::now),
-        }
+            published_at: release
+                .published_at
+                .ok_or_else(|| anyhow!("Release {tag_name} has no published_at"))?,
+        })
     }
 }
