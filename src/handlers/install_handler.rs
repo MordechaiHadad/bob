@@ -1,5 +1,5 @@
 use crate::config::{Config, ConfigFile};
-use crate::github_requests::{UpstreamVersion, get_commits_for_nightly, get_upstream_nightly};
+use crate::github_requests::{GitHubClient, NightlyInfo};
 use crate::helpers::checksum::sha256cmp;
 use crate::helpers::processes::handle_subprocess;
 use crate::helpers::version::nightly::produce_nightly_vec;
@@ -65,7 +65,8 @@ use super::{InstallResult, PostDownloadVersionType};
 #[allow(clippy::too_many_lines)]
 pub async fn start(
     version: &ParsedVersion,
-    client: &Client,
+    github: &GitHubClient,
+    download: &Client,
     config: &ConfigFile,
 ) -> Result<InstallResult> {
     if version.version_type == VersionType::NightlyRollback {
@@ -91,7 +92,7 @@ pub async fn start(
     }
 
     let nightly_version = if version.version_type == VersionType::Nightly {
-        Some(get_upstream_nightly(client).await?)
+        Some(github.get_nightly_release().await?)
     } else {
         None
     };
@@ -110,22 +111,22 @@ pub async fn start(
 
         match config.config.enable_nightly_info {
             Some(boolean) if boolean => {
-                print_commits(client, &local_nightly, upstream_nightly).await?;
+                print_commits(github, &local_nightly, upstream_nightly).await?;
             }
-            None => print_commits(client, &local_nightly, upstream_nightly).await?,
+            None => print_commits(github, &local_nightly, upstream_nightly).await?,
             _ => (),
         }
     }
 
     let downloaded_archive = match version.version_type {
         VersionType::Normal | VersionType::Latest => {
-            download_version(client, version, root, &config.config, false).await
+            download_version(download, version, root, &config.config, false).await
         }
         VersionType::Nightly => {
             if config.config.enable_release_build == Some(true) {
                 handle_building_from_source(version, &config.config).await
             } else {
-                download_version(client, version, root, &config.config, false).await
+                download_version(download, version, root, &config.config, false).await
             }
         }
         VersionType::Hash => handle_building_from_source(version, &config.config).await,
@@ -137,7 +138,7 @@ pub async fn start(
             unarchive::start(&downloaded_archive).await?;
         } else {
             let downloaded_checksum =
-                download_version(client, version, root, &config.config, true).await?;
+                download_version(download, version, root, &config.config, true).await?;
             let archive_path = root.join(format!(
                 "{}.{}",
                 downloaded_archive.file_name, downloaded_archive.file_format
@@ -241,7 +242,7 @@ async fn handle_rollback(config: &Config) -> Result<()> {
     }
 
     let nightly_file = fs::read_to_string("nightly/bob.json").await?;
-    let mut json_struct: UpstreamVersion = serde_json::from_str(&nightly_file)?;
+    let mut json_struct: NightlyInfo = serde_json::from_str(&nightly_file)?;
     let id: String = json_struct
         .target_commitish
         .as_ref()
@@ -289,17 +290,16 @@ async fn handle_rollback(config: &Config) -> Result<()> {
 /// print_commits(&client, &local, &upstream).await?;
 /// ```
 async fn print_commits(
-    client: &Client,
-    local: &UpstreamVersion,
-    upstream: &UpstreamVersion,
+    github: &GitHubClient,
+    local: &NightlyInfo,
+    upstream: &NightlyInfo,
 ) -> Result<()> {
-    let commits =
-        get_commits_for_nightly(client, &local.published_at, &upstream.published_at).await?;
+    let commits = github.get_commits_between(&local.published_at, &upstream.published_at).await?;
 
     for commit in commits {
         println!(
             "| {} {}\n",
-            Paint::blue(commit.commit.author.name).bold(),
+            Paint::blue(commit.commit.author.unwrap().name).bold(),
             commit.commit.message.replace('\n', "\n| ")
         );
     }
@@ -344,7 +344,7 @@ async fn print_commits(
 /// let result = download_version(&client, &version, &root, &config).await;
 /// ```
 async fn download_version(
-    client: &Client,
+    download: &Client,
     version: &ParsedVersion,
     root: &Path,
     config: &Config,
@@ -352,7 +352,7 @@ async fn download_version(
 ) -> Result<PostDownloadVersionType> {
     match version.version_type {
         VersionType::Normal | VersionType::Nightly | VersionType::Latest => {
-            let response = send_request(client, config, version, get_sha256sum).await;
+            let response = send_request(download, config, version, get_sha256sum).await;
 
             // Handle error case first so we don't need a match statement
             let response = if let Err(error) = response {
@@ -697,7 +697,7 @@ where
 ///
 /// * [`helpers::get_file_type`](src/helpers/file.rs)
 async fn send_request(
-    client: &Client,
+    download: &Client,
     config: &Config,
     version: &ParsedVersion,
     get_sha256sum: bool,
@@ -725,7 +725,7 @@ async fn send_request(
         format!("{url}/neovim/neovim/releases/download/{version_tag}/{platform}.{file_type}")
     };
 
-    client
+    download
         .get(request_url)
         .header("user-agent", "bob")
         .send()

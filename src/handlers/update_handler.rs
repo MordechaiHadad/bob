@@ -1,5 +1,6 @@
 use crate::cli::Update;
 use crate::config::ConfigFile;
+use crate::github_requests::GitHubClient;
 use crate::helpers::version::is_version_installed;
 use anyhow::Result;
 use reqwest::Client;
@@ -12,7 +13,8 @@ use crate::handlers::{InstallResult, install_handler};
 /// # Arguments
 ///
 /// * `data: Update` - Contains the version information to be updated. If `data.version` is `None` or `data.all` is `true`, it will attempt to update all installed versions.
-/// * `client: &Client` - A reference to the `Client` used for making requests.
+/// * `github: &GitHubClient` - The GitHub API client.
+/// * `download: &Client` - The HTTP client for downloading.
 /// * `config: Config` - Contains the configuration settings.
 ///
 /// # Behavior
@@ -49,13 +51,13 @@ use crate::handlers::{InstallResult, install_handler};
 /// * [`crate::version::parse_version_type`](src/version.rs)
 /// * [`is_version_installed`](src/helpers/version.rs)
 /// * [`install_handler::start`](src/handlers/install_handler.rs)
-pub async fn start(data: Update, client: &Client, config: ConfigFile) -> Result<()> {
+pub async fn start(data: Update, github: &GitHubClient, download: &Client, config: ConfigFile) -> Result<()> {
     if data.version.is_none() || data.all {
         let mut did_update = false;
 
-        let stable = crate::version::parse_version_type(client, "stable").await?;
+        let stable = crate::version::parse_version_type(github, "stable").await?;
         if is_version_installed(&stable.tag_name, &config.config).await? {
-            match install_handler::start(&stable, client, &config).await? {
+            match install_handler::start(&stable, github, download, &config).await? {
                 InstallResult::InstallationSuccess(_) => did_update = true,
                 InstallResult::VersionAlreadyInstalled
                 | InstallResult::NightlyIsUpdated
@@ -64,8 +66,8 @@ pub async fn start(data: Update, client: &Client, config: ConfigFile) -> Result<
         }
 
         if is_version_installed("nightly", &config.config).await? {
-            let nightly = crate::version::parse_version_type(client, "nightly").await?;
-            match install_handler::start(&nightly, client, &config).await? {
+            let nightly = crate::version::parse_version_type(github, "nightly").await?;
+            match install_handler::start(&nightly, github, download, &config).await? {
                 InstallResult::InstallationSuccess(_) => did_update = true,
                 InstallResult::NightlyIsUpdated
                 | InstallResult::VersionAlreadyInstalled
@@ -80,13 +82,13 @@ pub async fn start(data: Update, client: &Client, config: ConfigFile) -> Result<
         return Ok(());
     }
 
-    let version = crate::version::parse_version_type(client, &data.version.unwrap()).await?;
+    let version = crate::version::parse_version_type(github, &data.version.unwrap()).await?;
 
     if !is_version_installed(&version.tag_name, &config.config).await? {
         warn!("{} is not installed.", version.non_parsed_string);
         return Ok(());
     }
-    match install_handler::start(&version, client, &config).await? {
+    match install_handler::start(&version, github, download, &config).await? {
         InstallResult::NightlyIsUpdated => info!("Nightly is already updated!"),
         InstallResult::VersionAlreadyInstalled => info!("Stable is already updated!"),
         InstallResult::InstallationSuccess(_) | InstallResult::GivenNightlyRollback => (),

@@ -1,5 +1,6 @@
 use crate::{
     config::ConfigFile,
+    github_requests::GitHubClient,
     handlers::{
         self, InstallResult, erase_handler, list_handler, list_remote_handler, rollback_handler,
         run_handler, sync_handler, uninstall_handler, update_handler,
@@ -10,8 +11,7 @@ use crate::{
 use anyhow::Result;
 use clap::{ArgAction, Args, CommandFactory, Parser, ValueEnum};
 use clap_complete::shells;
-use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
-use reqwest::{Client, Error};
+use reqwest::Client;
 use std::sync::OnceLock;
 use tracing::{debug, info};
 use tracing_subscriber::Registry;
@@ -24,41 +24,18 @@ use tracing_subscriber::util::SubscriberInitExt;
 /// was originally installed by [`init_tracing`].
 static FILTER_RELOAD_HANDLE: OnceLock<reload::Handle<EnvFilter, Registry>> = OnceLock::new();
 
-/// Creates a new `reqwest::Client` with default headers.
-///
-/// This function fetches the `GITHUB_TOKEN` environment variable and uses it to set the `Authorization` header for the client.
-///
-/// # Returns
-///
-/// This function returns a `Result` that contains a `reqwest::Client` if the client was successfully created, or an `Error` if the client could not be created.
-///
-/// # Example
-///
-/// ```rust
-/// let client = create_reqwest_client();
-/// ```
-///
-/// # Errors
-///
-/// This function will return an error if the `reqwest::Client` could not be built.
-fn create_reqwest_client() -> Result<Client, Error> {
-    // fetch env variable
-    let github_token = std::env::var("GITHUB_TOKEN");
+struct Clients {
+    github: GitHubClient,
+    download: Client,
+}
 
-    let mut headers = HeaderMap::new();
-
-    if let Ok(github_token) = github_token {
-        headers.insert(
-            AUTHORIZATION,
-            HeaderValue::from_str(&format!("Bearer {github_token}")).unwrap(),
-        );
-    }
-
-    let client = reqwest::Client::builder()
-        .default_headers(headers)
+fn create_clients() -> Result<Clients> {
+    let github = GitHubClient::new()?;
+    let download = Client::builder()
+        .user_agent("bob")
         .build()?;
 
-    Ok(client)
+    Ok(Clients { github, download })
 }
 
 /// Top-level CLI options wrapper.
@@ -322,7 +299,7 @@ pub fn setup_tracing(verbose: u8) -> Result<()> {
 /// start(config).await.unwrap();
 /// ```
 pub async fn start(config: ConfigFile) -> Result<()> {
-    let client = create_reqwest_client()?;
+    let Clients { github, download } = create_clients()?;
     let opts = Opts::parse();
 
     setup_tracing(opts.verbose)?;
@@ -343,15 +320,15 @@ pub async fn start(config: ConfigFile) -> Result<()> {
             version,
             no_install,
         } => {
-            let version = parse_version_type(&client, &version).await?;
+            let version = parse_version_type(&github, &version).await?;
 
-            handlers::use_handler::start(version, !no_install, &client, config).await?;
+            handlers::use_handler::start(version, !no_install, &github, &download, config).await?;
         }
         Cli::Install { version } => {
-            let version = parse_version_type(&client, &version).await?;
+            let version = parse_version_type(&github, &version).await?;
             let tag_name: &str = version.tag_name.as_str();
 
-            match handlers::install_handler::start(&version, &client, &config).await? {
+            match handlers::install_handler::start(&version, &github, &download, &config).await? {
                 InstallResult::InstallationSuccess(location) => {
                     info!("{tag_name} has been successfully installed in {location}",);
                 }
@@ -366,11 +343,11 @@ pub async fn start(config: ConfigFile) -> Result<()> {
         }
         Cli::Sync => {
             info!("Starting sync process");
-            sync_handler::start(&client, config).await?;
+            sync_handler::start(&github, &download, config).await?;
         }
         Cli::Uninstall { version } => {
             info!("Starting uninstallation process");
-            uninstall_handler::start(version.as_deref(), config.config).await?;
+            uninstall_handler::start(version.as_deref(), &github, config.config).await?;
         }
         Cli::Rollback => rollback_handler::start(config.config).await?,
         Cli::Erase => erase_handler::start(config.config).await?,
@@ -379,11 +356,11 @@ pub async fn start(config: ConfigFile) -> Result<()> {
             clap_complete::generate(shell, &mut Opts::command(), "bob", &mut std::io::stdout());
         }
         Cli::Update(data) => {
-            update_handler::start(data, &client, config).await?;
+            update_handler::start(data, &github, &download, config).await?;
         }
-        Cli::ListRemote => list_remote_handler::start(config.config, client).await?,
+        Cli::ListRemote => list_remote_handler::start(config.config, &github).await?,
         Cli::Run { version, args } => {
-            run_handler::start(&version, &args, &client, &config.config).await?;
+            run_handler::start(&version, &args, &github, &download, &config.config).await?;
         }
     }
 

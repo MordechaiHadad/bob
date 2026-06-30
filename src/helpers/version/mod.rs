@@ -2,14 +2,10 @@ pub mod nightly;
 pub mod types;
 
 use self::types::{ParsedVersion, VersionType};
-use crate::github_requests::get_upstream_stable;
+use crate::github_requests::GitHubClient;
 use crate::helpers::directories;
-use crate::{
-    config::Config,
-    github_requests::{RepoCommit, deserialize_response},
-};
+use crate::config::Config;
 use anyhow::{Context, Result, anyhow};
-use reqwest::Client;
 use semver::Version;
 use std::path::{Path, PathBuf};
 use tokio::{
@@ -46,7 +42,10 @@ use tracing::info;
 /// let parsed_version = parse_version_type(&client, version).await.unwrap();
 /// println!("The parsed version is {:?}", parsed_version);
 /// ```
-pub async fn parse_version_type(client: &Client, version: &str) -> Result<ParsedVersion> {
+pub async fn parse_version_type(
+    github: &GitHubClient,
+    version: &str,
+) -> Result<ParsedVersion> {
     match version {
         "nightly" => Ok(ParsedVersion {
             tag_name: version.to_string(),
@@ -56,7 +55,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
         }),
         "stable" | "latest" => {
             info!("Fetching latest version");
-            let stable_version = get_upstream_stable(client).await?;
+            let stable_version = github.get_latest_release().await?;
             let cloned_version = stable_version.tag_name.clone();
             Ok(ParsedVersion {
                 tag_name: stable_version.tag_name,
@@ -67,7 +66,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
         }
         "head" | "git" | "HEAD" => {
             info!("Fetching latest commit");
-            let latest_commit = get_latest_commit(client).await?;
+            let latest_commit = get_latest_commit(github).await?;
             Ok(ParsedVersion {
                 tag_name: latest_commit.chars().take(7).collect(),
                 version_type: VersionType::Hash,
@@ -263,45 +262,8 @@ pub async fn is_version_used(version: &str, config: &Config) -> bool {
     }
 }
 
-/// Fetches the latest commit from the Neovim repository on GitHub.
-///
-/// This function sends a GET request to the GitHub API to fetch the latest commit from the master branch of the Neovim repository. It then deserializes the response into a `RepoCommit` object and returns the SHA of the commit.
-///
-/// # Arguments
-///
-/// * `client` - The HTTP client to use for the request.
-///
-/// # Returns
-///
-/// * `Result<String>` - Returns a `Result` that contains the SHA of the latest commit, or an error if the operation failed.
-///
-/// # Errors
-///
-/// This function will return an error if:
-///
-/// * The GET request to the GitHub API fails.
-/// * The response from the GitHub API cannot be deserialized into a `RepoCommit` object.
-///
-/// # Example
-///
-/// ```rust
-/// let client = Client::new();
-/// let latest_commit = get_latest_commit(&client).await.unwrap();
-/// println!("The latest commit is {}", latest_commit);
-/// ```
-async fn get_latest_commit(client: &Client) -> Result<String> {
-    let response = client
-        .get("https://api.github.com/repos/neovim/neovim/commits/master")
-        .header("user-agent", "bob")
-        .header("Accept", "application/vnd.github.v3+json")
-        .send()
-        .await?
-        .text()
-        .await?;
-
-    let commit: RepoCommit = deserialize_response(&response)?;
-
-    Ok(commit.sha)
+async fn get_latest_commit(github: &GitHubClient) -> Result<String> {
+    github.get_latest_commit_sha().await
 }
 
 #[cfg(test)]

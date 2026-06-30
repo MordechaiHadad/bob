@@ -1,6 +1,6 @@
 use semver::Version;
 
-use crate::github_requests::UpstreamVersion;
+use crate::github_requests::NightlyInfo;
 use std::path::PathBuf;
 
 /// Represents a parsed version of the software.
@@ -88,7 +88,7 @@ pub enum VersionType {
 /// ```
 #[derive(Debug, Clone)]
 pub struct LocalNightly {
-    pub data: UpstreamVersion,
+    pub data: NightlyInfo,
     pub path: PathBuf,
 }
 

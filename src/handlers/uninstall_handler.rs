@@ -1,5 +1,6 @@
 use crate::{
     config::Config,
+    github_requests::GitHubClient,
     helpers::{self, directories},
 };
 use anyhow::{Result, anyhow};
@@ -8,7 +9,6 @@ use dialoguer::{
     console::{Term, style},
     theme::ColorfulTheme,
 };
-use reqwest::Client;
 use tokio::fs;
 use tracing::{info, warn};
 
@@ -40,14 +40,12 @@ use tracing::{info, warn};
 /// let config = Config::default();
 /// start(Some("1.0.0"), config).await.unwrap();
 /// ```
-pub async fn start(version: Option<&str>, config: Config) -> Result<()> {
-    let client = Client::new();
-
+pub async fn start(version: Option<&str>, github: &GitHubClient, config: Config) -> Result<()> {
     let Some(version) = version else {
-        return uninstall_selections(&client, &config).await;
+        return uninstall_selections(github, &config).await;
     };
 
-    let version = helpers::version::parse_version_type(&client, version).await?;
+    let version = helpers::version::parse_version_type(github, version).await?;
     if helpers::version::is_version_used(&version.non_parsed_string, &config).await {
         warn!("Switch to a different version before proceeding");
         return Ok(());
@@ -97,7 +95,7 @@ pub async fn start(version: Option<&str>, config: Config) -> Result<()> {
 /// let config = Config::default();
 /// uninstall_selections(&client, &config).await.unwrap();
 /// ```
-async fn uninstall_selections(client: &Client, config: &Config) -> Result<()> {
+async fn uninstall_selections(github: &GitHubClient, config: &Config) -> Result<()> {
     let downloads_dir = directories::get_downloads_directory(config).await?;
 
     let mut paths = fs::read_dir(downloads_dir.clone()).await?;
@@ -106,7 +104,7 @@ async fn uninstall_selections(client: &Client, config: &Config) -> Result<()> {
     while let Some(path) = paths.next_entry().await? {
         let name = path.file_name().to_str().unwrap().to_owned();
 
-        let Ok(version) = helpers::version::parse_version_type(client, &name).await else {
+        let Ok(version) = helpers::version::parse_version_type(github, &name).await else {
             warn!("Could not parse version from file name: {}", name);
             continue;
         };

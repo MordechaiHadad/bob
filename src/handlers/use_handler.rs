@@ -7,6 +7,7 @@ use tokio::fs;
 use tracing::{debug, info, trace};
 
 use crate::config::{Config, ConfigFile};
+use crate::github_requests::GitHubClient;
 use crate::handlers::{InstallResult, install_handler};
 use crate::helpers;
 use crate::helpers::checksum::compare_binaries;
@@ -21,7 +22,8 @@ use crate::helpers::version::types::{ParsedVersion, VersionType};
 ///
 /// * `version` - The version to use.
 /// * `install` - Whether to install the version if it's not already installed.
-/// * `client` - The client to use for HTTP requests.
+/// * `github` - The GitHub API client.
+/// * `download` - The HTTP client for downloading.
 /// * `config` - The configuration for the operation.
 ///
 /// # Returns
@@ -41,14 +43,16 @@ use crate::helpers::version::types::{ParsedVersion, VersionType};
 /// ```rust
 /// let version = ParsedVersion::new("1.0.0");
 /// let install = true;
-/// let client = Client::new();
+/// let github = GitHubClient::new();
+/// let download = Client::new();
 /// let config = Config::default();
-/// start(version, install, &client, config).await.unwrap();
+/// start(version, install, &github, &download, config).await.unwrap();
 /// ```
 pub async fn start(
     version: ParsedVersion,
     install: bool,
-    client: &Client,
+    github: &GitHubClient,
+    download: &Client,
     config: ConfigFile,
 ) -> Result<()> {
     let is_version_used =
@@ -61,7 +65,7 @@ pub async fn start(
     }
 
     if install {
-        match install_handler::start(&version, client, &config).await {
+        match install_handler::start(&version, github, download, &config).await {
             Ok(success) => {
                 if let InstallResult::NightlyIsUpdated = success {
                     if is_version_used {

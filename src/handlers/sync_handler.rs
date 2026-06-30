@@ -3,6 +3,7 @@ use reqwest::Client;
 use tokio::fs;
 use tracing::info;
 
+use crate::github_requests::GitHubClient;
 use crate::{config::ConfigFile, helpers::version};
 
 use crate::handlers::use_handler;
@@ -13,7 +14,8 @@ use crate::handlers::use_handler;
 ///
 /// # Arguments
 ///
-/// * `client` - The HTTP client to be used for network requests.
+/// * `github` - The GitHub API client.
+/// * `download` - The HTTP client for downloading.
 /// * `config` - The configuration for the synchronization process.
 ///
 /// # Returns
@@ -31,11 +33,12 @@ use crate::handlers::use_handler;
 /// # Example
 ///
 /// ```rust
-/// let client = Client::new();
+/// let github = GitHubClient::new();
+/// let download = Client::new();
 /// let config = Config::default();
-/// start(&client, config).await.unwrap();
+/// start(&github, &download, config).await.unwrap();
 /// ```
-pub async fn start(client: &Client, config: ConfigFile) -> Result<()> {
+pub async fn start(github: &GitHubClient, download: &Client, config: ConfigFile) -> Result<()> {
     let version_sync_file_location = version::get_version_sync_file_location(&config.config)
         .await?
         .ok_or_else(|| anyhow!("version_sync_file_location needs to be set to use bob sync"))?;
@@ -59,9 +62,10 @@ pub async fn start(client: &Client, config: ConfigFile) -> Result<()> {
     );
 
     use_handler::start(
-        version::parse_version_type(client, trimmed_version).await?,
+        version::parse_version_type(github, trimmed_version).await?,
         true,
-        client,
+        github,
+        download,
         config,
     )
     .await?;
