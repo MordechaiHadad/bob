@@ -30,7 +30,7 @@ impl GitHubClient {
             .releases()
             .get_by_tag("nightly")
             .await?;
-        Ok(release.try_into()?)
+        release.try_into()
     }
 
     pub async fn get_latest_release(&self) -> Result<Release> {
