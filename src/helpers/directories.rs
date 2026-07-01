@@ -10,7 +10,11 @@ fn get_sudo_user_home() -> Option<PathBuf> {
     let c_user = std::ffi::CString::new(sudo_user).ok()?;
 
     let buf_size = unsafe { libc::sysconf(libc::_SC_GETPW_R_SIZE_MAX) };
-    let buf_size = if buf_size <= 0 { 4096 } else { buf_size as usize };
+    let buf_size = if buf_size <= 0 {
+        4096
+    } else {
+        buf_size as usize
+    };
     let mut buf = vec![0u8; buf_size];
     let mut pwd = std::mem::MaybeUninit::<libc::passwd>::uninit();
     let mut result: *mut libc::passwd = std::ptr::null_mut();
