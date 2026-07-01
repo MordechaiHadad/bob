@@ -100,7 +100,7 @@ pub async fn produce_nightly_vec(config: &Config) -> Result<Vec<LocalNightly>> {
         nightly_vec.push(nightly_entry);
     }
 
-    nightly_vec.sort_by(|a, b| b.data.published_at.cmp(&a.data.published_at));
+    nightly_vec.sort_by_key(|b| std::cmp::Reverse(b.data.published_at));
 
     Ok(nightly_vec)
 }
