@@ -96,7 +96,7 @@ pub async fn copy_dir_async(
     let original_path = from.as_ref().to_owned();
     let destination = to.as_ref().to_owned();
 
-    fs::create_dir(&destination).await?;
+    fs::create_dir_all(&destination).await?;
 
     let mut entries = fs::read_dir(original_path).await?;
 
