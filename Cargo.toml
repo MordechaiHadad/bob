@@ -83,12 +83,8 @@ version = "0.3.20"
 features = ["env-filter"]
 optional = false
 
-[target.'cfg(unix)'.dependencies.nix]
-version = "0.28.0"
-features = ["signal"]
-
 [target.'cfg(unix)'.dependencies]
-uzers = "0.12.2"
+libc = "0.2"
 flate2 = "1.0.26"
 tar = "0.4"
 

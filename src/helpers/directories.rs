@@ -1,41 +1,82 @@
 use anyhow::{Result, anyhow};
 use std::fs;
 use std::path::PathBuf;
-#[cfg(unix)]
-use uzers::os::unix::UserExt;
 
 use crate::config::Config;
 
-/// Returns the local data directory path for the current user.
-///
-/// On Unix systems, if running under sudo, it appends ".local/share" (or "Library/Application Support" on macOS) to the real user's home directory.
-/// Otherwise, it relies on the `dirs` crate which respects `XDG_DATA_HOME` on Linux.
-///
-/// # Returns
-///
-/// This function returns a `Result` that contains a `PathBuf` representing the local data directory path if the operation was successful.
-/// If the operation failed, the function returns `Err` with a description of the error.
-///
-/// # Example
-///
-/// ```rust
-/// let local_data_dir = get_local_data_dir()?;
-/// ```
-fn get_local_data_dir() -> Result<PathBuf> {
-    #[cfg(unix)]
-    if let Ok(sudo_user) = std::env::var("SUDO_USER") {
-        if let Some(user_info) = uzers::get_user_by_name(&sudo_user) {
-            let mut home: PathBuf = user_info.home_dir().into();
-            if cfg!(target_os = "macos") {
-                home.push("Library/Application Support");
-            } else {
-                home.push(".local/share");
-            }
-            return Ok(home);
+#[cfg(unix)]
+fn get_sudo_user_home() -> Option<PathBuf> {
+    let sudo_user = std::env::var("SUDO_USER").ok()?;
+    let c_user = std::ffi::CString::new(sudo_user).ok()?;
+
+    let buf_size = unsafe { libc::sysconf(libc::_SC_GETPW_R_SIZE_MAX) };
+    let buf_size = if buf_size <= 0 { 4096 } else { buf_size as usize };
+    let mut buf = vec![0u8; buf_size];
+    let mut pwd = std::mem::MaybeUninit::<libc::passwd>::uninit();
+    let mut result: *mut libc::passwd = std::ptr::null_mut();
+
+    let ret = unsafe {
+        libc::getpwnam_r(
+            c_user.as_ptr(),
+            pwd.as_mut_ptr(),
+            buf.as_mut_ptr() as *mut libc::c_char,
+            buf_size,
+            &mut result,
+        )
+    };
+
+    if ret == 0 && !result.is_null() {
+        let pwd = unsafe { pwd.assume_init() };
+        if !pwd.pw_dir.is_null() {
+            let home = unsafe { std::ffi::CStr::from_ptr(pwd.pw_dir) };
+            return Some(PathBuf::from(home.to_str().ok()?));
         }
     }
+    None
+}
 
-    dirs::data_local_dir().ok_or_else(|| anyhow!("Could not determine local data directory"))
+fn get_sudo_data_dir() -> Option<PathBuf> {
+    #[cfg(unix)]
+    if std::env::var("SUDO_USER").is_ok() {
+        if let Ok(xdg) = std::env::var("XDG_DATA_HOME") {
+            return Some(PathBuf::from(xdg));
+        }
+        if let Some(home) = get_sudo_user_home() {
+            return Some(if cfg!(target_os = "macos") {
+                home.join("Library/Application Support")
+            } else {
+                home.join(".local/share")
+            });
+        }
+    }
+    None
+}
+
+fn get_sudo_config_dir() -> Option<PathBuf> {
+    #[cfg(unix)]
+    if std::env::var("SUDO_USER").is_ok() {
+        if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
+            return Some(PathBuf::from(xdg));
+        }
+        if let Some(home) = get_sudo_user_home() {
+            return Some(if cfg!(target_os = "macos") {
+                home.join("Library/Application Support")
+            } else {
+                home.join(".config")
+            });
+        }
+    }
+    None
+}
+
+/// Returns the local data directory path for the current user.
+///
+/// On Unix systems, if running under sudo, it checks `XDG_DATA_HOME` first, then falls back
+/// to the real user's home directory with `.local/share`. Otherwise, relies on the `dirs` crate.
+fn get_local_data_dir() -> Result<PathBuf> {
+    get_sudo_data_dir()
+        .or_else(|| dirs::data_local_dir())
+        .ok_or_else(|| anyhow!("Could not determine local data directory"))
 }
 
 /// Returns the configuration file path for the current user.
@@ -59,31 +100,11 @@ pub fn get_config_file() -> Result<PathBuf> {
         return Ok(PathBuf::from(value));
     }
 
-    let mut config_dir = {
-        #[allow(unused_mut)]
-        let mut dir = None;
-        #[cfg(unix)]
-        if let Ok(sudo_user) = std::env::var("SUDO_USER") {
-            if let Some(user_info) = uzers::get_user_by_name(&sudo_user) {
-                let mut home: PathBuf = user_info.home_dir().into();
-                if cfg!(target_os = "macos") {
-                    home.push("Library/Application Support");
-                } else {
-                    home.push(".config");
-                }
-                dir = Some(home);
-            }
-        }
-        dir
-    };
+    let config_dir = get_sudo_config_dir()
+        .or_else(|| dirs::config_dir())
+        .ok_or_else(|| anyhow!("Could not determine config directory"))?;
 
-    if config_dir.is_none() {
-        config_dir = Some(
-            dirs::config_dir().ok_or_else(|| anyhow!("Could not determine config directory"))?,
-        );
-    }
-
-    let mut config_dir = config_dir.unwrap();
+    let mut config_dir = config_dir;
 
     config_dir.push("bob/config.toml");
 
