@@ -79,7 +79,7 @@ fn get_sudo_config_dir() -> Option<PathBuf> {
 /// to the real user's home directory with `.local/share`. Otherwise, relies on the `dirs` crate.
 fn get_local_data_dir() -> Result<PathBuf> {
     get_sudo_data_dir()
-        .or_else(|| dirs::data_local_dir())
+        .or_else(dirs::data_local_dir)
         .ok_or_else(|| anyhow!("Could not determine local data directory"))
 }
 
@@ -105,7 +105,7 @@ pub fn get_config_file() -> Result<PathBuf> {
     }
 
     let config_dir = get_sudo_config_dir()
-        .or_else(|| dirs::config_dir())
+        .or_else(dirs::config_dir)
         .ok_or_else(|| anyhow!("Could not determine config directory"))?;
 
     let mut config_dir = config_dir;
