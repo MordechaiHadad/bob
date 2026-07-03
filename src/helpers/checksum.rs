@@ -44,7 +44,10 @@ mod tests {
         f1.flush().unwrap();
         f2.flush().unwrap();
 
-        assert_eq!(hash_file_hex(f1.path()).unwrap(), hash_file_hex(f2.path()).unwrap());
+        assert_eq!(
+            hash_file_hex(f1.path()).unwrap(),
+            hash_file_hex(f2.path()).unwrap()
+        );
     }
 
     #[test]
@@ -56,7 +59,10 @@ mod tests {
         f1.flush().unwrap();
         f2.flush().unwrap();
 
-        assert_ne!(hash_file_hex(f1.path()).unwrap(), hash_file_hex(f2.path()).unwrap());
+        assert_ne!(
+            hash_file_hex(f1.path()).unwrap(),
+            hash_file_hex(f2.path()).unwrap()
+        );
     }
 
     #[test]

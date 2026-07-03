@@ -133,65 +133,11 @@ pub async fn start(
         VersionType::NightlyRollback => Ok(PostDownloadVersionType::None),
     }?;
 
-    if let PostDownloadVersionType::Standard(downloaded_archive) = downloaded_archive {
-        let archive_path = root.join(format!(
-            "{}.{}",
-            downloaded_archive.file_name, downloaded_archive.file_format
-        ));
-
-        if version.semver.as_ref().is_some_and(|v| *v <= Version::new(0, 4, 4)) {
-            unarchive::start(&downloaded_archive).await?;
-        } else if use_github_digest(version) {
-            let release = github.get_release_by_tag(&version.tag_name).await?;
-            let platform = helpers::get_platform_name(version.semver.as_ref());
-            let asset_name = format!("{}.{}", platform, downloaded_archive.file_format);
-
-            let digest = release
-                .assets
-                .iter()
-                .find(|a| a.name == asset_name)
-                .and_then(|a| a.digest.as_deref())
-                .ok_or_else(|| anyhow!("No digest found for {asset_name}"))?;
-
-            let digest = digest.strip_prefix("sha256:").unwrap_or(digest);
-
-            if hash_file_hex(&archive_path)? != digest {
-                tokio::fs::remove_file(archive_path).await?;
-                return Err(anyhow!("Checksum mismatch!"));
-            }
-
-            info!("Checksum matched!");
-            unarchive::start(&downloaded_archive).await?;
-        } else {
-            let downloaded_checksum =
-                download_version(download, version, root, &config.config, true).await?;
-
-            if let PostDownloadVersionType::Standard(downloaded_checksum) = downloaded_checksum {
-                let checksum_path = root.join(format!(
-                    "{}.{}",
-                    downloaded_checksum.file_name, downloaded_checksum.file_format
-                ));
-
-                let platform = helpers::get_platform_name(version.semver.as_ref());
-
-                if !sha256cmp(
-                    &archive_path,
-                    &checksum_path,
-                    &format!("{}.{}", platform, downloaded_archive.file_format),
-                )? {
-                    tokio::fs::remove_file(archive_path).await?;
-                    tokio::fs::remove_file(checksum_path).await?;
-                    return Err(anyhow!("Checksum mismatch!"));
-                }
-
-                info!("Checksum matched!");
-                tokio::fs::remove_file(checksum_path).await?;
-                unarchive::start(&downloaded_archive).await?;
-            } else if let PostDownloadVersionType::None = downloaded_checksum {
-                warn!("No checksum provided, skipping checksum verification");
-                unarchive::start(&downloaded_archive).await?;
-            }
+    match downloaded_archive {
+        PostDownloadVersionType::Standard(archive) => {
+            handle_standard_archive(&archive, version, github, download, root, config).await?;
         }
+        PostDownloadVersionType::None | PostDownloadVersionType::Hash => {}
     }
 
     if let VersionType::Nightly = version.version_type {
@@ -212,6 +158,81 @@ pub async fn start(
     Ok(InstallResult::InstallationSuccess(
         root.display().to_string(),
     ))
+}
+
+async fn handle_standard_archive(
+    downloaded_archive: &LocalVersion,
+    version: &ParsedVersion,
+    github: &GitHubClient,
+    download: &Client,
+    root: &Path,
+    config: &ConfigFile,
+) -> Result<()> {
+    let archive_path = root.join(format!(
+        "{}.{}",
+        downloaded_archive.file_name, downloaded_archive.file_format
+    ));
+
+    if version
+        .semver
+        .as_ref()
+        .is_some_and(|v| *v <= Version::new(0, 4, 4))
+    {
+        unarchive::start(downloaded_archive).await?;
+        return Ok(());
+    }
+
+    if use_github_digest(version) {
+        let release = github.get_release_by_tag(&version.tag_name).await?;
+        let platform = helpers::get_platform_name(version.semver.as_ref());
+        let asset_name = format!("{}.{}", platform, downloaded_archive.file_format);
+
+        let digest = release
+            .assets
+            .iter()
+            .find(|a| a.name == asset_name)
+            .and_then(|a| a.digest.as_deref())
+            .ok_or_else(|| anyhow!("No digest found for {asset_name}"))?;
+
+        let digest = digest.strip_prefix("sha256:").unwrap_or(digest);
+
+        if hash_file_hex(&archive_path)? != digest {
+            tokio::fs::remove_file(archive_path).await?;
+            return Err(anyhow!("Checksum mismatch!"));
+        }
+
+        info!("Checksum matched!");
+    } else {
+        let downloaded_checksum =
+            download_version(download, version, root, &config.config, true).await?;
+
+        if let PostDownloadVersionType::Standard(downloaded_checksum) = downloaded_checksum {
+            let checksum_path = root.join(format!(
+                "{}.{}",
+                downloaded_checksum.file_name, downloaded_checksum.file_format
+            ));
+
+            let platform = helpers::get_platform_name(version.semver.as_ref());
+
+            if !sha256cmp(
+                &archive_path,
+                &checksum_path,
+                &format!("{}.{}", platform, downloaded_archive.file_format),
+            )? {
+                tokio::fs::remove_file(archive_path).await?;
+                tokio::fs::remove_file(checksum_path).await?;
+                return Err(anyhow!("Checksum mismatch!"));
+            }
+
+            info!("Checksum matched!");
+            tokio::fs::remove_file(checksum_path).await?;
+        } else if let PostDownloadVersionType::None = downloaded_checksum {
+            warn!("No checksum provided, skipping checksum verification");
+        }
+    }
+
+    unarchive::start(downloaded_archive).await?;
+    Ok(())
 }
 
 /// Asynchronously handles the rollback for the nightly version(s) of Neovim.
@@ -758,5 +779,8 @@ async fn send_request(
 
 fn use_github_digest(version: &ParsedVersion) -> bool {
     version.version_type == VersionType::Nightly
-        || version.semver.as_ref().is_some_and(|v| *v >= Version::new(0, 11, 3))
+        || version
+            .semver
+            .as_ref()
+            .is_some_and(|v| *v >= Version::new(0, 11, 3))
 }
