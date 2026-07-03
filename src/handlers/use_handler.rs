@@ -10,7 +10,7 @@ use crate::config::{Config, ConfigFile};
 use crate::github_requests::GitHubClient;
 use crate::handlers::{InstallResult, install_handler};
 use crate::helpers;
-use crate::helpers::checksum::compare_binaries;
+use crate::helpers::checksum::hash_file_hex;
 use crate::helpers::directories::get_installation_directory;
 use crate::helpers::version::types::{ParsedVersion, VersionType};
 
@@ -223,7 +223,7 @@ async fn copy_nvim_proxy(config: &ConfigFile) -> Result<()> {
     }
 
     if fs::metadata(&installation_dir).await.is_ok()
-        && compare_binaries(&exe_path, &installation_dir)?
+        && hash_file_hex(&exe_path)? == hash_file_hex(&installation_dir)?
     {
         return Ok(());
     }

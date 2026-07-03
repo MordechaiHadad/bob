@@ -1,6 +1,6 @@
 use crate::config::{Config, ConfigFile};
 use crate::github_requests::{GitHubClient, NightlyInfo};
-use crate::helpers::checksum::sha256cmp;
+use crate::helpers::checksum::{hash_file_hex, sha256cmp};
 use crate::helpers::processes::handle_subprocess;
 use crate::helpers::version::nightly::produce_nightly_vec;
 use crate::helpers::version::types::{LocalVersion, ParsedVersion, VersionType};
@@ -134,15 +134,37 @@ pub async fn start(
     }?;
 
     if let PostDownloadVersionType::Standard(downloaded_archive) = downloaded_archive {
-        if version.semver.is_some() && version.semver.as_ref().unwrap() <= &Version::new(0, 4, 4) {
+        let archive_path = root.join(format!(
+            "{}.{}",
+            downloaded_archive.file_name, downloaded_archive.file_format
+        ));
+
+        if version.semver.as_ref().is_some_and(|v| *v <= Version::new(0, 4, 4)) {
+            unarchive::start(&downloaded_archive).await?;
+        } else if use_github_digest(version) {
+            let release = github.get_release_by_tag(&version.tag_name).await?;
+            let platform = helpers::get_platform_name(version.semver.as_ref());
+            let asset_name = format!("{}.{}", platform, downloaded_archive.file_format);
+
+            let digest = release
+                .assets
+                .iter()
+                .find(|a| a.name == asset_name)
+                .and_then(|a| a.digest.as_deref())
+                .ok_or_else(|| anyhow!("No digest found for {asset_name}"))?;
+
+            let digest = digest.strip_prefix("sha256:").unwrap_or(digest);
+
+            if hash_file_hex(&archive_path)? != digest {
+                tokio::fs::remove_file(archive_path).await?;
+                return Err(anyhow!("Checksum mismatch!"));
+            }
+
+            info!("Checksum matched!");
             unarchive::start(&downloaded_archive).await?;
         } else {
             let downloaded_checksum =
                 download_version(download, version, root, &config.config, true).await?;
-            let archive_path = root.join(format!(
-                "{}.{}",
-                downloaded_archive.file_name, downloaded_archive.file_format
-            ));
 
             if let PostDownloadVersionType::Standard(downloaded_checksum) = downloaded_checksum {
                 let checksum_path = root.join(format!(
@@ -732,4 +754,9 @@ async fn send_request(
         .header("user-agent", "bob")
         .send()
         .await
+}
+
+fn use_github_digest(version: &ParsedVersion) -> bool {
+    version.version_type == VersionType::Nightly
+        || version.semver.as_ref().is_some_and(|v| *v >= Version::new(0, 11, 3))
 }

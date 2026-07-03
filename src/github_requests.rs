@@ -23,6 +23,15 @@ impl GitHubClient {
         Ok(Self { octocrab })
     }
 
+    pub async fn get_release_by_tag(&self, tag: &str) -> Result<Release> {
+        Ok(self
+            .octocrab
+            .repos("neovim", "neovim")
+            .releases()
+            .get_by_tag(tag)
+            .await?)
+    }
+
     pub async fn get_nightly_release(&self) -> Result<NightlyInfo> {
         let release: Release = self
             .octocrab
