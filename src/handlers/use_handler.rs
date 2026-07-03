@@ -134,9 +134,7 @@ pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
             if let Ok(hash) = hash_result {
                 hash
             } else {
-                bail!(
-                    "Full hash file doesn't exist, please rebuild this commit"
-                );
+                bail!("Full hash file doesn't exist, please rebuild this commit");
             }
         } else {
             version.non_parsed_string.clone()

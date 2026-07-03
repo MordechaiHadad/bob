@@ -354,10 +354,7 @@ async fn download_version(
 
             // Handle error case first so we don't need a match statement
             let response = if let Err(error) = response {
-                bail!(
-                    "Failed to download version {}: {error}",
-                    version.tag_name
-                );
+                bail!("Failed to download version {}: {error}", version.tag_name);
             } else {
                 response?
             };
