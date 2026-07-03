@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{Result, anyhow, bail};
 use std::fs;
 use std::path::PathBuf;
 
@@ -145,7 +145,7 @@ pub fn get_config_file() -> Result<PathBuf> {
 pub async fn get_downloads_directory(config: &Config) -> Result<PathBuf> {
     let path = if let Some(path) = &config.downloads_location {
         if tokio::fs::metadata(path).await.is_err() {
-            return Err(anyhow!("Custom directory {path} doesn't exist!"));
+            bail!("Custom directory {path} doesn't exist!");
         }
 
         PathBuf::from(path)
@@ -157,7 +157,7 @@ pub async fn get_downloads_directory(config: &Config) -> Result<PathBuf> {
         let is_folder_created = tokio::fs::create_dir_all(&data_dir).await.is_ok();
 
         if !does_folder_exist && !is_folder_created {
-            return Err(anyhow!("Couldn't create downloads directory"));
+            bail!("Couldn't create downloads directory");
         }
         data_dir
     };

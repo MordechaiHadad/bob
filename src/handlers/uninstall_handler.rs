@@ -2,7 +2,7 @@ use crate::{
     config::Config,
     helpers::{self, directories},
 };
-use anyhow::{Result, anyhow};
+use anyhow::{Result, bail};
 use dialoguer::{
     Confirm, MultiSelect,
     console::{Term, style},
@@ -55,7 +55,7 @@ pub async fn start(version: Option<&str>, config: Config) -> Result<()> {
 
     let downloads_dir = match directories::get_downloads_directory(&config).await {
         Ok(value) => value,
-        Err(error) => return Err(anyhow!(error)),
+        Err(error) => bail!(error),
     };
 
     let path = downloads_dir.join(&version.tag_name);

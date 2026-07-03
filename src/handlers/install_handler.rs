@@ -74,7 +74,7 @@ pub async fn start(
 
     if let Some(version) = &version.semver {
         if version <= &Version::new(0, 2, 2) {
-            return Err(anyhow!("Versions below 0.2.2 are not supported"));
+            bail!("Versions below 0.2.2 are not supported");
         }
     }
 
@@ -158,7 +158,7 @@ pub async fn start(
                 )? {
                     tokio::fs::remove_file(archive_path).await?;
                     tokio::fs::remove_file(checksum_path).await?;
-                    return Err(anyhow!("Checksum mismatch!"));
+                    bail!("Checksum mismatch!");
                 }
 
                 info!("Checksum matched!");
@@ -179,9 +179,7 @@ pub async fn start(
             let mut json_file = File::create(downloads_dir).await?;
 
             if let Err(error) = json_file.write_all(nightly_string.as_bytes()).await {
-                return Err(anyhow!(
-                    "Failed to create file nightly/bob.json, reason: {error}"
-                ));
+                bail!("Failed to create file nightly/bob.json, reason: {error}");
             }
         }
     }
@@ -356,10 +354,10 @@ async fn download_version(
 
             // Handle error case first so we don't need a match statement
             let response = if let Err(error) = response {
-                return Err(anyhow!(
+                bail!(
                     "Failed to download version {}: {error}",
                     version.tag_name
-                ));
+                );
             } else {
                 response?
             };
@@ -400,15 +398,15 @@ async fn download_version(
             } else {
                 let error_text = response.text().await?;
                 if error_text.contains("Not Found") {
-                    return Err(anyhow!(
+                    bail!(
                         "Version does not exist in Neovim releases. Please check available versions with 'bob list-remote'"
-                    ));
+                    );
                 }
-                Err(anyhow!(
+                bail!(
                     "Failed to download version {}: {}",
                     version.tag_name,
                     error_text
-                ))
+                );
             }
         }
         VersionType::Hash => handle_building_from_source(version, config).await,

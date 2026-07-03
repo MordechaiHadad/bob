@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{Result, anyhow, bail};
 use reqwest::Client;
 use tokio::fs;
 use tracing::info;
@@ -42,12 +42,12 @@ pub async fn start(client: &Client, config: ConfigFile) -> Result<()> {
 
     let version = fs::read_to_string(&version_sync_file_location).await?;
     if version.is_empty() {
-        return Err(anyhow!("Sync file is empty"));
+        bail!("Sync file is empty");
     }
     let trimmed_version = version.trim();
 
     if trimmed_version.contains("nightly-") {
-        return Err(anyhow!("Cannot sync nightly rollbacks."));
+        bail!("Cannot sync nightly rollbacks.");
     }
 
     info!(
