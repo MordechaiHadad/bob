@@ -6,8 +6,7 @@ use crate::config::Config;
 
 #[cfg(unix)]
 fn get_sudo_user_home() -> Option<PathBuf> {
-    let sudo_user = std::env::var("SUDO_USER").ok()?;
-    let c_user = std::ffi::CString::new(sudo_user).ok()?;
+    let uid: libc::uid_t = std::env::var("SUDO_UID").ok()?.parse().ok()?;
 
     let buf_size = unsafe { libc::sysconf(libc::_SC_GETPW_R_SIZE_MAX) };
     let buf_size = if buf_size <= 0 {
@@ -20,8 +19,8 @@ fn get_sudo_user_home() -> Option<PathBuf> {
     let mut result: *mut libc::passwd = std::ptr::null_mut();
 
     let ret = unsafe {
-        libc::getpwnam_r(
-            c_user.as_ptr(),
+        libc::getpwuid_r(
+            uid,
             pwd.as_mut_ptr(),
             buf.as_mut_ptr() as *mut libc::c_char,
             buf_size,
@@ -96,8 +95,8 @@ fn get_local_data_dir() -> Result<PathBuf> {
 ///
 /// # Example
 ///
-/// ```rust
-/// let config_file = get_config_file()?;
+/// ```ignore
+/// let config_file = get_config_file().unwrap();
 /// ```
 pub fn get_config_file() -> Result<PathBuf> {
     if let Ok(value) = std::env::var("BOB_CONFIG") {
