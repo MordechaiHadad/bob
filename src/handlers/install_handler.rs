@@ -27,46 +27,18 @@ use super::{InstallResult, PostDownloadVersionType};
 ///
 /// # Arguments
 ///
-/// * `version` - A mutable reference to a `ParsedVersion` object representing the version to be installed.
-/// * `client` - A reference to a `Client` object used for making HTTP requests.
-/// * `config` - A reference to a `Config` object containing the configuration settings.
-///
-/// # Returns
-///
-/// * `Result<InstallResult>` - Returns a `Result` that contains an `InstallResult` enum on success, or an error on failure.
+/// * `version` - The parsed version to install.
+/// * `github` - The GitHub API client (used for API calls and downloads).
+/// * `config` - The application configuration.
 ///
 /// # Errors
 ///
-/// This function will return an error if:
-/// * The version is below 0.2.2.
-/// * There is a problem setting the current directory.
-/// * There is a problem checking if the version is already installed.
-/// * There is a problem getting the upstream nightly version.
-/// * There is a problem getting the local nightly version.
-/// * There is a problem handling a rollback.
-/// * There is a problem printing commits.
-/// * There is a problem downloading the version.
-/// * There is a problem handling building from source.
-/// * There is a problem unarchiving the downloaded file.
-/// * There is a problem creating the file `nightly/bob.json`.
-///
-/// # Panics
-///
-/// This function does not panic.
-///
-/// # Examples
-///
-/// ```rust
-/// let mut version = ParsedVersion::new(VersionType::Normal, "1.0.0");
-/// let client = Client::new();
-/// let config = Config::default();
-/// let result = start(&mut version, &client, &config).await;
-/// ```
+/// Returns an error if the version is below 0.2.2, network requests fail,
+/// checksums mismatch, or filesystem operations fail.
 #[allow(clippy::too_many_lines)]
 pub async fn start(
     version: &ParsedVersion,
     github: &GitHubClient,
-    download: &Client,
     config: &ConfigFile,
 ) -> Result<InstallResult> {
     if version.version_type == VersionType::NightlyRollback {
@@ -120,13 +92,13 @@ pub async fn start(
 
     let downloaded_archive = match version.version_type {
         VersionType::Normal | VersionType::Latest => {
-            download_version(download, version, root, &config.config, false).await
+            download_version(github.download(), version, root, &config.config, false).await
         }
         VersionType::Nightly => {
             if config.config.enable_release_build == Some(true) {
                 handle_building_from_source(version, &config.config).await
             } else {
-                download_version(download, version, root, &config.config, false).await
+                download_version(github.download(), version, root, &config.config, false).await
             }
         }
         VersionType::Hash => handle_building_from_source(version, &config.config).await,
@@ -135,7 +107,7 @@ pub async fn start(
 
     match downloaded_archive {
         PostDownloadVersionType::Standard(archive) => {
-            handle_standard_archive(&archive, version, github, download, root, config).await?;
+            handle_standard_archive(&archive, version, github, root, config).await?;
         }
         PostDownloadVersionType::None | PostDownloadVersionType::Hash => {}
     }
@@ -164,7 +136,6 @@ async fn handle_standard_archive(
     downloaded_archive: &LocalVersion,
     version: &ParsedVersion,
     github: &GitHubClient,
-    download: &Client,
     root: &Path,
     config: &ConfigFile,
 ) -> Result<()> {
@@ -204,7 +175,7 @@ async fn handle_standard_archive(
         info!("Checksum matched!");
     } else {
         let downloaded_checksum =
-            download_version(download, version, root, &config.config, true).await?;
+            download_version(github.download(), version, root, &config.config, true).await?;
 
         if let PostDownloadVersionType::Standard(downloaded_checksum) = downloaded_checksum {
             let checksum_path = root.join(format!(

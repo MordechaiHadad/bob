@@ -6,7 +6,8 @@ use octocrab::models::repos::{Release, Tag};
 use serde::{Deserialize, Serialize};
 
 pub struct GitHubClient {
-    pub octocrab: Octocrab,
+    octocrab: Octocrab,
+    download: reqwest::Client,
 }
 
 impl GitHubClient {
@@ -19,8 +20,13 @@ impl GitHubClient {
         }
 
         let octocrab = builder.build()?;
+        let download = reqwest::Client::builder().user_agent("bob").build()?;
 
-        Ok(Self { octocrab })
+        Ok(Self { octocrab, download })
+    }
+
+    pub fn download(&self) -> &reqwest::Client {
+        &self.download
     }
 
     pub async fn get_release_by_tag(&self, tag: &str) -> Result<Release> {
@@ -33,13 +39,7 @@ impl GitHubClient {
     }
 
     pub async fn get_nightly_release(&self) -> Result<NightlyInfo> {
-        let release: Release = self
-            .octocrab
-            .repos("neovim", "neovim")
-            .releases()
-            .get_by_tag("nightly")
-            .await?;
-        release.try_into()
+        self.get_release_by_tag("nightly").await?.try_into()
     }
 
     pub async fn get_latest_release(&self) -> Result<Release> {

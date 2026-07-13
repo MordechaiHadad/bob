@@ -1,5 +1,4 @@
 use anyhow::{Result, anyhow};
-use reqwest::Client;
 use tokio::fs;
 use tracing::info;
 
@@ -10,35 +9,19 @@ use crate::handlers::use_handler;
 
 /// Starts the synchronization process.
 ///
-/// This function reads the version from a sync file and starts the use handler with the read version.
+/// Reads the version from a sync file and starts the use handler with the
+/// read version.
 ///
 /// # Arguments
 ///
 /// * `github` - The GitHub API client.
-/// * `download` - The HTTP client for downloading.
 /// * `config` - The configuration for the synchronization process.
-///
-/// # Returns
-///
-/// * `Result<()>` - Returns a `Result` that indicates whether the synchronization process was successful or not.
 ///
 /// # Errors
 ///
-/// This function will return an error if:
-///
-/// * The `version_sync_file_location` is not set in the configuration.
-/// * The sync file is empty.
-/// * The version read from the sync file contains "nightly-".
-///
-/// # Example
-///
-/// ```rust
-/// let github = GitHubClient::new();
-/// let download = Client::new();
-/// let config = Config::default();
-/// start(&github, &download, config).await.unwrap();
-/// ```
-pub async fn start(github: &GitHubClient, download: &Client, config: ConfigFile) -> Result<()> {
+/// Returns an error if `version_sync_file_location` is not set, the sync
+/// file is empty, or it contains "nightly-".
+pub async fn start(github: &GitHubClient, config: ConfigFile) -> Result<()> {
     let version_sync_file_location = version::get_version_sync_file_location(&config.config)
         .await?
         .ok_or_else(|| anyhow!("version_sync_file_location needs to be set to use bob sync"))?;
@@ -65,7 +48,6 @@ pub async fn start(github: &GitHubClient, download: &Client, config: ConfigFile)
         version::parse_version_type(github, trimmed_version).await?,
         true,
         github,
-        download,
         config,
     )
     .await?;

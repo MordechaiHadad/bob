@@ -3,58 +3,24 @@ use crate::config::ConfigFile;
 use crate::github_requests::GitHubClient;
 use crate::helpers::version::is_version_installed;
 use anyhow::Result;
-use reqwest::Client;
 use tracing::{info, warn};
 
 use crate::handlers::{InstallResult, install_handler};
 
-/// Starts the update process based on the provided `Update` data, `Client`, and `Config`.
+/// Starts the update process.
+///
+/// If `data.version` is `None` or `data.all` is `true`, attempts to update
+/// both "stable" and "nightly" if installed. Otherwise updates the
+/// specified version.
 ///
 /// # Arguments
 ///
-/// * `data: Update` - Contains the version information to be updated. If `data.version` is `None` or `data.all` is `true`, it will attempt to update all installed versions.
-/// * `github: &GitHubClient` - The GitHub API client.
-/// * `download: &Client` - The HTTP client for downloading.
-/// * `config: Config` - Contains the configuration settings.
-///
-/// # Behavior
-///
-/// If `data.version` is `None` or `data.all` is `true`, the function will attempt to update both the "stable" and "nightly" versions if they are installed. If an update is successful, `did_update` is set to `true`.
-///
-/// If neither version is updated, a warning message "There was nothing to update." is logged.
-///
-/// If `data.version` is not `None` and `data.all` is not `true`, the function will attempt to update the specified version if it is installed. If the version is not installed, a warning message is logged.
-///
-/// # Returns
-///
-/// * `Result<()>` - Returns `Ok(())` if the function executes successfully, otherwise it returns an error.
-///
-/// # Errors
-///
-/// This function will return an error if there's a problem with parsing the version type, checking if a version is installed, or starting the installation process.
-///
-/// # Example
-///
-/// ```rust
-/// let data = Update { version: Some("0.2.2"), all: false };
-/// let client = Client::new();
-/// let config = Config::default();
-/// start(data, &client, config).await?;
-/// ```
-///
-/// # Note
-///
-/// This function is asynchronous and must be awaited.
-///
-/// # See Also
-///
-/// * [`crate::version::parse_version_type`](src/version.rs)
-/// * [`is_version_installed`](src/helpers/version.rs)
-/// * [`install_handler::start`](src/handlers/install_handler.rs)
+/// * `data` - Contains the version information to be updated.
+/// * `github` - The GitHub API client.
+/// * `config` - The configuration settings.
 pub async fn start(
     data: Update,
     github: &GitHubClient,
-    download: &Client,
     config: ConfigFile,
 ) -> Result<()> {
     if data.version.is_none() || data.all {
@@ -62,7 +28,7 @@ pub async fn start(
 
         let stable = crate::version::parse_version_type(github, "stable").await?;
         if is_version_installed(&stable.tag_name, &config.config).await? {
-            match install_handler::start(&stable, github, download, &config).await? {
+            match install_handler::start(&stable, github, &config).await? {
                 InstallResult::InstallationSuccess(_) => did_update = true,
                 InstallResult::VersionAlreadyInstalled
                 | InstallResult::NightlyIsUpdated
@@ -72,7 +38,7 @@ pub async fn start(
 
         if is_version_installed("nightly", &config.config).await? {
             let nightly = crate::version::parse_version_type(github, "nightly").await?;
-            match install_handler::start(&nightly, github, download, &config).await? {
+            match install_handler::start(&nightly, github, &config).await? {
                 InstallResult::InstallationSuccess(_) => did_update = true,
                 InstallResult::NightlyIsUpdated
                 | InstallResult::VersionAlreadyInstalled
@@ -93,7 +59,7 @@ pub async fn start(
         warn!("{} is not installed.", version.non_parsed_string);
         return Ok(());
     }
-    match install_handler::start(&version, github, download, &config).await? {
+    match install_handler::start(&version, github, &config).await? {
         InstallResult::NightlyIsUpdated => info!("Nightly is already updated!"),
         InstallResult::VersionAlreadyInstalled => info!("Stable is already updated!"),
         InstallResult::InstallationSuccess(_) | InstallResult::GivenNightlyRollback => (),

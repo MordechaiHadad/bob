@@ -66,35 +66,12 @@ pub async fn start(version: Option<&str>, github: &GitHubClient, config: Config)
     Ok(())
 }
 
-/// Uninstalls selected versions.
-///
-/// This function reads the versions from the downloads directory, presents a list of installed versions to the user, allows them to select versions to uninstall, and then uninstalls the selected versions.
+/// Uninstalls selected versions via interactive prompt.
 ///
 /// # Arguments
 ///
-/// * `client` - The HTTP client to be used for network requests.
+/// * `github` - The GitHub API client (for parsing version names).
 /// * `config` - The configuration for the uninstall process.
-///
-/// # Returns
-///
-/// * `Result<()>` - Returns a `Result` that indicates whether the uninstall process was successful or not.
-///
-/// # Errors
-///
-/// This function will return an error if:
-///
-/// * The downloads directory cannot be read.
-/// * The version cannot be parsed from the file name.
-/// * The version is currently in use.
-/// * The user aborts the uninstall process.
-///
-/// # Example
-///
-/// ```rust
-/// let client = Client::new();
-/// let config = Config::default();
-/// uninstall_selections(&client, &config).await.unwrap();
-/// ```
 async fn uninstall_selections(github: &GitHubClient, config: &Config) -> Result<()> {
     let downloads_dir = directories::get_downloads_directory(config).await?;
 

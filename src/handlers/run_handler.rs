@@ -1,5 +1,4 @@
 use anyhow::Result;
-use reqwest::Client;
 use tokio::process::Command;
 
 use crate::config::Config;
@@ -8,24 +7,16 @@ use crate::helpers;
 
 /// Starts the process of running a specific version of Neovim with the provided arguments.
 ///
-/// This function parses the specified version, checks if it's installed,
-/// and runs the Neovim binary from that version with the provided arguments.
-///
 /// # Arguments
 ///
 /// * `version` - The version to run (nightly|stable|<version-string>|<commit-hash>)
-/// * `args` - Arguments to pass to Neovim (flags, files, commands, etc.)
+/// * `args` - Arguments to pass to Neovim
 /// * `github` - The GitHub API client.
 /// * `config` - The configuration for the operation
-///
-/// # Returns
-///
-/// * `Result<()>` - Returns a `Result` that indicates whether the operation was successful or not.
 pub async fn start(
     version: &str,
     args: &[String],
     github: &GitHubClient,
-    _download: &Client,
     config: &Config,
 ) -> Result<()> {
     // Parse the specified version

@@ -1,6 +1,5 @@
 use anyhow::{Result, anyhow};
 use dialoguer::Confirm;
-use reqwest::Client;
 use std::env;
 use std::path::{Path, PathBuf};
 use tokio::fs;
@@ -16,43 +15,23 @@ use crate::helpers::version::types::{ParsedVersion, VersionType};
 
 /// Starts the process of using a specified version.
 ///
-/// This function checks if the specified version is already used, copies the Neovim proxy to the installation directory, installs the version if it's not already installed and used, switches to the version, and removes the "stable" directory if the version type is "Latest".
+/// Checks if the version is already used, copies the Neovim proxy,
+/// installs the version if needed, switches to it, and cleans up.
 ///
 /// # Arguments
 ///
 /// * `version` - The version to use.
-/// * `install` - Whether to install the version if it's not already installed.
+/// * `install` - Whether to install the version if not already installed.
 /// * `github` - The GitHub API client.
-/// * `download` - The HTTP client for downloading.
 /// * `config` - The configuration for the operation.
-///
-/// # Returns
-///
-/// * `Result<()>` - Returns a `Result` that indicates whether the operation was successful or not.
 ///
 /// # Errors
 ///
-/// This function will return an error if:
-///
-/// * The version is not already used and it cannot be installed.
-/// * The version cannot be switched to.
-/// * The "stable" directory exists and it cannot be removed.
-///
-/// # Example
-///
-/// ```rust
-/// let version = ParsedVersion::new("1.0.0");
-/// let install = true;
-/// let github = GitHubClient::new();
-/// let download = Client::new();
-/// let config = Config::default();
-/// start(version, install, &github, &download, config).await.unwrap();
-/// ```
+/// Returns an error if installation, switch, or PATH modification fails.
 pub async fn start(
     version: ParsedVersion,
     install: bool,
     github: &GitHubClient,
-    download: &Client,
     config: ConfigFile,
 ) -> Result<()> {
     let is_version_used =
@@ -65,7 +44,7 @@ pub async fn start(
     }
 
     if install {
-        match install_handler::start(&version, github, download, &config).await {
+        match install_handler::start(&version, github, &config).await {
             Ok(success) => {
                 if let InstallResult::NightlyIsUpdated = success {
                     if is_version_used {
