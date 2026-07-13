@@ -2,8 +2,8 @@ use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
 use octocrab::Octocrab;
 use octocrab::models::repos::{Release, Tag};
-
 use serde::{Deserialize, Serialize};
+use tracing::debug;
 
 pub struct GitHubClient {
     octocrab: Octocrab,
@@ -17,6 +17,8 @@ impl GitHubClient {
         let mut builder = Octocrab::builder();
         if let Some(token) = token {
             builder = builder.personal_token(token);
+        } else {
+            debug!("GITHUB_TOKEN not set -- unauthenticated requests are rate-limited to 60/hour");
         }
 
         let octocrab = builder.build()?;
