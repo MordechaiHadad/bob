@@ -68,7 +68,7 @@ pub async fn start(config: Config, github: &GitHubClient) -> Result<()> {
                 stable_version_string
             )
         } else {
-            writeln!(buffer, "{}{}", &version.name, stable_version_string)
+            writeln!(buffer, "{}{}", version.name, stable_version_string)
         };
 
         if let Err(e) = write_result {
