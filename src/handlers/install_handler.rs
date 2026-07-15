@@ -260,7 +260,9 @@ async fn handle_rollback(config: &Config) -> Result<()> {
     let id: String = json_struct
         .target_commitish
         .as_deref()
-        .ok_or_else(|| anyhow!("Nightly release is missing a target commit SHA, cannot create rollback"))?
+        .ok_or_else(|| {
+            anyhow!("Nightly release is missing a target commit SHA, cannot create rollback")
+        })?
         .chars()
         .take(7)
         .collect();

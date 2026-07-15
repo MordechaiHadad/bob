@@ -18,11 +18,7 @@ use crate::handlers::{InstallResult, install_handler};
 /// * `data` - Contains the version information to be updated.
 /// * `github` - The GitHub API client.
 /// * `config` - The configuration settings.
-pub async fn start(
-    data: Update,
-    github: &GitHubClient,
-    config: ConfigFile,
-) -> Result<()> {
+pub async fn start(data: Update, github: &GitHubClient, config: ConfigFile) -> Result<()> {
     if data.version.is_none() || data.all {
         let mut did_update = false;
 

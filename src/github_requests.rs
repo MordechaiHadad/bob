@@ -1,8 +1,8 @@
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
-use reqwest::StatusCode;
 use octocrab::Octocrab;
 use octocrab::models::repos::{Release, Tag};
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 
@@ -39,7 +39,9 @@ impl GitHubClient {
         if let Some(token) = token {
             builder = builder.personal_token(token);
         } else {
-            debug!("GITHUB_TOKEN not set -- unauthenticated requests are rate-limited to 60/hour, set GITHUB_TOKEN in your environment to increase to 5,000/hour");
+            debug!(
+                "GITHUB_TOKEN not set -- unauthenticated requests are rate-limited to 60/hour, set GITHUB_TOKEN in your environment to increase to 5,000/hour"
+            );
         }
 
         let octocrab = builder.build()?;
@@ -53,8 +55,7 @@ impl GitHubClient {
     }
 
     pub async fn get_release_by_tag(&self, tag: &str) -> Result<Release> {
-        self
-            .octocrab
+        self.octocrab
             .repos("neovim", "neovim")
             .releases()
             .get_by_tag(tag)
@@ -67,8 +68,7 @@ impl GitHubClient {
     }
 
     pub async fn get_latest_release(&self) -> Result<Release> {
-        self
-            .octocrab
+        self.octocrab
             .repos("neovim", "neovim")
             .releases()
             .get_latest()

@@ -23,8 +23,6 @@ use tracing_subscriber::util::SubscriberInitExt;
 /// was originally installed by [`init_tracing`].
 static FILTER_RELOAD_HANDLE: OnceLock<reload::Handle<EnvFilter, Registry>> = OnceLock::new();
 
-
-
 /// Top-level CLI options wrapper.
 ///
 /// This struct captures global flags (like verbosity) and flattens the
