@@ -71,17 +71,19 @@ pub enum VersionType {
 ///
 /// # Fields
 ///
-/// * `data: UpstreamVersion` - The upstream version data for the local nightly version.
+/// * `data: NightlyInfo` - The upstream version data for the local nightly version.
 /// * `path: PathBuf` - The path to the file that contains the local nightly version.
 ///
 /// # Example
 ///
 /// ```rust
-/// let upstream_version = UpstreamVersion {
-///     // initialize fields
+/// let nightly_info = NightlyInfo {
+///     tag_name: "nightly".to_string(),
+///     target_commitish: Some("abc1234".to_string()),
+///     published_at: Utc::now(),
 /// };
 /// let local_nightly = LocalNightly {
-///     data: upstream_version,
+///     data: nightly_info,
 ///     path: PathBuf::from("/path/to/nightly/version"),
 /// };
 /// println!("The local nightly version is {:?}", local_nightly);

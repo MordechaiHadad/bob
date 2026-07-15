@@ -37,9 +37,9 @@ use tracing::info;
 /// # Example
 ///
 /// ```rust
-/// let client = Client::new();
+/// let github = GitHubClient::new().unwrap();
 /// let version = "nightly";
-/// let parsed_version = parse_version_type(&client, version).await.unwrap();
+/// let parsed_version = parse_version_type(&github, version).await.unwrap();
 /// println!("The parsed version is {:?}", parsed_version);
 /// ```
 pub async fn parse_version_type(github: &GitHubClient, version: &str) -> Result<ParsedVersion> {

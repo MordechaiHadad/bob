@@ -1,9 +1,30 @@
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
+use reqwest::StatusCode;
 use octocrab::Octocrab;
 use octocrab::models::repos::{Release, Tag};
 use serde::{Deserialize, Serialize};
 use tracing::debug;
+
+trait OctocrabResultExt<T> {
+    fn map_rate_limit(self) -> Result<T>;
+}
+
+impl<T> OctocrabResultExt<T> for octocrab::Result<T> {
+    fn map_rate_limit(self) -> Result<T> {
+        match self {
+            Err(octocrab::Error::GitHub { source, .. })
+                if source.status_code == StatusCode::FORBIDDEN =>
+            {
+                Err(anyhow!(
+                    "GitHub API rate limit reached. Either wait an hour or \
+                     see https://github.com/MordechaiHadad/bob#increasing-github-rate-limit",
+                ))
+            }
+            result => Ok(result?),
+        }
+    }
+}
 
 pub struct GitHubClient {
     octocrab: Octocrab,
@@ -12,13 +33,13 @@ pub struct GitHubClient {
 
 impl GitHubClient {
     pub fn new() -> Result<Self> {
-        let token = std::env::var("GITHUB_TOKEN").ok();
+        let token = std::env::var("GITHUB_TOKEN").ok().filter(|t| !t.is_empty());
 
         let mut builder = Octocrab::builder();
         if let Some(token) = token {
             builder = builder.personal_token(token);
         } else {
-            debug!("GITHUB_TOKEN not set -- unauthenticated requests are rate-limited to 60/hour");
+            debug!("GITHUB_TOKEN not set -- unauthenticated requests are rate-limited to 60/hour, set GITHUB_TOKEN in your environment to increase to 5,000/hour");
         }
 
         let octocrab = builder.build()?;
@@ -32,12 +53,13 @@ impl GitHubClient {
     }
 
     pub async fn get_release_by_tag(&self, tag: &str) -> Result<Release> {
-        Ok(self
+        self
             .octocrab
             .repos("neovim", "neovim")
             .releases()
             .get_by_tag(tag)
-            .await?)
+            .await
+            .map_rate_limit()
     }
 
     pub async fn get_nightly_release(&self) -> Result<NightlyInfo> {
@@ -45,12 +67,13 @@ impl GitHubClient {
     }
 
     pub async fn get_latest_release(&self) -> Result<Release> {
-        Ok(self
+        self
             .octocrab
             .repos("neovim", "neovim")
             .releases()
             .get_latest()
-            .await?)
+            .await
+            .map_rate_limit()
     }
 
     pub async fn get_commits_between(
@@ -66,7 +89,8 @@ impl GitHubClient {
             .until(*until)
             .per_page(100)
             .send()
-            .await?;
+            .await
+            .map_rate_limit()?;
 
         Ok(page.items)
     }
@@ -78,7 +102,8 @@ impl GitHubClient {
             .list_commits()
             .per_page(1)
             .send()
-            .await?;
+            .await
+            .map_rate_limit()?;
 
         let commit = page
             .items
@@ -96,7 +121,8 @@ impl GitHubClient {
             .list_tags()
             .per_page(100)
             .send()
-            .await?;
+            .await
+            .map_rate_limit()?;
 
         Ok(page.items)
     }
@@ -113,13 +139,13 @@ impl TryFrom<Release> for NightlyInfo {
     type Error = anyhow::Error;
 
     fn try_from(release: Release) -> Result<Self> {
-        let tag_name = release.tag_name.clone();
+        let published_at = release
+            .published_at
+            .ok_or_else(|| anyhow!("Release {} has no published_at", release.tag_name))?;
         Ok(Self {
             tag_name: release.tag_name,
             target_commitish: Some(release.target_commitish),
-            published_at: release
-                .published_at
-                .ok_or_else(|| anyhow!("Release {tag_name} has no published_at"))?,
+            published_at,
         })
     }
 }

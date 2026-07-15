@@ -259,8 +259,8 @@ async fn handle_rollback(config: &Config) -> Result<()> {
     let mut json_struct: NightlyInfo = serde_json::from_str(&nightly_file)?;
     let id: String = json_struct
         .target_commitish
-        .as_ref()
-        .unwrap()
+        .as_deref()
+        .ok_or_else(|| anyhow!("Nightly release is missing a target commit SHA, cannot create rollback"))?
         .chars()
         .take(7)
         .collect();
@@ -298,10 +298,10 @@ async fn handle_rollback(config: &Config) -> Result<()> {
 /// # Example
 ///
 /// ```rust
-/// let client = Client::new();
-/// let local = UpstreamVersion::get_local_version();
-/// let upstream = UpstreamVersion::get_upstream_version(&client).await?;
-/// print_commits(&client, &local, &upstream).await?;
+/// let github = GitHubClient::new().unwrap();
+/// let local = helpers::version::nightly::get_local_nightly(&config).await?;
+/// let upstream = github.get_nightly_release().await?;
+/// print_commits(&github, &local, &upstream).await?;
 /// ```
 async fn print_commits(
     github: &GitHubClient,
