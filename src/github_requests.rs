@@ -14,7 +14,8 @@ impl<T> OctocrabResultExt<T> for octocrab::Result<T> {
     fn map_rate_limit(self) -> Result<T> {
         match self {
             Err(octocrab::Error::GitHub { source, .. })
-                if source.status_code == StatusCode::FORBIDDEN =>
+                if source.status_code == StatusCode::FORBIDDEN
+                    || source.status_code == StatusCode::TOO_MANY_REQUESTS =>
             {
                 Err(anyhow!(
                     "GitHub API rate limit reached. Either wait an hour or \
