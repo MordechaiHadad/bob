@@ -92,7 +92,7 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
     let version = semver::Version::parse(&used_version.replace('v', "")).ok();
     let platform = get_platform_name(version.as_ref());
 
-    let new_version: String = if crate::HASH_REGEX.is_match(&used_version) {
+    let new_version: String = if used_version.chars().all(|c| c.is_ascii_hexdigit()) {
         used_version.chars().take(7).collect()
     } else {
         used_version
