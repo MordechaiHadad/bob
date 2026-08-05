@@ -544,7 +544,7 @@ where
     let mut opened_file = File::create(file_path).await?;
 
     opened_file
-        .write_all(format!("source \"{}\"\n", &env_path).as_bytes())
+        .write_all(format!("source \"{}\"\n", env_path).as_bytes())
         .await?;
     opened_file.flush().await?;
 
