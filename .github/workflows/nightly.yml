@@ -105,8 +105,8 @@ jobs:
       - name: Setup Bob build directory
         run: |
           mkdir build
-          copy .\\bin\\vcruntime140.dll .\\build
-          copy .\\target\\optimized\\bob.exe .\\build
+          copy .\bin\vcruntime140.dll .\build
+          copy .\target\optimized\bob.exe .\build
         if: matrix.os.OS == 'windows-latest'
       - name: Upload Bob binary
         uses: actions/upload-artifact@v4
@@ -151,6 +151,11 @@ jobs:
           find . -mindepth 1 -maxdepth 1 -type d -empty -delete
           echo "Prepared assets:"
           ls -l
+      - name: Delete existing nightly release and tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete nightly --yes --cleanup-tag || true
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -158,6 +163,5 @@ jobs:
           name: "Nightly Development Build"
           prerelease: true
           make_latest: true
-          generate_release_notes: true
           files: |
             ./artifacts/*
