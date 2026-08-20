@@ -150,3 +150,42 @@ impl TryFrom<Release> for NightlyInfo {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{Duration, Utc};
+
+    #[tokio::test]
+    async fn get_latest_commit_sha_returns_full_sha() {
+        let github = GitHubClient::new().expect("failed to build GitHubClient");
+        let sha = github
+            .get_latest_commit_sha()
+            .await
+            .expect("failed to fetch the latest commit sha");
+        assert_eq!(sha.len(), 40);
+        assert!(
+            sha.chars().all(|character| character.is_ascii_hexdigit()),
+            "sha should only contain ascii hex digits, got {sha}"
+        );
+    }
+
+    #[tokio::test]
+    async fn get_commits_between_returns_commits() {
+        let github = GitHubClient::new().expect("failed to build GitHubClient");
+        let until = Utc::now();
+        let since = until - Duration::days(30);
+        let commits = github
+            .get_commits_between(&since, &until)
+            .await
+            .expect("failed to fetch commits between the given dates");
+        assert!(
+            !commits.is_empty(),
+            "expected at least one commit in the last 30 days"
+        );
+        assert!(
+            commits.iter().all(|commit| commit.sha.len() == 40),
+            "every commit should carry a full 40 character sha"
+        );
+    }
+}
