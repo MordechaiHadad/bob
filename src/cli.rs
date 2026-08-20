@@ -295,9 +295,7 @@ pub async fn start(config: ConfigFile) -> Result<()> {
         && !config.config.ignore_running_instances.unwrap_or(true)
         && is_neovim_running()
     {
-        return Err(anyhow::anyhow!(
-            "Neovim is currently running. Please close it before switching versions."
-        ));
+        anyhow::bail!("Neovim is currently running. Please close it before switching versions.");
     }
 
     match cli {

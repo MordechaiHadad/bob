@@ -87,6 +87,13 @@ pub async fn parse_version_type(github: &GitHubClient, version: &str) -> Result<
                             .context("Unable to parse version string in parse_version_type")?,
                     ),
                 });
+            } else if crate::NIGHTLY_REGEX.is_match(version) {
+                return Ok(ParsedVersion {
+                    tag_name: version.to_string(),
+                    version_type: VersionType::NightlyRollback,
+                    non_parsed_string: version.to_string(),
+                    semver: None,
+                });
             } else if crate::HASH_REGEX.is_match(version) {
                 return Ok(ParsedVersion {
                     tag_name: version.to_string().chars().take(7).collect(),
@@ -96,22 +103,13 @@ pub async fn parse_version_type(github: &GitHubClient, version: &str) -> Result<
                 });
             }
 
-            if crate::NIGHTLY_REGEX.is_match(version) {
-                return Ok(ParsedVersion {
-                    tag_name: version.to_string(),
-                    version_type: VersionType::NightlyRollback,
-                    non_parsed_string: version.to_string(),
-                    semver: None,
-                });
-            }
-
-            Err(anyhow!(
+            bail!(
                 "Please provide a proper version string. Valid options are:
 
                     • stable|latest|nightly - Latest stable, most recent, or nightly build
                     • [v]x.x.x              - Specific version (e.g., 0.6.0 or v0.6.0)
                     • <commit-hash>         - Specific commit hash"
-            ))
+            )
         }
     }
 }
@@ -244,6 +242,11 @@ pub async fn get_current_version(config: &Config) -> Result<String> {
 ///
 /// * `bool` - Returns `true` if the specified version is currently being used, `false` otherwise.
 ///
+/// # Notes
+///
+/// The "used" file can hold a full commit hash while `version` is its short form, so a prefix match
+/// is allowed only when the stored value is itself a pure commit hash. Otherwise an exact match is required.
+///
 /// # Example
 ///
 /// ```rust
@@ -254,7 +257,15 @@ pub async fn get_current_version(config: &Config) -> Result<String> {
 /// ```
 pub async fn is_version_used(version: &str, config: &Config) -> bool {
     match get_current_version(config).await {
-        Ok(value) => value.starts_with(version),
+        Ok(value) => {
+            let value = value.trim();
+            if value == version {
+                return true;
+            }
+            value.len() > version.len()
+                && value.starts_with(version)
+                && value.chars().all(|character| character.is_ascii_hexdigit())
+        }
         Err(_) => false,
     }
 }

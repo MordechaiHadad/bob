@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{Result, bail};
 use async_recursion::async_recursion;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::path::Path;
@@ -54,7 +54,7 @@ pub async fn remove_dir(directory: &str) -> Result<()> {
     }
 
     if let Err(e) = fs::remove_dir(directory).await {
-        return Err(anyhow!("Failed to remove {directory}: {e}"));
+        bail!("Failed to remove {directory}: {e}");
     }
 
     pb.finish_with_message(format!("Finished removing {}", path.display()));

@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{Result, bail};
 use chrono::{DateTime, Utc};
 use octocrab::Octocrab;
 use octocrab::models::repos::{Release, Tag};

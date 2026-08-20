@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{Result, bail};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -46,12 +46,12 @@ pub async fn start(file: &LocalVersion) -> Result<()> {
     let temp_file = file.clone();
     match tokio::task::spawn_blocking(move || match expand(&temp_file) {
         Ok(()) => Ok(()),
-        Err(error) => Err(anyhow!(error)),
+        Err(error) => bail!(error),
     })
     .await
     {
         Ok(_) => (),
-        Err(error) => return Err(anyhow!(error)),
+        Err(error) => bail!(error),
     }
     tokio::fs::remove_file(format!(
         "{}/{}.{}",
@@ -219,11 +219,11 @@ fn expand(downloaded_file: &LocalVersion) -> Result<()> {
     )) {
         Ok(value) => value,
         Err(error) => {
-            return Err(anyhow!(
+            bail!(
                 "Failed to open file {}.{}, file doesn't exist. additional info: {error}",
                 downloaded_file.file_name,
                 downloaded_file.file_format
-            ));
+            );
         }
     };
     let decompress_stream = GzDecoder::new(file);

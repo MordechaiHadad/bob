@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{Result, anyhow, bail};
 use dialoguer::Confirm;
 use std::env;
 use std::path::{Path, PathBuf};
@@ -117,9 +117,7 @@ pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
             if let Ok(hash) = hash_result {
                 hash
             } else {
-                return Err(anyhow!(
-                    "Full hash file doesn't exist, please rebuild this commit"
-                ));
+                bail!("Full hash file doesn't exist, please rebuild this commit");
             }
         } else {
             version.non_parsed_string.clone()
@@ -282,10 +280,10 @@ async fn copy_file_with_error_handling(old_path: &Path, new_path: &Path) -> Resu
                     new_path.display(),
                     code
                 );
-                Err(anyhow::anyhow!(
+                bail!(
                     "The file {} is busy. Please make sure to close any processes using it.",
                     old_path.display()
-                ))
+                )
             } else {
                 debug!(
                     "copy_file_with_error_handling: copy failed {} -> {}: {:?}",
@@ -293,7 +291,7 @@ async fn copy_file_with_error_handling(old_path: &Path, new_path: &Path) -> Resu
                     new_path.display(),
                     e
                 );
-                Err(anyhow::anyhow!(e).context("Failed to copy file"))
+                bail!(anyhow!(e).context("Failed to copy file"))
             }
         }
     }
@@ -374,7 +372,7 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
             }
             Some(Err(e)) => {
                 // non valid due to some error
-                return Err(anyhow::anyhow!(e).context("Failed to read user input"));
+                bail!(anyhow!(e).context("Failed to read user input"));
             }
             None => {
                 // none due to timeout elapsing
@@ -505,7 +503,7 @@ fn get_rc_files_from_shell(
     Ok(match shell.get_rcfiles() {
         Ok(files) => files,
         Err(error) => {
-            return Err(anyhow::anyhow!(error).context("Failed to get rc files"));
+            bail!(anyhow!(error).context("Failed to get rc files"));
         }
     })
 }

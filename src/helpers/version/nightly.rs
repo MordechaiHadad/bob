@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{Result, bail};
 use tokio::fs;
 
 use crate::helpers::version::types::LocalNightly;
@@ -12,7 +12,7 @@ pub async fn get_local_nightly(config: &Config) -> Result<NightlyInfo> {
         let file_json: NightlyInfo = serde_json::from_str(&file)?;
         Ok(file_json)
     } else {
-        Err(anyhow!("Couldn't find bob.json"))
+        bail!("Couldn't find bob.json")
     }
 }
 

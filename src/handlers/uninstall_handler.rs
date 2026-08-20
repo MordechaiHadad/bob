@@ -3,7 +3,7 @@ use crate::{
     github_requests::GitHubClient,
     helpers::{self, directories},
 };
-use anyhow::{Result, anyhow};
+use anyhow::{Result, bail};
 use dialoguer::{
     Confirm, MultiSelect,
     console::{Term, style},
@@ -53,7 +53,7 @@ pub async fn start(version: Option<&str>, github: &GitHubClient, config: Config)
 
     let downloads_dir = match directories::get_downloads_directory(&config).await {
         Ok(value) => value,
-        Err(error) => return Err(anyhow!(error)),
+        Err(error) => bail!(error),
     };
 
     let path = downloads_dir.join(&version.tag_name);

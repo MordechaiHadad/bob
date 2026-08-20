@@ -1,5 +1,5 @@
 use crate::config::Config;
-use anyhow::{Result, anyhow};
+use anyhow::{Result, bail};
 use std::time::Duration;
 use sysinfo::System;
 use tokio::{process::Command, time::sleep};
@@ -43,8 +43,8 @@ use crate::helpers::{
 pub async fn handle_subprocess(process: &mut Command) -> Result<()> {
     match process.status().await?.code() {
         Some(0) => Ok(()),
-        Some(code) => Err(anyhow!(code)),
-        None => Err(anyhow!("process terminated by signal")),
+        Some(code) => bail!(code),
+        None => bail!("process terminated by signal"),
     }
 }
 
@@ -92,7 +92,7 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
     let version = semver::Version::parse(&used_version.replace('v', "")).ok();
     let platform = get_platform_name(version.as_ref());
 
-    let new_version: String = if crate::HASH_REGEX.is_match(&used_version) {
+    let new_version: String = if used_version.chars().all(|c| c.is_ascii_hexdigit()) {
         used_version.chars().take(7).collect()
     } else {
         used_version
@@ -125,7 +125,7 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
         {
             use std::os::unix::process::CommandExt;
             let err = child.exec();
-            return Err(anyhow!("Failed to exec neovim: {err}"));
+            bail!("Failed to exec neovim: {err}");
         }
     }
 
@@ -136,14 +136,14 @@ pub async fn handle_nvim_process(config: &Config, args: &[String]) -> Result<()>
         match child_done {
             Ok(Some(status)) => match status.code() {
                 Some(0) => return Ok(()),
-                Some(code) => return Err(anyhow!("Process exited with error code {code}")),
-                None => return Err(anyhow!("Process terminated by signal")),
+                Some(code) => bail!("Process exited with error code {code}"),
+                None => bail!("Process terminated by signal"),
             },
             Ok(None) => {
                 // short delay to avoid high cpu usage
                 sleep(Duration::from_millis(200)).await;
             }
-            Err(_) => return Err(anyhow!("Failed to wait on child process")),
+            Err(_) => bail!("Failed to wait on child process"),
         }
     }
 }
