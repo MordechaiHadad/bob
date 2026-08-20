@@ -1,5 +1,5 @@
-use anyhow::{Result, bail};
 use chrono::{DateTime, Utc};
+use eyre::{Result, eyre};
 use octocrab::Octocrab;
 use octocrab::models::repos::{Release, Tag};
 use reqwest::StatusCode;
@@ -17,7 +17,7 @@ impl<T> OctocrabResultExt<T> for octocrab::Result<T> {
                 if source.status_code == StatusCode::FORBIDDEN
                     || source.status_code == StatusCode::TOO_MANY_REQUESTS =>
             {
-                Err(anyhow!(
+                Err(eyre!(
                     "GitHub API rate limit reached. Either wait an hour or \
                      see https://github.com/MordechaiHadad/bob#increasing-github-rate-limit",
                 ))
@@ -110,7 +110,7 @@ impl GitHubClient {
             .items
             .into_iter()
             .next()
-            .ok_or_else(|| anyhow!("No commits found"))?;
+            .ok_or_else(|| eyre!("No commits found"))?;
 
         Ok(commit.sha)
     }
@@ -137,12 +137,12 @@ pub struct NightlyInfo {
 }
 
 impl TryFrom<Release> for NightlyInfo {
-    type Error = anyhow::Error;
+    type Error = eyre::Report;
 
     fn try_from(release: Release) -> Result<Self> {
         let published_at = release
             .published_at
-            .ok_or_else(|| anyhow!("Release {} has no published_at", release.tag_name))?;
+            .ok_or_else(|| eyre!("Release {} has no published_at", release.tag_name))?;
         Ok(Self {
             tag_name: release.tag_name,
             target_commitish: Some(release.target_commitish),

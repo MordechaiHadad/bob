@@ -5,7 +5,7 @@ use crate::helpers::processes::handle_subprocess;
 use crate::helpers::version::nightly::produce_nightly_vec;
 use crate::helpers::version::types::{LocalVersion, ParsedVersion, VersionType};
 use crate::helpers::{self, directories, filesystem, unarchive};
-use anyhow::{Result, anyhow, bail};
+use eyre::{Result, bail, eyre};
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
@@ -161,13 +161,13 @@ async fn handle_standard_archive(
             .iter()
             .find(|a| a.name == asset_name)
             .and_then(|a| a.digest.as_deref())
-            .ok_or_else(|| anyhow!("No digest found for {asset_name}"))?;
+            .ok_or_else(|| eyre!("No digest found for {asset_name}"))?;
 
         let digest = digest.strip_prefix("sha256:").unwrap_or(digest);
 
         if hash_file_hex(&archive_path)? != digest {
             tokio::fs::remove_file(archive_path).await?;
-            return Err(anyhow!("Checksum mismatch!"));
+            return Err(eyre!("Checksum mismatch!"));
         }
 
         info!("Checksum matched!");
@@ -190,7 +190,7 @@ async fn handle_standard_archive(
             )? {
                 tokio::fs::remove_file(archive_path).await?;
                 tokio::fs::remove_file(checksum_path).await?;
-                return Err(anyhow!("Checksum mismatch!"));
+                return Err(eyre!("Checksum mismatch!"));
             }
 
             info!("Checksum matched!");
@@ -259,7 +259,7 @@ async fn handle_rollback(config: &Config) -> Result<()> {
         .target_commitish
         .as_deref()
         .ok_or_else(|| {
-            anyhow!("Nightly release is missing a target commit SHA, cannot create rollback")
+            eyre!("Nightly release is missing a target commit SHA, cannot create rollback")
         })?
         .chars()
         .take(7)
@@ -390,7 +390,7 @@ async fn download_version(
                 let mut downloaded: u64 = 0;
 
                 while let Some(item) = response_bytes.next().await {
-                    let chunk = item.map_err(|_| anyhow!("hello"))?;
+                    let chunk = item.map_err(|_| eyre!("hello"))?;
                     file.write_all(&chunk).await?;
                     let new = min(downloaded + (chunk.len() as u64), total_size);
                     downloaded = new;
@@ -442,7 +442,7 @@ where
     fn new(total_size: u64, tag_name: &'a S, get_sha256sum: bool) -> PbWrapper<'a, S> {
         let pb = ProgressBar::new(total_size);
         pb.set_style(ProgressStyle::with_template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
-        .map_err(|_| anyhow!("Failed to set progress bar style")).unwrap()
+        .map_err(|_| eyre!("Failed to set progress bar style")).unwrap()
         .progress_chars("█  "));
         let dl = if get_sha256sum { "checksum" } else { "version" };
         PbWrapper {

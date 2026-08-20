@@ -5,7 +5,7 @@ use self::types::{ParsedVersion, VersionType};
 use crate::config::Config;
 use crate::github_requests::GitHubClient;
 use crate::helpers::directories;
-use anyhow::{Context, Result, anyhow};
+use eyre::{Context, Result, bail, eyre};
 use semver::Version;
 use std::path::{Path, PathBuf};
 use tokio::{
@@ -226,7 +226,7 @@ pub async fn get_current_version(config: &Config) -> Result<String> {
     let mut downloads_dir = directories::get_downloads_directory(config).await?;
     downloads_dir.push("used");
     fs::read_to_string(&downloads_dir).await
-        .map_err(|_| anyhow!("The used file required for bob could not be found. This could mean that Neovim is not installed through bob."))
+        .map_err(|_| eyre!("The used file required for bob could not be found. This could mean that Neovim is not installed through bob."))
 }
 
 /// Checks if a specific version is currently being used.

@@ -1,5 +1,5 @@
 use crate::config::Config;
-use anyhow::{Result, bail};
+use eyre::{Result, bail};
 use std::time::Duration;
 use sysinfo::System;
 use tokio::{process::Command, time::sleep};

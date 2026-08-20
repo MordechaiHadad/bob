@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow, bail};
+use eyre::{Result, bail, eyre};
 use std::fs;
 use std::path::PathBuf;
 
@@ -79,7 +79,7 @@ fn get_sudo_config_dir() -> Option<PathBuf> {
 fn get_local_data_dir() -> Result<PathBuf> {
     get_sudo_data_dir()
         .or_else(dirs::data_local_dir)
-        .ok_or_else(|| anyhow!("Could not determine local data directory"))
+        .ok_or_else(|| eyre!("Could not determine local data directory"))
 }
 
 /// Returns the configuration file path for the current user.
@@ -105,7 +105,7 @@ pub fn get_config_file() -> Result<PathBuf> {
 
     let config_dir = get_sudo_config_dir()
         .or_else(dirs::config_dir)
-        .ok_or_else(|| anyhow!("Could not determine config directory"))?;
+        .ok_or_else(|| eyre!("Could not determine config directory"))?;
 
     let mut config_dir = config_dir;
 

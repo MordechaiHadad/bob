@@ -3,12 +3,12 @@ use crate::{
     github_requests::GitHubClient,
     helpers::{self, directories},
 };
-use anyhow::{Result, bail};
 use dialoguer::{
     Confirm, MultiSelect,
     console::{Term, style},
     theme::ColorfulTheme,
 };
+use eyre::{Result, bail};
 use tokio::fs;
 use tracing::{info, warn};
 

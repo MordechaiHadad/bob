@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use eyre::{Result, bail, eyre};
 use tokio::fs;
 use tracing::info;
 
@@ -24,7 +24,7 @@ use crate::handlers::use_handler;
 pub async fn start(github: &GitHubClient, config: ConfigFile) -> Result<()> {
     let version_sync_file_location = version::get_version_sync_file_location(&config.config)
         .await?
-        .ok_or_else(|| anyhow!("version_sync_file_location needs to be set to use bob sync"))?;
+        .ok_or_else(|| eyre!("version_sync_file_location needs to be set to use bob sync"))?;
 
     let version = fs::read_to_string(&version_sync_file_location).await?;
     if version.is_empty() {

@@ -1,5 +1,5 @@
-use anyhow::{Result, anyhow, bail};
 use dialoguer::Confirm;
+use eyre::{Result, bail, eyre};
 use std::env;
 use std::path::{Path, PathBuf};
 use tokio::fs;
@@ -245,7 +245,7 @@ async fn copy_nvim_proxy(config: &ConfigFile) -> Result<()> {
 ///
 /// ```rust
 /// use std::path::Path;
-/// use anyhow::Result;
+/// use eyre::Result;
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<()> {
@@ -291,7 +291,7 @@ async fn copy_file_with_error_handling(old_path: &Path, new_path: &Path) -> Resu
                     new_path.display(),
                     e
                 );
-                bail!(anyhow!(e).context("Failed to copy file"))
+                bail!(eyre!(e).wrap_err("Failed to copy file"))
             }
         }
     }
@@ -372,7 +372,7 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
             }
             Some(Err(e)) => {
                 // non valid due to some error
-                bail!(anyhow!(e).context("Failed to read user input"));
+                bail!(eyre!(e).wrap_err("Failed to read user input"));
             }
             None => {
                 // none due to timeout elapsing
@@ -452,7 +452,7 @@ async fn modify_path(config: &ConfigFile, installation_dir: &str) -> Result<()> 
                 .first()
                 .ok_or_else(|| {
                     warn!("No fish rc files found");
-                    anyhow!("No fish rc files found")
+                    eyre!("No fish rc files found")
                 })?
                 .as_ref()
                 .join("bob.fish");
@@ -503,7 +503,7 @@ fn get_rc_files_from_shell(
     Ok(match shell.get_rcfiles() {
         Ok(files) => files,
         Err(error) => {
-            bail!(anyhow!(error).context("Failed to get rc files"));
+            bail!(eyre!(error).wrap_err("Failed to get rc files"));
         }
     })
 }
@@ -662,7 +662,7 @@ mod use_handler_tests {
 
         let fish_file = fish_files
             .first()
-            .ok_or_else(|| anyhow::anyhow!("No fish rc files found"))
+            .ok_or_else(|| eyre::eyre!("No fish rc files found"))
             .unwrap()
             .as_ref()
             .join("bob.fish");

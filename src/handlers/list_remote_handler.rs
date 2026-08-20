@@ -4,7 +4,7 @@ use std::{
     path::PathBuf,
 };
 
-use anyhow::Result;
+use eyre::Result;
 use yansi::Paint;
 
 use crate::{
@@ -90,7 +90,7 @@ pub async fn start(config: Config, github: &GitHubClient) -> Result<()> {
     let mut stdout = io::stdout().lock();
     stdout.write_all(&buffer).map_err(|e| {
         if e.kind() == io::ErrorKind::BrokenPipe {
-            return anyhow::anyhow!("Failed to write to stdout: Broken pipe");
+            return eyre::eyre!("Failed to write to stdout: Broken pipe");
         }
         e.into()
     })?;

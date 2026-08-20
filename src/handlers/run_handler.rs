@@ -1,4 +1,4 @@
-use anyhow::Result;
+use eyre::Result;
 use tokio::process::Command;
 
 use crate::config::Config;
@@ -26,7 +26,7 @@ pub async fn start(
 
     // If not installed, suggest installing it first
     if !version_path.exists() {
-        anyhow::bail!(
+        eyre::bail!(
             "Version {} is not installed. Install it first with: bob install {}",
             version.tag_name,
             version.tag_name
@@ -41,7 +41,7 @@ pub async fn start(
     };
 
     if !bin_path.exists() {
-        anyhow::bail!(
+        eyre::bail!(
             "Neovim binary not found at expected path: {}",
             bin_path.display()
         );

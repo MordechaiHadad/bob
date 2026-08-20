@@ -8,9 +8,9 @@ use crate::{
     helpers::processes::is_neovim_running,
     version::parse_version_type,
 };
-use anyhow::Result;
 use clap::{ArgAction, Args, CommandFactory, Parser, ValueEnum};
 use clap_complete::shells;
+use eyre::Result;
 use std::sync::OnceLock;
 use tracing::{debug, info};
 use tracing_subscriber::Registry;
@@ -223,7 +223,7 @@ pub fn init_tracing() -> Result<()> {
 
     FILTER_RELOAD_HANDLE
         .set(reload_handle)
-        .map_err(|_| anyhow::anyhow!("Tracing reload handle already initialised"))?;
+        .map_err(|_| eyre::eyre!("Tracing reload handle already initialised"))?;
 
     Ok(())
 }
@@ -256,7 +256,7 @@ pub fn setup_tracing(verbose: u8) -> Result<()> {
 
     let handle = FILTER_RELOAD_HANDLE
         .get()
-        .ok_or_else(|| anyhow::anyhow!("Tracing not initialised — call init_tracing first"))?;
+        .ok_or_else(|| eyre::eyre!("Tracing not initialised — call init_tracing first"))?;
 
     handle.reload(env_filter)?;
 
@@ -295,7 +295,7 @@ pub async fn start(config: ConfigFile) -> Result<()> {
         && !config.config.ignore_running_instances.unwrap_or(true)
         && is_neovim_running()
     {
-        anyhow::bail!("Neovim is currently running. Please close it before switching versions.");
+        eyre::bail!("Neovim is currently running. Please close it before switching versions.");
     }
 
     match cli {

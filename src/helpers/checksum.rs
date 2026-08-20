@@ -1,5 +1,4 @@
-use anyhow::Result;
-use anyhow::anyhow;
+use eyre::{Result, eyre};
 use sha2::{Digest, Sha256};
 use std::path::Path;
 use std::{fs, io};
@@ -20,7 +19,7 @@ pub fn sha256cmp(a: &Path, b: &Path, filename: &str) -> Result<bool> {
         .lines()
         .find(|line| line.contains(filename))
         .and_then(|line| line.split_whitespace().next())
-        .ok_or_else(|| anyhow!("Checksum not found for {filename}"))?;
+        .ok_or_else(|| eyre!("Checksum not found for {filename}"))?;
 
     let hash = hash_file_hex(a)?;
     Ok(hash == expected)

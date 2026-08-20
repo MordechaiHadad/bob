@@ -2,7 +2,7 @@ use crate::cli::Update;
 use crate::config::ConfigFile;
 use crate::github_requests::GitHubClient;
 use crate::helpers::version::is_version_installed;
-use anyhow::Result;
+use eyre::Result;
 use tracing::{info, warn};
 
 use crate::handlers::{InstallResult, install_handler};
