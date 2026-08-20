@@ -1,11 +1,11 @@
 use crate::config::{Config, ConfigFile};
-use crate::github_requests::{UpstreamVersion, get_commits_for_nightly, get_upstream_nightly};
-use crate::helpers::checksum::sha256cmp;
+use crate::github_requests::{GitHubClient, NightlyInfo};
+use crate::helpers::checksum::{hash_file_hex, sha256cmp};
 use crate::helpers::processes::handle_subprocess;
 use crate::helpers::version::nightly::produce_nightly_vec;
 use crate::helpers::version::types::{LocalVersion, ParsedVersion, VersionType};
 use crate::helpers::{self, directories, filesystem, unarchive};
-use anyhow::{Result, anyhow, bail};
+use eyre::{Result, bail, eyre};
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
@@ -27,45 +27,18 @@ use super::{InstallResult, PostDownloadVersionType};
 ///
 /// # Arguments
 ///
-/// * `version` - A mutable reference to a `ParsedVersion` object representing the version to be installed.
-/// * `client` - A reference to a `Client` object used for making HTTP requests.
-/// * `config` - A reference to a `Config` object containing the configuration settings.
-///
-/// # Returns
-///
-/// * `Result<InstallResult>` - Returns a `Result` that contains an `InstallResult` enum on success, or an error on failure.
+/// * `version` - The parsed version to install.
+/// * `github` - The GitHub API client (used for API calls and downloads).
+/// * `config` - The application configuration.
 ///
 /// # Errors
 ///
-/// This function will return an error if:
-/// * The version is below 0.2.2.
-/// * There is a problem setting the current directory.
-/// * There is a problem checking if the version is already installed.
-/// * There is a problem getting the upstream nightly version.
-/// * There is a problem getting the local nightly version.
-/// * There is a problem handling a rollback.
-/// * There is a problem printing commits.
-/// * There is a problem downloading the version.
-/// * There is a problem handling building from source.
-/// * There is a problem unarchiving the downloaded file.
-/// * There is a problem creating the file `nightly/bob.json`.
-///
-/// # Panics
-///
-/// This function does not panic.
-///
-/// # Examples
-///
-/// ```rust
-/// let mut version = ParsedVersion::new(VersionType::Normal, "1.0.0");
-/// let client = Client::new();
-/// let config = Config::default();
-/// let result = start(&mut version, &client, &config).await;
-/// ```
+/// Returns an error if the version is below 0.2.2, network requests fail,
+/// checksums mismatch, or filesystem operations fail.
 #[allow(clippy::too_many_lines)]
 pub async fn start(
     version: &ParsedVersion,
-    client: &Client,
+    github: &GitHubClient,
     config: &ConfigFile,
 ) -> Result<InstallResult> {
     if version.version_type == VersionType::NightlyRollback {
@@ -91,7 +64,7 @@ pub async fn start(
     }
 
     let nightly_version = if version.version_type == VersionType::Nightly {
-        Some(get_upstream_nightly(client).await?)
+        Some(github.get_nightly_release().await?)
     } else {
         None
     };
@@ -110,65 +83,33 @@ pub async fn start(
 
         match config.config.enable_nightly_info {
             Some(boolean) if boolean => {
-                print_commits(client, &local_nightly, upstream_nightly).await?;
+                print_commits(github, &local_nightly, upstream_nightly).await?;
             }
-            None => print_commits(client, &local_nightly, upstream_nightly).await?,
+            None => print_commits(github, &local_nightly, upstream_nightly).await?,
             _ => (),
         }
     }
 
     let downloaded_archive = match version.version_type {
         VersionType::Normal | VersionType::Latest => {
-            download_version(client, version, root, &config.config, false).await
+            download_version(github.download(), version, root, &config.config, false).await
         }
         VersionType::Nightly => {
             if config.config.enable_release_build == Some(true) {
                 handle_building_from_source(version, &config.config).await
             } else {
-                download_version(client, version, root, &config.config, false).await
+                download_version(github.download(), version, root, &config.config, false).await
             }
         }
         VersionType::Hash => handle_building_from_source(version, &config.config).await,
         VersionType::NightlyRollback => Ok(PostDownloadVersionType::None),
     }?;
 
-    if let PostDownloadVersionType::Standard(downloaded_archive) = downloaded_archive {
-        if version.semver.is_some() && version.semver.as_ref().unwrap() <= &Version::new(0, 4, 4) {
-            unarchive::start(&downloaded_archive).await?;
-        } else {
-            let downloaded_checksum =
-                download_version(client, version, root, &config.config, true).await?;
-            let archive_path = root.join(format!(
-                "{}.{}",
-                downloaded_archive.file_name, downloaded_archive.file_format
-            ));
-
-            if let PostDownloadVersionType::Standard(downloaded_checksum) = downloaded_checksum {
-                let checksum_path = root.join(format!(
-                    "{}.{}",
-                    downloaded_checksum.file_name, downloaded_checksum.file_format
-                ));
-
-                let platform = helpers::get_platform_name(version.semver.as_ref());
-
-                if !sha256cmp(
-                    &archive_path,
-                    &checksum_path,
-                    &format!("{}.{}", platform, downloaded_archive.file_format),
-                )? {
-                    tokio::fs::remove_file(archive_path).await?;
-                    tokio::fs::remove_file(checksum_path).await?;
-                    bail!("Checksum mismatch!");
-                }
-
-                info!("Checksum matched!");
-                tokio::fs::remove_file(checksum_path).await?;
-                unarchive::start(&downloaded_archive).await?;
-            } else if let PostDownloadVersionType::None = downloaded_checksum {
-                warn!("No checksum provided, skipping checksum verification");
-                unarchive::start(&downloaded_archive).await?;
-            }
+    match downloaded_archive {
+        PostDownloadVersionType::Standard(archive) => {
+            handle_standard_archive(&archive, version, github, root, config).await?;
         }
+        PostDownloadVersionType::None | PostDownloadVersionType::Hash => {}
     }
 
     if let VersionType::Nightly = version.version_type {
@@ -187,6 +128,80 @@ pub async fn start(
     Ok(InstallResult::InstallationSuccess(
         root.display().to_string(),
     ))
+}
+
+async fn handle_standard_archive(
+    downloaded_archive: &LocalVersion,
+    version: &ParsedVersion,
+    github: &GitHubClient,
+    root: &Path,
+    config: &ConfigFile,
+) -> Result<()> {
+    let archive_path = root.join(format!(
+        "{}.{}",
+        downloaded_archive.file_name, downloaded_archive.file_format
+    ));
+
+    if version
+        .semver
+        .as_ref()
+        .is_some_and(|v| *v <= Version::new(0, 4, 4))
+    {
+        unarchive::start(downloaded_archive).await?;
+        return Ok(());
+    }
+
+    if use_github_digest(version) {
+        let release = github.get_release_by_tag(&version.tag_name).await?;
+        let platform = helpers::get_platform_name(version.semver.as_ref());
+        let asset_name = format!("{}.{}", platform, downloaded_archive.file_format);
+
+        let digest = release
+            .assets
+            .iter()
+            .find(|a| a.name == asset_name)
+            .and_then(|a| a.digest.as_deref())
+            .ok_or_else(|| eyre!("No digest found for {asset_name}"))?;
+
+        let digest = digest.strip_prefix("sha256:").unwrap_or(digest);
+
+        if hash_file_hex(&archive_path)? != digest {
+            tokio::fs::remove_file(archive_path).await?;
+            return Err(eyre!("Checksum mismatch!"));
+        }
+
+        info!("Checksum matched!");
+    } else {
+        let downloaded_checksum =
+            download_version(github.download(), version, root, &config.config, true).await?;
+
+        if let PostDownloadVersionType::Standard(downloaded_checksum) = downloaded_checksum {
+            let checksum_path = root.join(format!(
+                "{}.{}",
+                downloaded_checksum.file_name, downloaded_checksum.file_format
+            ));
+
+            let platform = helpers::get_platform_name(version.semver.as_ref());
+
+            if !sha256cmp(
+                &archive_path,
+                &checksum_path,
+                &format!("{}.{}", platform, downloaded_archive.file_format),
+            )? {
+                tokio::fs::remove_file(archive_path).await?;
+                tokio::fs::remove_file(checksum_path).await?;
+                return Err(eyre!("Checksum mismatch!"));
+            }
+
+            info!("Checksum matched!");
+            tokio::fs::remove_file(checksum_path).await?;
+        } else if let PostDownloadVersionType::None = downloaded_checksum {
+            warn!("No checksum provided, skipping checksum verification");
+        }
+    }
+
+    unarchive::start(downloaded_archive).await?;
+    Ok(())
 }
 
 /// Asynchronously handles the rollback for the nightly version(s) of Neovim.
@@ -239,11 +254,13 @@ async fn handle_rollback(config: &Config) -> Result<()> {
     }
 
     let nightly_file = fs::read_to_string("nightly/bob.json").await?;
-    let mut json_struct: UpstreamVersion = serde_json::from_str(&nightly_file)?;
+    let mut json_struct: NightlyInfo = serde_json::from_str(&nightly_file)?;
     let id: String = json_struct
         .target_commitish
-        .as_ref()
-        .unwrap()
+        .as_deref()
+        .ok_or_else(|| {
+            eyre!("Nightly release is missing a target commit SHA, cannot create rollback")
+        })?
         .chars()
         .take(7)
         .collect();
@@ -281,23 +298,24 @@ async fn handle_rollback(config: &Config) -> Result<()> {
 /// # Example
 ///
 /// ```rust
-/// let client = Client::new();
-/// let local = UpstreamVersion::get_local_version();
-/// let upstream = UpstreamVersion::get_upstream_version(&client).await?;
-/// print_commits(&client, &local, &upstream).await?;
+/// let github = GitHubClient::new().unwrap();
+/// let local = helpers::version::nightly::get_local_nightly(&config).await?;
+/// let upstream = github.get_nightly_release().await?;
+/// print_commits(&github, &local, &upstream).await?;
 /// ```
 async fn print_commits(
-    client: &Client,
-    local: &UpstreamVersion,
-    upstream: &UpstreamVersion,
+    github: &GitHubClient,
+    local: &NightlyInfo,
+    upstream: &NightlyInfo,
 ) -> Result<()> {
-    let commits =
-        get_commits_for_nightly(client, &local.published_at, &upstream.published_at).await?;
+    let commits = github
+        .get_commits_between(&local.published_at, &upstream.published_at)
+        .await?;
 
     for commit in commits {
         println!(
             "| {} {}\n",
-            Paint::blue(commit.commit.author.name).bold(),
+            Paint::blue(commit.commit.author.as_ref().map_or("Unknown", |a| &a.name)).bold(),
             commit.commit.message.replace('\n', "\n| ")
         );
     }
@@ -342,7 +360,7 @@ async fn print_commits(
 /// let result = download_version(&client, &version, &root, &config).await;
 /// ```
 async fn download_version(
-    client: &Client,
+    download: &Client,
     version: &ParsedVersion,
     root: &Path,
     config: &Config,
@@ -350,7 +368,7 @@ async fn download_version(
 ) -> Result<PostDownloadVersionType> {
     match version.version_type {
         VersionType::Normal | VersionType::Nightly | VersionType::Latest => {
-            let response = send_request(client, config, version, get_sha256sum).await;
+            let response = send_request(download, config, version, get_sha256sum).await;
 
             // Handle error case first so we don't need a match statement
             let response = if let Err(error) = response {
@@ -372,7 +390,7 @@ async fn download_version(
                 let mut downloaded: u64 = 0;
 
                 while let Some(item) = response_bytes.next().await {
-                    let chunk = item.map_err(|_| anyhow!("hello"))?;
+                    let chunk = item.map_err(|_| eyre!("hello"))?;
                     file.write_all(&chunk).await?;
                     let new = min(downloaded + (chunk.len() as u64), total_size);
                     downloaded = new;
@@ -424,7 +442,7 @@ where
     fn new(total_size: u64, tag_name: &'a S, get_sha256sum: bool) -> PbWrapper<'a, S> {
         let pb = ProgressBar::new(total_size);
         pb.set_style(ProgressStyle::with_template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
-        .map_err(|_| anyhow!("Failed to set progress bar style")).unwrap()
+        .map_err(|_| eyre!("Failed to set progress bar style")).unwrap()
         .progress_chars("█  "));
         let dl = if get_sha256sum { "checksum" } else { "version" };
         PbWrapper {
@@ -692,7 +710,7 @@ where
 ///
 /// * [`helpers::get_file_type`](src/helpers/file.rs)
 async fn send_request(
-    client: &Client,
+    download: &Client,
     config: &Config,
     version: &ParsedVersion,
     get_sha256sum: bool,
@@ -720,9 +738,17 @@ async fn send_request(
         format!("{url}/neovim/neovim/releases/download/{version_tag}/{platform}.{file_type}")
     };
 
-    client
+    download
         .get(request_url)
         .header("user-agent", "bob")
         .send()
         .await
+}
+
+fn use_github_digest(version: &ParsedVersion) -> bool {
+    version.version_type == VersionType::Nightly
+        || version
+            .semver
+            .as_ref()
+            .is_some_and(|v| *v >= Version::new(0, 11, 3))
 }

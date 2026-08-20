@@ -1,54 +1,37 @@
-use anyhow::{Result, anyhow, bail};
 use dialoguer::Confirm;
-use reqwest::Client;
+use eyre::{Result, bail, eyre};
 use std::env;
 use std::path::{Path, PathBuf};
 use tokio::fs;
 use tracing::{debug, info, trace};
 
 use crate::config::{Config, ConfigFile};
+use crate::github_requests::GitHubClient;
 use crate::handlers::{InstallResult, install_handler};
 use crate::helpers;
-use crate::helpers::checksum::compare_binaries;
+use crate::helpers::checksum::hash_file_hex;
 use crate::helpers::directories::get_installation_directory;
 use crate::helpers::version::types::{ParsedVersion, VersionType};
 
 /// Starts the process of using a specified version.
 ///
-/// This function checks if the specified version is already used, copies the Neovim proxy to the installation directory, installs the version if it's not already installed and used, switches to the version, and removes the "stable" directory if the version type is "Latest".
+/// Checks if the version is already used, copies the Neovim proxy,
+/// installs the version if needed, switches to it, and cleans up.
 ///
 /// # Arguments
 ///
 /// * `version` - The version to use.
-/// * `install` - Whether to install the version if it's not already installed.
-/// * `client` - The client to use for HTTP requests.
+/// * `install` - Whether to install the version if not already installed.
+/// * `github` - The GitHub API client.
 /// * `config` - The configuration for the operation.
-///
-/// # Returns
-///
-/// * `Result<()>` - Returns a `Result` that indicates whether the operation was successful or not.
 ///
 /// # Errors
 ///
-/// This function will return an error if:
-///
-/// * The version is not already used and it cannot be installed.
-/// * The version cannot be switched to.
-/// * The "stable" directory exists and it cannot be removed.
-///
-/// # Example
-///
-/// ```rust
-/// let version = ParsedVersion::new("1.0.0");
-/// let install = true;
-/// let client = Client::new();
-/// let config = Config::default();
-/// start(version, install, &client, config).await.unwrap();
-/// ```
+/// Returns an error if installation, switch, or PATH modification fails.
 pub async fn start(
     version: ParsedVersion,
     install: bool,
-    client: &Client,
+    github: &GitHubClient,
     config: ConfigFile,
 ) -> Result<()> {
     let is_version_used =
@@ -61,7 +44,7 @@ pub async fn start(
     }
 
     if install {
-        match install_handler::start(&version, client, &config).await {
+        match install_handler::start(&version, github, &config).await {
             Ok(success) => {
                 if let InstallResult::NightlyIsUpdated = success {
                     if is_version_used {
@@ -217,7 +200,7 @@ async fn copy_nvim_proxy(config: &ConfigFile) -> Result<()> {
     }
 
     if fs::metadata(&installation_dir).await.is_ok()
-        && compare_binaries(&exe_path, &installation_dir)?
+        && hash_file_hex(&exe_path)? == hash_file_hex(&installation_dir)?
     {
         return Ok(());
     }
@@ -262,7 +245,7 @@ async fn copy_nvim_proxy(config: &ConfigFile) -> Result<()> {
 ///
 /// ```rust
 /// use std::path::Path;
-/// use anyhow::Result;
+/// use eyre::Result;
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<()> {
@@ -308,7 +291,7 @@ async fn copy_file_with_error_handling(old_path: &Path, new_path: &Path) -> Resu
                     new_path.display(),
                     e
                 );
-                bail!(anyhow!(e).context("Failed to copy file"))
+                bail!(eyre!(e).wrap_err("Failed to copy file"))
             }
         }
     }
@@ -389,7 +372,7 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
             }
             Some(Err(e)) => {
                 // non valid due to some error
-                bail!(anyhow!(e).context("Failed to read user input"));
+                bail!(eyre!(e).wrap_err("Failed to read user input"));
             }
             None => {
                 // none due to timeout elapsing
@@ -469,7 +452,7 @@ async fn modify_path(config: &ConfigFile, installation_dir: &str) -> Result<()> 
                 .first()
                 .ok_or_else(|| {
                     warn!("No fish rc files found");
-                    anyhow!("No fish rc files found")
+                    eyre!("No fish rc files found")
                 })?
                 .as_ref()
                 .join("bob.fish");
@@ -520,7 +503,7 @@ fn get_rc_files_from_shell(
     Ok(match shell.get_rcfiles() {
         Ok(files) => files,
         Err(error) => {
-            bail!(anyhow!(error).context("Failed to get rc files"));
+            bail!(eyre!(error).wrap_err("Failed to get rc files"));
         }
     })
 }
@@ -679,7 +662,7 @@ mod use_handler_tests {
 
         let fish_file = fish_files
             .first()
-            .ok_or_else(|| anyhow::anyhow!("No fish rc files found"))
+            .ok_or_else(|| eyre::eyre!("No fish rc files found"))
             .unwrap()
             .as_ref()
             .join("bob.fish");

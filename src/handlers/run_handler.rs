@@ -1,34 +1,32 @@
-use anyhow::Result;
-use reqwest::Client;
+use eyre::Result;
 use tokio::process::Command;
 
 use crate::config::Config;
+use crate::github_requests::GitHubClient;
 use crate::helpers;
 
 /// Starts the process of running a specific version of Neovim with the provided arguments.
 ///
-/// This function parses the specified version, checks if it's installed,
-/// and runs the Neovim binary from that version with the provided arguments.
-///
 /// # Arguments
 ///
 /// * `version` - The version to run (nightly|stable|<version-string>|<commit-hash>)
-/// * `args` - Arguments to pass to Neovim (flags, files, commands, etc.)
-/// * `client` - The client to use for HTTP requests (needed for version parsing)
+/// * `args` - Arguments to pass to Neovim
+/// * `github` - The GitHub API client.
 /// * `config` - The configuration for the operation
-///
-/// # Returns
-///
-/// * `Result<()>` - Returns a `Result` that indicates whether the operation was successful or not.
-pub async fn start(version: &str, args: &[String], client: &Client, config: &Config) -> Result<()> {
+pub async fn start(
+    version: &str,
+    args: &[String],
+    github: &GitHubClient,
+    config: &Config,
+) -> Result<()> {
     // Parse the specified version
-    let version = crate::version::parse_version_type(client, version).await?;
+    let version = crate::version::parse_version_type(github, version).await?;
     let downloads_dir = helpers::directories::get_downloads_directory(config).await?;
     let version_path = downloads_dir.join(&version.tag_name);
 
     // If not installed, suggest installing it first
     if !version_path.exists() {
-        anyhow::bail!(
+        eyre::bail!(
             "Version {} is not installed. Install it first with: bob install {}",
             version.tag_name,
             version.tag_name
@@ -43,7 +41,7 @@ pub async fn start(version: &str, args: &[String], client: &Client, config: &Con
     };
 
     if !bin_path.exists() {
-        anyhow::bail!(
+        eyre::bail!(
             "Neovim binary not found at expected path: {}",
             bin_path.display()
         );

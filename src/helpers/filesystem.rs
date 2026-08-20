@@ -1,5 +1,5 @@
-use anyhow::{Result, bail};
 use async_recursion::async_recursion;
+use eyre::{Result, bail};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::path::Path;
 use tokio::fs;

@@ -1,336 +1,191 @@
-use anyhow::{Result, bail};
 use chrono::{DateTime, Utc};
-use reqwest::Client;
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use eyre::{Result, eyre};
+use octocrab::Octocrab;
+use octocrab::models::repos::{Release, Tag};
+use reqwest::StatusCode;
+use serde::{Deserialize, Serialize};
+use tracing::debug;
 
-/// Represents the version of the upstream software in the GitHub API.
-///
-/// This struct contains the tag name of the version, the target commitish of the version, and the date and time the version was published.
-///
-/// # Fields
-///
-/// * `tag_name: String` - The tag name of the version.
-/// * `target_commitish: Option<String>` - The target commitish of the version. This is optional and may be `None`.
-/// * `published_at: DateTime<Utc>` - The date and time the version was published, represented as a `DateTime<Utc>` object.
-///
-/// # Example
-///
-/// ```rust
-/// let upstream_version = UpstreamVersion {
-///     tag_name: "v1.0.0".to_string(),
-///     target_commitish: Some("abc123".to_string()),
-///     published_at: Utc::now(),
-/// };
-/// println!("The tag name is {}", upstream_version.tag_name);
-/// println!("The target commitish is {}", upstream_version.target_commitish.unwrap_or_default());
-/// println!("The published date and time is {}", upstream_version.published_at);
-/// ```
+trait OctocrabResultExt<T> {
+    fn map_rate_limit(self) -> Result<T>;
+}
+
+impl<T> OctocrabResultExt<T> for octocrab::Result<T> {
+    fn map_rate_limit(self) -> Result<T> {
+        match self {
+            Err(octocrab::Error::GitHub { source, .. })
+                if source.status_code == StatusCode::FORBIDDEN
+                    || source.status_code == StatusCode::TOO_MANY_REQUESTS =>
+            {
+                Err(eyre!(
+                    "GitHub API rate limit reached. Either wait an hour or \
+                     see https://github.com/MordechaiHadad/bob#increasing-github-rate-limit",
+                ))
+            }
+            result => Ok(result?),
+        }
+    }
+}
+
+pub struct GitHubClient {
+    octocrab: Octocrab,
+    download: reqwest::Client,
+}
+
+impl GitHubClient {
+    pub fn new() -> Result<Self> {
+        let token = std::env::var("GITHUB_TOKEN").ok().filter(|t| !t.is_empty());
+
+        let mut builder = Octocrab::builder();
+        if let Some(token) = token {
+            builder = builder.personal_token(token);
+        } else {
+            debug!(
+                "GITHUB_TOKEN not set -- unauthenticated requests are rate-limited to 60/hour, set GITHUB_TOKEN in your environment to increase to 5,000/hour"
+            );
+        }
+
+        let octocrab = builder.build()?;
+        let download = reqwest::Client::builder().user_agent("bob").build()?;
+
+        Ok(Self { octocrab, download })
+    }
+
+    pub fn download(&self) -> &reqwest::Client {
+        &self.download
+    }
+
+    pub async fn get_release_by_tag(&self, tag: &str) -> Result<Release> {
+        self.octocrab
+            .repos("neovim", "neovim")
+            .releases()
+            .get_by_tag(tag)
+            .await
+            .map_rate_limit()
+    }
+
+    pub async fn get_nightly_release(&self) -> Result<NightlyInfo> {
+        self.get_release_by_tag("nightly").await?.try_into()
+    }
+
+    pub async fn get_latest_release(&self) -> Result<Release> {
+        self.octocrab
+            .repos("neovim", "neovim")
+            .releases()
+            .get_latest()
+            .await
+            .map_rate_limit()
+    }
+
+    pub async fn get_commits_between(
+        &self,
+        since: &DateTime<Utc>,
+        until: &DateTime<Utc>,
+    ) -> Result<Vec<octocrab::models::repos::RepoCommit>> {
+        let page = self
+            .octocrab
+            .repos("neovim", "neovim")
+            .list_commits()
+            .since(*since)
+            .until(*until)
+            .per_page(100)
+            .send()
+            .await
+            .map_rate_limit()?;
+
+        Ok(page.items)
+    }
+
+    pub async fn get_latest_commit_sha(&self) -> Result<String> {
+        let page = self
+            .octocrab
+            .repos("neovim", "neovim")
+            .list_commits()
+            .per_page(1)
+            .send()
+            .await
+            .map_rate_limit()?;
+
+        let commit = page
+            .items
+            .into_iter()
+            .next()
+            .ok_or_else(|| eyre!("No commits found"))?;
+
+        Ok(commit.sha)
+    }
+
+    pub async fn get_tags(&self) -> Result<Vec<Tag>> {
+        let page = self
+            .octocrab
+            .repos("neovim", "neovim")
+            .list_tags()
+            .per_page(100)
+            .send()
+            .await
+            .map_rate_limit()?;
+
+        Ok(page.items)
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct UpstreamVersion {
+pub struct NightlyInfo {
     pub tag_name: String,
     pub target_commitish: Option<String>,
     pub published_at: DateTime<Utc>,
 }
 
-/// Represents a repository commit in the GitHub API.
-///
-/// This struct contains the SHA of a commit and the commit details, as returned by the GitHub API.
-///
-/// # Fields
-///
-/// * `sha: String` - The SHA of the commit.
-/// * `commit: Commit` - The details of the commit, represented as a `Commit` object.
-///
-/// # Example
-///
-/// ```rust
-/// let commit_author = CommitAuthor {
-///     name: "Alice".to_string(),
-/// };
-/// let commit = Commit {
-///     author: commit_author,
-///     message: "Initial commit".to_string(),
-/// };
-/// let repo_commit = RepoCommit {
-///     sha: "abc123".to_string(),
-///     commit: commit,
-/// };
-/// println!("The commit SHA is {}", repo_commit.sha);
-/// println!("The commit author is {}", repo_commit.commit.author.name);
-/// println!("The commit message is {}", repo_commit.commit.message);
-/// ```
-#[derive(Serialize, Deserialize, Debug)]
-pub struct RepoCommit {
-    pub sha: String,
-    pub commit: Commit,
+impl TryFrom<Release> for NightlyInfo {
+    type Error = eyre::Report;
+
+    fn try_from(release: Release) -> Result<Self> {
+        let published_at = release
+            .published_at
+            .ok_or_else(|| eyre!("Release {} has no published_at", release.tag_name))?;
+        Ok(Self {
+            tag_name: release.tag_name,
+            target_commitish: Some(release.target_commitish),
+            published_at,
+        })
+    }
 }
 
-/// Represents a commit in the GitHub API.
-///
-/// This struct contains the author of a commit and the commit message, as returned by the GitHub API.
-///
-/// # Fields
-///
-/// * `author: CommitAuthor` - The author of the commit, represented as a `CommitAuthor` object.
-/// * `message: String` - The commit message.
-///
-/// # Example
-///
-/// ```rust
-/// let commit_author = CommitAuthor {
-///     name: "Alice".to_string(),
-/// };
-/// let commit = Commit {
-///     author: commit_author,
-///     message: "Initial commit".to_string(),
-/// };
-/// println!("The commit author is {}", commit.author.name);
-/// println!("The commit message is {}", commit.message);
-/// ```
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Commit {
-    pub author: CommitAuthor,
-    pub message: String,
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{Duration, Utc};
 
-/// Represents the author of a commit in the GitHub API.
-///
-/// This struct contains the name of the author of a commit, as returned by the GitHub API.
-///
-/// # Fields
-///
-/// * `name: String` - The name of the author of the commit.
-///
-/// # Example
-///
-/// ```rust
-/// let commit_author = CommitAuthor {
-///     name: "Alice".to_string(),
-/// };
-/// println!("The commit author is {}", commit_author.name);
-/// ```
-#[derive(Serialize, Deserialize, Debug)]
-pub struct CommitAuthor {
-    pub name: String,
-}
-
-/// Represents an error response from the GitHub API.
-///
-/// This struct contains information about an error response from the GitHub API, including the error message and the URL of the documentation related to the error.
-///
-/// # Fields
-///
-/// * `message: String` - The error message from the GitHub API.
-/// * `documentation_url: String` - The URL of the documentation related to the error.
-///
-/// # Example
-///
-/// ```rust
-/// let error_response = ErrorResponse {
-///     message: "Not Found".to_string(),
-///     documentation_url: "https://docs.github.com/rest".to_string(),
-/// };
-/// println!("The error message is {}", error_response.message);
-/// println!("The documentation URL is {}", error_response.documentation_url);
-/// ```
-#[derive(Debug, Deserialize, Serialize)]
-pub struct ErrorResponse {
-    pub message: String,
-    pub documentation_url: String,
-}
-
-/// Asynchronously makes a GitHub API request.
-///
-/// This function takes a reference to a `Client` and a URL as arguments. It sets the "user-agent" header to "bob" and the "Accept" header to "application/vnd.github.v3+json".
-/// It then sends the request and awaits the response. It reads the response body as text and returns it as a `String`.
-///
-/// # Arguments
-///
-/// * `client` - A reference to a `Client` used to make the request.
-/// * `url` - A URL that implements `AsRef<str>` and `reqwest::IntoUrl`.
-///
-/// # Returns
-///
-/// This function returns a `Result` that contains a `String` representing the response body if the operation was successful.
-/// If the operation failed, the function returns `Err` with a description of the error.
-///
-/// # Errors
-///
-/// * `reqwest::Error` - If an error occurs while making the request.
-/// * `anyhow::Error` - If an error occurs while creating the `Client` or if the URL is invalid.
-///
-/// # Example
-///
-/// ```rust
-/// let client = Client::new();
-/// let url = "https://api.github.com/repos/neovim/neovim/tags";
-/// let response = make_github_request(&client, url).await?;
-/// ```
-pub async fn make_github_request<T: AsRef<str> + reqwest::IntoUrl>(
-    client: &Client,
-    url: T,
-) -> Result<String> {
-    let response = client
-        .get(url)
-        .header("user-agent", "bob")
-        .header("Accept", "application/vnd.github.v3+json")
-        .send()
-        .await?
-        .text()
-        .await?;
-
-    Ok(response)
-}
-
-/// Fetches the upstream nightly version from the GitHub API.
-///
-/// # Parameters
-///
-/// * `Client` - A reference to a `reqwest::Client` used to make the request.
-///
-/// # Returns
-///
-///  * `Result<UpstreamVersion>` - A `Result` that contains the `UpstreamVersion` if the request was successful, or an error if it failed.
-///
-/// # Errors
-///
-///  This function will return an error if the request to the GitHub API fails or if the response cannot be deserialized into an `UpstreamVersion`.
-///
-/// # Example
-///
-/// ```rust,no_run
-/// use reqwest::Client;
-/// use bob::github_requests::get_upstream_nightly;
-///
-/// let upstream_version = get_upstream_nightly(&Client::new());
-/// assert!(upstream_version.is_ok());
-/// ```
-pub async fn get_upstream_nightly(client: &Client) -> Result<UpstreamVersion> {
-    let response = make_github_request(
-        client,
-        "https://api.github.com/repos/neovim/neovim/releases/tags/nightly",
-    )
-    .await?;
-
-    deserialize_response(&response)
-}
-
-/// Asynchronously searches for the stable version of Neovim.
-///
-/// This function takes a reference to a `Client` as an argument and makes a GitHub API request to get the releases of the Neovim repository.
-/// It then deserializes the response into a vector of `UpstreamVersion`.
-/// It finds the release that has the tag name "stable" and the release that has the same `target_commitish` as the stable release but does not have the tag name "stable".
-/// The function returns the tag name of the found release.
-///
-/// # Arguments
-///
-/// * `client` - A reference to a `Client` used to make the GitHub API request.
-///
-/// # Returns
-///
-/// This function returns a `Result` that contains a `String` representing the tag name of the stable version if the operation was successful.
-/// If the operation failed, the function returns `Err` with a description of the error.
-///
-/// # Example
-///
-/// ```rust,no_run
-/// use reqwest::Client;
-/// use bob::github_requests::get_upstream_stable;
-/// let client = Client::new();
-/// let upstream_version = get_upstream_stable(&Client::new()).await?;
-/// assert!(upstream_version.is_ok());
-/// ```
-pub async fn get_upstream_stable(client: &Client) -> Result<UpstreamVersion> {
-    let response = make_github_request(
-        client,
-        "https://api.github.com/repos/neovim/neovim/releases/latest",
-    )
-    .await?;
-
-    deserialize_response(&response)
-}
-
-/// Fetches the commits for the nightly version from the GitHub API.
-///
-/// This function sends a GET request to the GitHub API to fetch the commits for the nightly version of the software. The commits are fetched for a specified time range, from `since` to `until`.
-///
-/// # Parameters
-///
-/// * `client: &Client` - The HTTP client used to send the request.
-/// * `since: &DateTime<Utc>` - The start of the time range for which to fetch the commits.
-/// * `until: &DateTime<Utc>` - The end of the time range for which to fetch the commits.
-///
-/// # Returns
-///
-/// * `Result<Vec<RepoCommit>>` - A vector of `RepoCommit` objects representing the commits for the nightly version, or an error if the request failed.
-///
-/// # Errors
-///
-/// This function will return an error if the request to the GitHub API fails or if the response cannot be deserialized into a vector of `RepoCommit` objects.
-///
-/// # Example
-///
-/// ```rust
-/// let client = Client::new();
-/// let since = Utc::now() - Duration::days(1);
-/// let until = Utc::now();
-/// let result = get_commits_for_nightly(&client, &since, &until).await;
-/// match result {
-///     Ok(commits) => println!("Received {} commits", commits.len()),
-///     Err(e) => println!("An error occurred: {:?}", e),
-/// }
-/// ```
-pub async fn get_commits_for_nightly(
-    client: &Client,
-    since: &DateTime<Utc>,
-    until: &DateTime<Utc>,
-) -> Result<Vec<RepoCommit>> {
-    let response = make_github_request(client, format!(
-            "https://api.github.com/repos/neovim/neovim/commits?since={since}&until={until}&per_page=100")).await?;
-
-    deserialize_response(&response)
-}
-
-/// Deserializes a JSON response from the GitHub API.
-///
-/// This function takes a JSON response as a string and attempts to deserialize it into a specified type `T`. If the response contains a "message" field, it is treated as an error response, and the function will return an error with the message from the response. If the error is related to rate limiting, a specific error message is returned.
-///
-/// # Parameters
-///
-/// * `response: String` - The JSON response from the GitHub API as a string.
-///
-/// # Returns
-///
-/// * `Result<T>` - The deserialized response as the specified type `T`, or an error if the response could not be deserialized or contains an error message.
-///
-/// # Errors
-///
-/// This function will return an error if the response contains a "message" field (indicating an error from the GitHub API), or if the response could not be deserialized into the specified type `T`.
-///
-/// # Example
-///
-/// ```rust
-/// let response = "{\"data\": \"some data\"}";
-/// let result: Result<MyType> = deserialize_response(response);
-/// match result {
-///     Ok(data) => println!("Received data: {:?}", data),
-///     Err(e) => println!("An error occurred: {:?}", e),
-/// }
-/// ```
-pub fn deserialize_response<T: DeserializeOwned>(response: &str) -> Result<T> {
-    let value: serde_json::Value = serde_json::from_str(response)?;
-
-    if value.get("message").is_some() {
-        let result: ErrorResponse = serde_json::from_value(value)?;
-
-        if result.documentation_url.contains("rate-limiting") {
-            bail!(
-                "Github API rate limit has been reach, either wait an hour or checkout https://github.com/MordechaiHadad/bob#increasing-github-rate-limit"
-            );
-        }
-
-        bail!(result.message);
+    #[tokio::test]
+    async fn get_latest_commit_sha_returns_full_sha() {
+        let github = GitHubClient::new().expect("failed to build GitHubClient");
+        let sha = github
+            .get_latest_commit_sha()
+            .await
+            .expect("failed to fetch the latest commit sha");
+        assert_eq!(sha.len(), 40);
+        assert!(
+            sha.chars().all(|character| character.is_ascii_hexdigit()),
+            "sha should only contain ascii hex digits, got {sha}"
+        );
     }
 
-    Ok(serde_json::from_value(value)?)
+    #[tokio::test]
+    async fn get_commits_between_returns_commits() {
+        let github = GitHubClient::new().expect("failed to build GitHubClient");
+        let until = Utc::now();
+        let since = until - Duration::days(30);
+        let commits = github
+            .get_commits_between(&since, &until)
+            .await
+            .expect("failed to fetch commits between the given dates");
+        assert!(
+            !commits.is_empty(),
+            "expected at least one commit in the last 30 days"
+        );
+        assert!(
+            commits.iter().all(|commit| commit.sha.len() == 40),
+            "every commit should carry a full 40 character sha"
+        );
+    }
 }

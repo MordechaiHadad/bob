@@ -1,4 +1,4 @@
-use anyhow::Result;
+use eyre::Result;
 use serde::{Deserialize, Serialize};
 use std::{env, path::PathBuf};
 use tokio::{
