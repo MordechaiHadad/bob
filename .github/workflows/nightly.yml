@@ -45,26 +45,19 @@ jobs:
               PATH: target/optimized/bob,
               TARGET: "",
             }
-    runs-on: ${{matrix.os.OS}}
+    runs-on: ${{ matrix.os.OS }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: dev
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
+        uses: dtolnay/rust-toolchain@stable
       - name: Add Rust target for cross-compilation
         if: matrix.os.TARGET != ''
         run: rustup target add ${{ matrix.os.TARGET }}
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
       - name: Build Bob
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --locked --profile optimized ${{ matrix.os.TARGET != '' && format('--target {0}', matrix.os.TARGET) || '' }}
+        run: cargo build --locked --profile optimized ${{ matrix.os.TARGET != '' && format('--target {0}', matrix.os.TARGET) || '' }}
       - name: Install AppImage tools & cargo-appimage
         if: matrix.os.NAME == 'linux'
         run: |
@@ -152,7 +145,7 @@ jobs:
           echo "Prepared assets:"
           ls -l
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: nightly
           name: "Nightly Development Build"

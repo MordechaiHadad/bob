@@ -27,6 +27,8 @@ sysinfo = "0.35.2"
 clap_complete_nushell = "4.5.8"
 
 [dev-dependencies]
+assert_cmd = "2.2.2"
+predicates = "3.1.4"
 tempfile = "3"
 
 [dependencies.chrono]

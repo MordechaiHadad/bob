@@ -1,46 +1,52 @@
 name: Continuous Integration
-on: [push, pull_request]
+
+on:
+  push:
+    branches: [dev, master]
+    paths-ignore: ['*.md', 'LICENSE', 'resources/**']
+  pull_request:
+    branches: [dev, master]
+    paths-ignore: ['*.md', 'LICENSE', 'resources/**']
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   clippy:
     strategy:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
-    runs-on: ${{matrix.os}}
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          profile: minimal
-          override: true
+          components: clippy
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
       - name: Check the lints
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --all-targets -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings
 
   test:
     strategy:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
-    runs-on: ${{matrix.os}}
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
       - name: Run the tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --locked
+        run: cargo test --locked
 
   formatting:
     runs-on: ubuntu-latest
@@ -48,152 +54,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          profile: minimal
-          override: true
+          components: rustfmt
       - name: Check the formatting
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+        run: cargo fmt --all -- --check
 
-  security_audit:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-      - name: Install cargo-audit
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: cargo-audit
-      - name: Run security audit
-        uses: actions-rs/cargo@v1
-        with:
-          command: audit
-          args: --deny warnings
-
-  build:
-    needs: [clippy, formatting, test, security_audit]
-    strategy:
-      matrix:
-        os:
-          - {
-              NAME: linux,
-              OS: ubuntu-latest,
-              ARCH: x86_64,
-              PATH: target/optimized/bob,
-              TARGET: "",
-            }
-          - {
-              NAME: linux,
-              OS: ubuntu-24.04-arm,
-              ARCH: arm,
-              PATH: target/optimized/bob,
-              TARGET: "",
-            }
-          - {
-              NAME: macos,
-              OS: macos-latest,
-              ARCH: x86_64,
-              PATH: target/x86_64-apple-darwin/optimized/bob,
-              TARGET: "x86_64-apple-darwin",
-            }
-          - {
-              NAME: windows,
-              OS: windows-latest,
-              ARCH: x86_64,
-              PATH: build,
-              TARGET: "",
-            }
-          - {
-              NAME: macos,
-              OS: macos-latest,
-              ARCH: arm,
-              PATH: target/optimized/bob,
-              TARGET: "",
-            }
-    runs-on: ${{matrix.os.OS}}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-      - name: Add Rust target for cross-compilation
-        if: matrix.os.TARGET != ''
-        run: rustup target add ${{ matrix.os.TARGET }}
-      - uses: Swatinem/rust-cache@v1
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
       - name: Build Bob
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --locked --profile optimized ${{ matrix.os.TARGET != '' && format('--target {0}', matrix.os.TARGET) || '' }}
-      - name: Install AppImage tools & cargo-appimage
-        if: matrix.os.NAME == 'linux'
-        run: |
-          set -euo pipefail
-          sudo apt update && sudo apt install -y libfuse2
-
-          ARCH="${{ matrix.os.ARCH }}"
-          if [ "$ARCH" = "arm" ] || [ "$ARCH" = "aarch64" ]; then
-            URL="https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-aarch64.AppImage"
-          else
-            URL="https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
-          fi
-
-          echo "Downloading appimagetool from $URL"
-          wget -c "$URL" -O appimagetool
-          chmod +x appimagetool
-
-          # Move into PATH so tooling can call it
-          sudo mv appimagetool /usr/local/bin/appimagetool
-          echo "appimagetool installed at: $(command -v appimagetool)"
-
-          cargo install cargo-appimage --locked
-      - name: Build AppImage with cargo-appimage
-        if: matrix.os.NAME == 'linux'
-        run: |
-          # cargo-appimage reads package.metadata.appimage from Cargo.toml
-          cargo appimage
-
-          # verify AppImage exists in the canonical location
-          if ! ls target/appimage/*.AppImage >/dev/null 2>&1; then
-            echo "No AppImage found under target/appimage/; listing for debugging:"
-            ls -la target || true
-            ls -la target/appimage || true
-            exit 1
-          fi
-
-          echo "Found AppImage: $(ls target/appimage/*.AppImage | head -n1)"
-      - name: Setup Bob build directory
-        run: |
-          mkdir build
-          copy .\\bin\\vcruntime140.dll .\\build
-          copy .\\target\\optimized\\bob.exe .\\build
-        if: matrix.os.OS == 'windows-latest'
-      - name: Upload Bob binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: "bob-${{ matrix.os.NAME }}-${{ matrix.os.ARCH }}"
-          path: ${{ matrix.os.PATH }}
-          if-no-files-found: error
-          retention-days: 7
-      - name: Upload Bob AppImage
-        if: matrix.os.NAME == 'linux'
-        uses: actions/upload-artifact@v4
-        with:
-          name: "bob-${{ matrix.os.NAME }}-${{ matrix.os.ARCH }}-appimage"
-          path: "target/appimage/*.AppImage"
-          if-no-files-found: error
-          retention-days: 7
+        run: cargo build --locked --profile optimized
