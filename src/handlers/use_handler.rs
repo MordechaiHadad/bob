@@ -326,6 +326,10 @@ async fn copy_file_with_error_handling(old_path: &Path, new_path: &Path) -> Resu
 async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()> {
     let installation_dir = installation_dir.to_str().unwrap();
 
+    // On Linux this guard must not short-circuit the migration: stale rc-file
+    // setups keep `nvim-bin` in PATH forever, so the symlink path below has to
+    // run instead.
+    #[cfg(not(target_os = "linux"))]
     if what_the_path::shell::exists_in_path("nvim-bin") {
         return Ok(());
     }
@@ -557,10 +561,17 @@ async fn modify_path(config: &ConfigFile, installation_dir: &str) -> Result<()> 
 
     #[cfg(target_os = "linux")]
     {
-        if try_symlink_shim_to_local_bin(installation_dir).await? {
-            cleanup_stale_rc_entries(config).await;
-            info!("Added {installation_dir} to system PATH via ~/.local/bin symlink");
-            return Ok(());
+        match try_symlink_shim_to_local_bin(installation_dir).await {
+            Ok(true) => {
+                cleanup_stale_rc_entries(config).await;
+                info!("Added {installation_dir} to system PATH via ~/.local/bin symlink");
+                return Ok(());
+            }
+            Ok(false) => {}
+            Err(error) => {
+                warn!("Failed to set up ~/.local/bin symlink: {error}");
+                return Ok(());
+            }
         }
     }
 
