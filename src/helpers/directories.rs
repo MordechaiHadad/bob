@@ -38,6 +38,19 @@ fn get_sudo_user_home() -> Option<PathBuf> {
     None
 }
 
+/// Returns the user's home directory path.
+///
+/// On Unix systems running under sudo, this resolves the real invoking user's home
+/// directory instead of root's. Otherwise it delegates to the `dirs` crate.
+///
+/// # Returns
+///
+/// The home directory as a `PathBuf`, or `None` if it cannot be determined.
+#[cfg(target_os = "linux")]
+pub fn get_user_home() -> Option<PathBuf> {
+    get_sudo_user_home().or_else(dirs::home_dir)
+}
+
 fn get_sudo_data_dir() -> Option<PathBuf> {
     #[cfg(unix)]
     if std::env::var("SUDO_USER").is_ok() {

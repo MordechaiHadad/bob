@@ -419,10 +419,150 @@ async fn modify_path(installation_dir: &str) -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
+fn path_contains_entry(path_var: &str, directory: &Path) -> bool {
+    path_var
+        .split(':')
+        .any(|entry| Path::new(entry) == directory)
+}
+
+/// Attempts to make the bob-managed `nvim` shim reachable through `~/.local/bin`.
+///
+/// A symlink is created at `~/.local/bin/nvim` pointing to the shim inside the
+/// installation directory, but only if `~/.local/bin` exists and is already an
+/// entry of `$PATH`. This avoids modifying any shell configuration files.
+///
+/// # Returns
+///
+/// `Ok(true)` when the symlink is present and up to date, `Ok(false)` when
+/// `~/.local/bin` cannot be used and the caller should fall back to rc file
+/// modification.
+///
+/// # Errors
+///
+/// This function will return an error if inspecting, removing, or creating the
+/// symlink fails.
+#[cfg(target_os = "linux")]
+async fn try_symlink_shim_to_local_bin(installation_dir: &str) -> Result<bool> {
+    use crate::helpers::directories::get_user_home;
+    use tracing::warn;
+
+    let Some(home_dir) = get_user_home() else {
+        warn!("Could not determine home directory, falling back to rc file modification");
+        return Ok(false);
+    };
+
+    let local_bin_dir = home_dir.join(".local").join("bin");
+    let path_var = env::var("PATH").unwrap_or_default();
+
+    if !local_bin_dir.is_dir() || !path_contains_entry(&path_var, &local_bin_dir) {
+        return Ok(false);
+    }
+
+    let shim_source = PathBuf::from(installation_dir).join("nvim");
+    let shim_link = local_bin_dir.join("nvim");
+
+    let existing_link_target = match fs::symlink_metadata(&shim_link).await {
+        Ok(_) => match fs::read_link(&shim_link).await {
+            Ok(target) => Some(target),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+            Err(error) => return Err(error.into()),
+        },
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+        Err(error) => return Err(error.into()),
+    };
+
+    if existing_link_target.as_deref() != Some(shim_source.as_path()) {
+        if existing_link_target.is_some() {
+            fs::remove_file(&shim_link).await?;
+        }
+        fs::symlink(&shim_source, &shim_link).await?;
+    }
+
+    info!("Linked nvim shim into {}", local_bin_dir.display());
+    Ok(true)
+}
+
+/// Removes PATH setup leftovers written by older bob versions.
+///
+/// Deletes `<fish config dir>/bob.fish` when resolvable and removes the
+/// `. "<downloads>/env/env.sh"` source line from the rc files of the currently
+/// detected POSIX shell. All failures are reported as warnings and never abort
+/// the surrounding operation.
+#[cfg(target_os = "linux")]
+async fn cleanup_stale_rc_entries(config: &ConfigFile) {
+    use crate::helpers::directories::get_downloads_directory;
+    use tracing::warn;
+    use what_the_path::error::ShellError;
+    use what_the_path::shell::{Fish, Shell};
+
+    if let Ok(fish_files) = Shell::Fish(Fish).get_rcfiles() {
+        if let Some(fish_conf_dir) = fish_files.first() {
+            let bob_fish_file = fish_conf_dir.join("bob.fish");
+            if bob_fish_file.exists()
+                && let Err(error) = fs::remove_file(&bob_fish_file).await
+            {
+                warn!(
+                    "Failed to remove stale fish config {}: {error}",
+                    bob_fish_file.display()
+                );
+            }
+        }
+    }
+
+    let shell = match Shell::detect_by_shell_var() {
+        Ok(shell) => shell,
+        Err(error) => {
+            warn!("Failed to detect shell for stale rc entry cleanup: {error}");
+            return;
+        }
+    };
+
+    if matches!(shell, Shell::Fish(_)) {
+        return;
+    }
+
+    let downloads_dir = match get_downloads_directory(&config.config).await {
+        Ok(downloads_dir) => downloads_dir,
+        Err(error) => {
+            warn!("Failed to resolve downloads directory for stale rc entry cleanup: {error}");
+            return;
+        }
+    };
+    let stale_line = format!(
+        ". \"{}\"\n",
+        downloads_dir.join("env").join("env.sh").display()
+    );
+
+    let Ok(rc_files) = shell.get_rcfiles() else {
+        warn!("Failed to get rc files for stale entry cleanup");
+        return;
+    };
+
+    for rc_file in rc_files {
+        match what_the_path::shell::remove_from_rcfile(rc_file.clone(), &stale_line) {
+            Ok(()) | Err(ShellError::RCFileNotFound(_)) => {}
+            Err(error) => warn!(
+                "Failed to clean stale PATH entry in {}: {error}",
+                rc_file.display()
+            ),
+        }
+    }
+}
+
 #[cfg(not(target_family = "windows"))]
 async fn modify_path(config: &ConfigFile, installation_dir: &str) -> Result<()> {
     use tracing::warn;
     use what_the_path::shell::Shell;
+
+    #[cfg(target_os = "linux")]
+    {
+        if try_symlink_shim_to_local_bin(installation_dir).await? {
+            cleanup_stale_rc_entries(config).await;
+            info!("Added {installation_dir} to system PATH via ~/.local/bin symlink");
+            return Ok(());
+        }
+    }
 
     let shell = match Shell::detect_by_shell_var() {
         Ok(shell) => shell,
@@ -626,6 +766,32 @@ mod use_handler_tests {
     // Debug using the `dbg!()` macros via:
     //                                         V- to binary
     // `cargo test --bin bob use_handler_tests -- --no-capture`
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn path_contains_entry_test() {
+        assert!(path_contains_entry(
+            "/usr/local/bin:/home/tester/.local/bin",
+            Path::new("/home/tester/.local/bin")
+        ));
+
+        assert!(path_contains_entry(
+            "/opt/tools/:/home/tester/.local/bin/",
+            Path::new("/home/tester/.local/bin")
+        ));
+
+        assert!(!path_contains_entry(
+            "/home/tester/.local/bin-extra",
+            Path::new("/home/tester/.local/bin")
+        ));
+
+        assert!(!path_contains_entry(
+            "/usr/local/bin:/opt/bin",
+            Path::new("/home/tester/.local/bin")
+        ));
+
+        assert!(!path_contains_entry("", Path::new("/usr/bin")));
+    }
 
     #[tokio::test]
     async fn copy_env_files_test() {
