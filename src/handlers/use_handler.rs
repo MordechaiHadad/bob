@@ -323,7 +323,7 @@ async fn copy_file_with_error_handling(old_path: &Path, new_path: &Path) -> Resu
 /// let installation_dir = Path::new("/usr/local/bin");
 /// add_to_path(&installation_dir).unwrap();
 /// ```
-async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()> {
+async fn add_to_path(installation_dir: PathBuf, mut config: ConfigFile) -> Result<()> {
     let installation_dir = installation_dir.to_str().unwrap();
 
     // On Linux this guard must not short-circuit the migration: stale rc-file
@@ -339,18 +339,14 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
         return Ok(());
     }
 
-    let temp_config = std::cell::RefCell::new(&config);
-    let temp_path = std::cell::RefCell::new(temp_config.borrow().config.add_neovim_binary_to_path);
-
     if !(dialoguer::console::user_attended() && dialoguer::console::user_attended_stderr())
         && config.config.add_neovim_binary_to_path.is_none()
     {
         info!(
             "You're running in a non-interactive shell. Automatically adding {installation_dir} to system PATH"
         );
-        let _ = temp_path.replace(Some(true));
-        let tc = temp_config.into_inner(); // use into_inner to gain ownerhsip + original for saving
-        tc.save_to_file().await?;
+        config.config.add_neovim_binary_to_path = Some(true);
+        config.save_to_file().await?;
         return Ok(());
     }
 
@@ -366,9 +362,8 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
         match timeout {
             Some(Ok(confirmation)) => {
                 // valid confirmation + within time
-                let _ = temp_path.replace(Some(confirmation));
-                let tc = temp_config.into_inner(); // use into_inner to gain ownerhsip + original for saving
-                tc.save_to_file().await?;
+                config.config.add_neovim_binary_to_path = Some(confirmation);
+                config.save_to_file().await?;
 
                 if !confirmation {
                     return Ok(());

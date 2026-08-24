@@ -1,6 +1,6 @@
 mod common;
 
-use common::TestWorkspace;
+use common::{TestWorkspace, path_string};
 use predicates::prelude::*;
 use std::fs;
 
@@ -47,6 +47,38 @@ fn use_no_install_writes_used_and_proxy() {
         proxy.exists(),
         "proxy binary should exist at {}",
         proxy.display()
+    );
+}
+
+/// Regression test: the PATH decision must actually land in the config file.
+///
+/// A refactor once mutated a detached copy of the value before saving, so the
+/// config was rewritten without `add_neovim_binary_to_path` and bob kept
+/// re-running the PATH flow on every `use`.
+#[test]
+fn use_persists_add_to_path_choice_in_config() {
+    let mut workspace = TestWorkspace::new();
+    workspace.write_raw(
+        "config.toml",
+        &format!(
+            "downloads_location = \"{}\"\ninstallation_location = \"{}\"\nignore_running_instances = true\n",
+            path_string(&workspace.downloads_dir),
+            path_string(&workspace.installation_dir)
+        ),
+    );
+    workspace.fake_version("v0.9.5");
+
+    workspace
+        .bob()
+        .args(["use", "v0.9.5", "--no-install"])
+        .assert()
+        .success();
+
+    let contents =
+        fs::read_to_string(&workspace.config_path).expect("config file should still exist");
+    assert!(
+        contents.contains("add_neovim_binary_to_path = true"),
+        "bob must persist the PATH decision to the config, got: {contents}"
     );
 }
 

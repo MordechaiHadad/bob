@@ -1,10 +1,15 @@
 use eyre::Result;
 use serde::{Deserialize, Serialize};
-use std::{env, path::PathBuf};
+use std::{
+    env,
+    io::ErrorKind,
+    path::{Path, PathBuf},
+};
 use tokio::{
     fs::{self, File},
     io::AsyncWriteExt,
 };
+use tracing::warn;
 
 use crate::ENVIRONMENT_VAR_REGEX;
 
@@ -15,31 +20,86 @@ pub struct ConfigFile {
     pub config: Config,
 }
 
+/// Template written to disk when bob runs for the first time without a config
+/// file. Every option stays commented out so bob keeps using its built-in
+/// defaults until the user explicitly enables one.
+const DEFAULT_CONFIG_TEMPLATE: &str = r#"# Configuration file for bob, the Neovim version manager.
+# Everything below is commented out, so bob falls back to its built-in defaults.
+# String values support environment variable substitution, e.g. '$HOME/.local/share/bob'.
+
+# Show the commits included in new nightly releases when updating. Default: true
+# enable_nightly_info = true
+
+# Compile neovim nightly or hash versions as release builds (slightly improved performance, no debug info). Default: false
+# enable_release_build = false
+
+# The folder in which neovim versions are downloaded to. Must exist if set.
+# downloads_location = '/home/user/.local/share/bob'
+
+# The path in which the proxied neovim installation will be located.
+# installation_location = '/home/user/.local/share/bob/nvim-bin'
+
+# The path to a file holding the used neovim version string, useful for config version tracking.
+# version_sync_file_location = '/home/user/.config/nvim/nvim.version'
+
+# A github mirror to use instead of https://github.com.
+# github_mirror = 'https://github.com'
+
+# The amount of rollbacks before bob starts deleting older ones, up to 255. Default: 3
+# rollback_limit = 3
+
+# Whether bob should automatically add the neovim proxy to your system PATH. Prompts on first use by default.
+# add_neovim_binary_to_path = true
+
+# If true, install/update/sync/uninstall/erase/rollback/use are allowed even while Neovim is running. Default: false
+# ignore_running_instances = false
+"#;
+
+async fn write_atomic(path: &Path, data: &str) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        tokio::fs::create_dir_all(parent).await?;
+    }
+
+    let tmp_path = path.with_extension("tmp");
+    let mut file = File::create(&tmp_path).await?;
+    file.write_all(data.as_bytes()).await?;
+    file.flush().await?;
+
+    // atomic operation I guess
+    tokio::fs::rename(tmp_path, path).await?;
+
+    Ok(())
+}
+
 impl ConfigFile {
     pub async fn save_to_file(&self) -> Result<()> {
-        if let Some(parent) = self.path.parent() {
-            tokio::fs::create_dir_all(parent).await?;
-        }
-
         let data = match self.format {
             ConfigFormat::Toml => toml::to_string(&self.config)?,
             ConfigFormat::Json => serde_json::to_string_pretty(&self.config)?,
         };
 
-        let tmp_path = self.path.with_extension("tmp");
-        let mut file = File::create(&tmp_path).await?;
-        file.write_all(data.as_bytes()).await?;
-        file.flush().await?;
+        write_atomic(&self.path, &data).await
+    }
 
-        // atomic operation I guess
-        tokio::fs::rename(tmp_path, &self.path).await?;
+    /// Writes this config file to disk using the first-run template for TOML
+    /// files, so freshly created configs double as documentation.
+    async fn create_default(&self) -> Result<()> {
+        let data = match self.format {
+            ConfigFormat::Toml => DEFAULT_CONFIG_TEMPLATE.to_string(),
+            ConfigFormat::Json => serde_json::to_string_pretty(&self.config)?,
+        };
 
-        Ok(())
+        write_atomic(&self.path, &data).await
     }
 }
 
 impl ConfigFile {
     /// Does what it says on the tin, get's the config file
+    ///
+    /// If no config file exists yet, a TOML file containing the default
+    /// configuration is created at the resolved location. Failures to create
+    /// the file are logged as a warning and bob keeps running with in-memory
+    /// defaults. The same happens when an existing config file cannot be read.
     ///
     /// # Returns
     /// * `ConfigFile` - A struct containing the path to the config file, the format of the config
@@ -48,14 +108,9 @@ impl ConfigFile {
         let config_file = crate::helpers::directories::get_config_file()?;
         let (config, format) = match fs::read_to_string(&config_file).await {
             Ok(content) => {
-                let ext = config_file
-                    .extension()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("json");
-
-                let mut config = match ext {
-                    "toml" => (toml::from_str::<Config>(&content)?, ConfigFormat::Toml),
-                    _ => (
+                let mut config = match format_for(&config_file) {
+                    ConfigFormat::Toml => (toml::from_str::<Config>(&content)?, ConfigFormat::Toml),
+                    ConfigFormat::Json => (
                         serde_json::from_str::<Config>(&content)?,
                         ConfigFormat::Json,
                     ),
@@ -64,7 +119,35 @@ impl ConfigFile {
                 handle_envars(&mut config.0)?;
                 config
             }
-            Err(_) => (Config::default(), ConfigFormat::Json),
+            Err(error) => {
+                if error.kind() == ErrorKind::NotFound {
+                    let format = format_for(&config_file);
+                    let config_file = ConfigFile {
+                        path: config_file,
+                        format,
+                        config: Config::default(),
+                    };
+
+                    if let Err(error) = config_file.create_default().await {
+                        warn!(
+                            "Failed to create default config file at {}: {error}",
+                            config_file.path.display()
+                        );
+                    }
+
+                    return Ok(config_file);
+                }
+
+                warn!(
+                    "Failed to read config file at {}: {error}. Using default configuration",
+                    config_file.display()
+                );
+                return Ok(ConfigFile {
+                    path: config_file,
+                    format: ConfigFormat::Json,
+                    config: Config::default(),
+                });
+            }
         };
 
         Ok(ConfigFile {
@@ -72,6 +155,17 @@ impl ConfigFile {
             format,
             config,
         })
+    }
+}
+
+/// Decides which format a config file at the given path is parsed with.
+///
+/// Mirrors the historical behavior: `.toml` files are TOML, everything else
+/// (including paths without an extension) is treated as JSON.
+fn format_for(path: &Path) -> ConfigFormat {
+    match path.extension().and_then(|s| s.to_str()) {
+        Some("toml") => ConfigFormat::Toml,
+        _ => ConfigFormat::Json,
     }
 }
 

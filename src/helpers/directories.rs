@@ -101,6 +101,10 @@ fn get_local_data_dir() -> Result<PathBuf> {
 /// On Unix systems, if running under sudo, it appends ".config" (or "Library/Application Support" on macOS) to the real user's home directory.
 /// Otherwise, it relies on the `dirs` crate which respects `XDG_CONFIG_HOME` on Linux.
 ///
+/// When neither `config.toml` nor `config.json` exists yet, the path of
+/// `config.toml` is returned so that fresh setups get a TOML config created
+/// for them on first run. Existing JSON setups keep resolving to `config.json`.
+///
 /// # Returns
 ///
 /// This function returns a `Result` that contains a `PathBuf` representing the config file path if the operation was successful.
@@ -124,9 +128,16 @@ pub fn get_config_file() -> Result<PathBuf> {
 
     config_dir.push("bob/config.toml");
 
-    if fs::metadata(&config_dir).is_err() {
-        config_dir.pop();
-        config_dir.push("config.json");
+    if fs::metadata(&config_dir).is_ok() {
+        return Ok(config_dir);
+    }
+
+    let mut json_config_dir = config_dir.clone();
+    json_config_dir.pop();
+    json_config_dir.push("config.json");
+
+    if fs::metadata(&json_config_dir).is_ok() {
+        return Ok(json_config_dir);
     }
 
     Ok(config_dir)

@@ -63,6 +63,20 @@ impl TestWorkspace {
         cmd
     }
 
+    /// Returns a `bob` command with `BOB_CONFIG` unset and every home/config/data
+    /// directory redirected into the workspace temp dir.
+    ///
+    /// Use this to exercise a first run without a config file: bob then creates
+    /// its default config inside the sandbox instead of touching real user data.
+    pub fn bob_sandboxed(&self) -> Command {
+        let mut cmd = self.bob();
+        cmd.env_remove("BOB_CONFIG");
+        cmd.env("HOME", self.temp_dir.path());
+        cmd.env("XDG_CONFIG_HOME", self.temp_dir.path().join("config-home"));
+        cmd.env("XDG_DATA_HOME", self.temp_dir.path().join("data-home"));
+        cmd
+    }
+
     /// Writes an arbitrary config file and points the workspace at it.
     pub fn write_raw(&mut self, filename: &str, contents: &str) {
         let path = self.temp_dir.path().join(filename);
