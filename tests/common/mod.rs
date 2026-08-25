@@ -15,6 +15,19 @@ pub fn path_string(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
 
+/// Default config directory bob resolves when `BOB_CONFIG` is unset.
+///
+/// Mirrors the `dirs` crate: `XDG_CONFIG_HOME` on Linux (set to
+/// `<temp>/config-home` by `bob_sandboxed`), `~/Library/Application Support`
+/// on macOS.
+pub fn default_config_dir(temp: &Path) -> PathBuf {
+    if cfg!(target_os = "macos") {
+        temp.join("Library/Application Support")
+    } else {
+        temp.join("config-home")
+    }
+}
+
 /// A self-contained test environment backed by a temporary directory.
 ///
 /// Every test gets its own config file, downloads directory and installation

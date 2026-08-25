@@ -1,6 +1,6 @@
 mod common;
 
-use common::{TestWorkspace, path_string};
+use common::{TestWorkspace, default_config_dir, path_string};
 use predicates::prelude::*;
 use std::fs;
 
@@ -142,10 +142,7 @@ fn first_run_creates_config_at_default_location() {
 
     workspace.bob_sandboxed().arg("list").assert().success();
 
-    let expected = workspace
-        .temp_dir
-        .path()
-        .join("config-home")
+    let expected = default_config_dir(workspace.temp_dir.path())
         .join("bob")
         .join("config.toml");
     let contents = fs::read_to_string(expected).expect("default config.toml should be created");
