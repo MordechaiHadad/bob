@@ -15,17 +15,38 @@ pub fn path_string(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
 
-/// Default config directory bob resolves when `BOB_CONFIG` is unset.
+/// Resolves the default config directory a sandboxed `bob` process sees.
 ///
-/// Mirrors the `dirs` crate: `XDG_CONFIG_HOME` on Linux (set to
-/// `<temp>/config-home` by `bob_sandboxed`), `~/Library/Application Support`
-/// on macOS.
+/// Installs the same environment [`TestWorkspace::bob_sandboxed`] gives the
+/// child process into this process, then asks the same `dirs` crate bob uses
+/// for its default location. This keeps the test tracking bob's actual
+/// directory resolution instead of duplicating the per-platform rules here.
 pub fn default_config_dir(temp: &Path) -> PathBuf {
-    if cfg!(target_os = "macos") {
-        temp.join("Library/Application Support")
-    } else {
-        temp.join("config-home")
+    let saved_home = std::env::var_os("HOME");
+    let saved_xdg_config_home = std::env::var_os("XDG_CONFIG_HOME");
+
+    // Safety: only mutates this process's environment, restoring it before
+    // returning; other tests pass explicit env/paths to their bob children and
+    // never read these variables in-process.
+    unsafe {
+        std::env::set_var("HOME", temp);
+        std::env::set_var("XDG_CONFIG_HOME", temp.join("config-home"));
     }
+
+    let resolved = dirs::config_dir().expect("dirs should resolve the sandboxed config dir");
+
+    unsafe {
+        match saved_home {
+            Some(home) => std::env::set_var("HOME", home),
+            None => std::env::remove_var("HOME"),
+        }
+        match saved_xdg_config_home {
+            Some(xdg_config_home) => std::env::set_var("XDG_CONFIG_HOME", xdg_config_home),
+            None => std::env::remove_var("XDG_CONFIG_HOME"),
+        }
+    }
+
+    resolved
 }
 
 /// A self-contained test environment backed by a temporary directory.
