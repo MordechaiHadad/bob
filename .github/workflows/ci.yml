@@ -47,6 +47,8 @@ jobs:
         uses: Swatinem/rust-cache@v2
       - name: Run the tests
         run: cargo test --locked
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   formatting:
     runs-on: ubuntu-latest

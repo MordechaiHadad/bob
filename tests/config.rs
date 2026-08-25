@@ -1,8 +1,11 @@
 mod common;
 
-use common::{TestWorkspace, default_config_dir, path_string};
+use common::{TestWorkspace, path_string};
 use predicates::prelude::*;
 use std::fs;
+
+#[cfg(unix)]
+use common::default_config_dir;
 
 #[test]
 fn toml_config_is_honored() {
