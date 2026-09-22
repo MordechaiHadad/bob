@@ -70,6 +70,7 @@ pub async fn start(config: Config) -> Result<()> {
                  }
             }
             unix => {
+                use what_the_path::error::ShellError;
                 use what_the_path::shell::Shell;
 
                 let shell = Shell::detect_by_shell_var()?;
@@ -78,8 +79,9 @@ pub async fn start(config: Config) -> Result<()> {
                     Shell::Fish(fish) => {
                        if let Ok(files) = fish.get_rcfiles() {
                            let fish_file = files[0].join("bob.fish");
-                           if !fish_file.exists() { return Ok(()) }
-                           fs::remove_file(fish_file).await?;
+                           if fish_file.exists() {
+                               fs::remove_file(fish_file).await?;
+                           }
                        }
                     },
                     shell => {
@@ -87,7 +89,10 @@ pub async fn start(config: Config) -> Result<()> {
                             let env_path = downloads.join("env/env.sh");
                             let source_string = format!(". \"{}\"", env_path.display());
                             for file in files {
-                                what_the_path::shell::remove_from_rcfile(file, &source_string)?;
+                                match what_the_path::shell::remove_from_rcfile(file, &source_string) {
+                                    Ok(()) | Err(ShellError::RCFileNotFound(_)) => {},
+                                    Err(error) => return Err(error.into()),
+                                }
                             }
 
                         }
