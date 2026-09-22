@@ -1,5 +1,5 @@
-use anyhow::{Result, anyhow};
 use async_recursion::async_recursion;
+use eyre::{Result, bail};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::path::Path;
 use tokio::fs;
@@ -54,7 +54,7 @@ pub async fn remove_dir(directory: &str) -> Result<()> {
     }
 
     if let Err(e) = fs::remove_dir(directory).await {
-        return Err(anyhow!("Failed to remove {directory}: {e}"));
+        bail!("Failed to remove {directory}: {e}");
     }
 
     pb.finish_with_message(format!("Finished removing {}", path.display()));
@@ -96,7 +96,7 @@ pub async fn copy_dir_async(
     let original_path = from.as_ref().to_owned();
     let destination = to.as_ref().to_owned();
 
-    fs::create_dir(&destination).await?;
+    fs::create_dir_all(&destination).await?;
 
     let mut entries = fs::read_dir(original_path).await?;
 

@@ -1,7 +1,7 @@
 use crate::helpers::version::nightly::produce_nightly_vec;
-use anyhow::Result;
 use chrono::{Duration, Utc};
 use dialoguer::{Select, console::Term, theme::ColorfulTheme};
+use eyre::Result;
 use tracing::info;
 
 use crate::{

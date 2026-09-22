@@ -1,54 +1,37 @@
-use anyhow::{Result, anyhow};
 use dialoguer::Confirm;
-use reqwest::Client;
+use eyre::{Result, bail, eyre};
 use std::env;
 use std::path::{Path, PathBuf};
 use tokio::fs;
 use tracing::{debug, info, trace};
 
 use crate::config::{Config, ConfigFile};
+use crate::github_requests::GitHubClient;
 use crate::handlers::{InstallResult, install_handler};
 use crate::helpers;
-use crate::helpers::checksum::compare_binaries;
+use crate::helpers::checksum::hash_file_hex;
 use crate::helpers::directories::get_installation_directory;
 use crate::helpers::version::types::{ParsedVersion, VersionType};
 
 /// Starts the process of using a specified version.
 ///
-/// This function checks if the specified version is already used, copies the Neovim proxy to the installation directory, installs the version if it's not already installed and used, switches to the version, and removes the "stable" directory if the version type is "Latest".
+/// Checks if the version is already used, copies the Neovim proxy,
+/// installs the version if needed, switches to it, and cleans up.
 ///
 /// # Arguments
 ///
 /// * `version` - The version to use.
-/// * `install` - Whether to install the version if it's not already installed.
-/// * `client` - The client to use for HTTP requests.
+/// * `install` - Whether to install the version if not already installed.
+/// * `github` - The GitHub API client.
 /// * `config` - The configuration for the operation.
-///
-/// # Returns
-///
-/// * `Result<()>` - Returns a `Result` that indicates whether the operation was successful or not.
 ///
 /// # Errors
 ///
-/// This function will return an error if:
-///
-/// * The version is not already used and it cannot be installed.
-/// * The version cannot be switched to.
-/// * The "stable" directory exists and it cannot be removed.
-///
-/// # Example
-///
-/// ```rust
-/// let version = ParsedVersion::new("1.0.0");
-/// let install = true;
-/// let client = Client::new();
-/// let config = Config::default();
-/// start(version, install, &client, config).await.unwrap();
-/// ```
+/// Returns an error if installation, switch, or PATH modification fails.
 pub async fn start(
     version: ParsedVersion,
     install: bool,
-    client: &Client,
+    github: &GitHubClient,
     config: ConfigFile,
 ) -> Result<()> {
     let is_version_used =
@@ -61,7 +44,7 @@ pub async fn start(
     }
 
     if install {
-        match install_handler::start(&version, client, &config).await {
+        match install_handler::start(&version, github, &config).await {
             Ok(success) => {
                 if let InstallResult::NightlyIsUpdated = success {
                     if is_version_used {
@@ -134,9 +117,7 @@ pub async fn switch(config: &Config, version: &ParsedVersion) -> Result<()> {
             if let Ok(hash) = hash_result {
                 hash
             } else {
-                return Err(anyhow!(
-                    "Full hash file doesn't exist, please rebuild this commit"
-                ));
+                bail!("Full hash file doesn't exist, please rebuild this commit");
             }
         } else {
             version.non_parsed_string.clone()
@@ -219,7 +200,7 @@ async fn copy_nvim_proxy(config: &ConfigFile) -> Result<()> {
     }
 
     if fs::metadata(&installation_dir).await.is_ok()
-        && compare_binaries(&exe_path, &installation_dir)?
+        && hash_file_hex(&exe_path)? == hash_file_hex(&installation_dir)?
     {
         return Ok(());
     }
@@ -264,7 +245,7 @@ async fn copy_nvim_proxy(config: &ConfigFile) -> Result<()> {
 ///
 /// ```rust
 /// use std::path::Path;
-/// use anyhow::Result;
+/// use eyre::Result;
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<()> {
@@ -299,10 +280,10 @@ async fn copy_file_with_error_handling(old_path: &Path, new_path: &Path) -> Resu
                     new_path.display(),
                     code
                 );
-                Err(anyhow::anyhow!(
+                bail!(
                     "The file {} is busy. Please make sure to close any processes using it.",
                     old_path.display()
-                ))
+                )
             } else {
                 debug!(
                     "copy_file_with_error_handling: copy failed {} -> {}: {:?}",
@@ -310,7 +291,7 @@ async fn copy_file_with_error_handling(old_path: &Path, new_path: &Path) -> Resu
                     new_path.display(),
                     e
                 );
-                Err(anyhow::anyhow!(e).context("Failed to copy file"))
+                bail!(eyre!(e).wrap_err("Failed to copy file"))
             }
         }
     }
@@ -342,9 +323,13 @@ async fn copy_file_with_error_handling(old_path: &Path, new_path: &Path) -> Resu
 /// let installation_dir = Path::new("/usr/local/bin");
 /// add_to_path(&installation_dir).unwrap();
 /// ```
-async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()> {
+async fn add_to_path(installation_dir: PathBuf, mut config: ConfigFile) -> Result<()> {
     let installation_dir = installation_dir.to_str().unwrap();
 
+    // On Linux this guard must not short-circuit the migration: stale rc-file
+    // setups keep `nvim-bin` in PATH forever, so the symlink path below has to
+    // run instead.
+    #[cfg(not(target_os = "linux"))]
     if what_the_path::shell::exists_in_path("nvim-bin") {
         return Ok(());
     }
@@ -354,18 +339,14 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
         return Ok(());
     }
 
-    let temp_config = std::cell::RefCell::new(&config);
-    let temp_path = std::cell::RefCell::new(temp_config.borrow().config.add_neovim_binary_to_path);
-
     if !(dialoguer::console::user_attended() && dialoguer::console::user_attended_stderr())
         && config.config.add_neovim_binary_to_path.is_none()
     {
         info!(
             "You're running in a non-interactive shell. Automatically adding {installation_dir} to system PATH"
         );
-        let _ = temp_path.replace(Some(true));
-        let tc = temp_config.into_inner(); // use into_inner to gain ownerhsip + original for saving
-        tc.save_to_file().await?;
+        config.config.add_neovim_binary_to_path = Some(true);
+        config.save_to_file().await?;
         return Ok(());
     }
 
@@ -381,9 +362,8 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
         match timeout {
             Some(Ok(confirmation)) => {
                 // valid confirmation + within time
-                let _ = temp_path.replace(Some(confirmation));
-                let tc = temp_config.into_inner(); // use into_inner to gain ownerhsip + original for saving
-                tc.save_to_file().await?;
+                config.config.add_neovim_binary_to_path = Some(confirmation);
+                config.save_to_file().await?;
 
                 if !confirmation {
                     return Ok(());
@@ -391,7 +371,7 @@ async fn add_to_path(installation_dir: PathBuf, config: ConfigFile) -> Result<()
             }
             Some(Err(e)) => {
                 // non valid due to some error
-                return Err(anyhow::anyhow!(e).context("Failed to read user input"));
+                bail!(eyre!(e).wrap_err("Failed to read user input"));
             }
             None => {
                 // none due to timeout elapsing
@@ -438,10 +418,157 @@ async fn modify_path(installation_dir: &str) -> Result<()> {
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
+fn path_contains_entry(path_var: &str, directory: &Path) -> bool {
+    path_var
+        .split(':')
+        .any(|entry| Path::new(entry) == directory)
+}
+
+/// Attempts to make the bob-managed `nvim` shim reachable through `~/.local/bin`.
+///
+/// A symlink is created at `~/.local/bin/nvim` pointing to the shim inside the
+/// installation directory, but only if `~/.local/bin` exists and is already an
+/// entry of `$PATH`. This avoids modifying any shell configuration files.
+///
+/// # Returns
+///
+/// `Ok(true)` when the symlink is present and up to date, `Ok(false)` when
+/// `~/.local/bin` cannot be used and the caller should fall back to rc file
+/// modification.
+///
+/// # Errors
+///
+/// This function will return an error if inspecting, removing, or creating the
+/// symlink fails.
+#[cfg(target_os = "linux")]
+async fn try_symlink_shim_to_local_bin(installation_dir: &str) -> Result<bool> {
+    use crate::helpers::directories::get_user_home;
+    use tracing::warn;
+
+    let Some(home_dir) = get_user_home() else {
+        warn!("Could not determine home directory, falling back to rc file modification");
+        return Ok(false);
+    };
+
+    let local_bin_dir = home_dir.join(".local").join("bin");
+    let path_var = env::var("PATH").unwrap_or_default();
+
+    if !local_bin_dir.is_dir() || !path_contains_entry(&path_var, &local_bin_dir) {
+        return Ok(false);
+    }
+
+    let shim_source = PathBuf::from(installation_dir).join("nvim");
+    let shim_link = local_bin_dir.join("nvim");
+
+    let existing_link_target = match fs::symlink_metadata(&shim_link).await {
+        Ok(_) => match fs::read_link(&shim_link).await {
+            Ok(target) => Some(target),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+            Err(error) => return Err(error.into()),
+        },
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+        Err(error) => return Err(error.into()),
+    };
+
+    if existing_link_target.as_deref() != Some(shim_source.as_path()) {
+        if existing_link_target.is_some() {
+            fs::remove_file(&shim_link).await?;
+        }
+        fs::symlink(&shim_source, &shim_link).await?;
+    }
+
+    info!("Linked nvim shim into {}", local_bin_dir.display());
+    Ok(true)
+}
+
+/// Removes PATH setup leftovers written by older bob versions.
+///
+/// Deletes `<fish config dir>/bob.fish` when resolvable and removes the
+/// `. "<downloads>/env/env.sh"` source line from the rc files of the currently
+/// detected POSIX shell. All failures are reported as warnings and never abort
+/// the surrounding operation.
+#[cfg(target_os = "linux")]
+async fn cleanup_stale_rc_entries(config: &ConfigFile) {
+    use crate::helpers::directories::get_downloads_directory;
+    use tracing::warn;
+    use what_the_path::error::ShellError;
+    use what_the_path::shell::{Fish, Shell};
+
+    if let Ok(fish_files) = Shell::Fish(Fish).get_rcfiles() {
+        if let Some(fish_conf_dir) = fish_files.first() {
+            let bob_fish_file = fish_conf_dir.join("bob.fish");
+            if bob_fish_file.exists()
+                && let Err(error) = fs::remove_file(&bob_fish_file).await
+            {
+                warn!(
+                    "Failed to remove stale fish config {}: {error}",
+                    bob_fish_file.display()
+                );
+            }
+        }
+    }
+
+    let shell = match Shell::detect_by_shell_var() {
+        Ok(shell) => shell,
+        Err(error) => {
+            warn!("Failed to detect shell for stale rc entry cleanup: {error}");
+            return;
+        }
+    };
+
+    if matches!(shell, Shell::Fish(_)) {
+        return;
+    }
+
+    let downloads_dir = match get_downloads_directory(&config.config).await {
+        Ok(downloads_dir) => downloads_dir,
+        Err(error) => {
+            warn!("Failed to resolve downloads directory for stale rc entry cleanup: {error}");
+            return;
+        }
+    };
+    let stale_line = format!(
+        ". \"{}\"\n",
+        downloads_dir.join("env").join("env.sh").display()
+    );
+
+    let Ok(rc_files) = shell.get_rcfiles() else {
+        warn!("Failed to get rc files for stale entry cleanup");
+        return;
+    };
+
+    for rc_file in rc_files {
+        match what_the_path::shell::remove_from_rcfile(rc_file.clone(), &stale_line) {
+            Ok(()) | Err(ShellError::RCFileNotFound(_)) => {}
+            Err(error) => warn!(
+                "Failed to clean stale PATH entry in {}: {error}",
+                rc_file.display()
+            ),
+        }
+    }
+}
+
 #[cfg(not(target_family = "windows"))]
 async fn modify_path(config: &ConfigFile, installation_dir: &str) -> Result<()> {
     use tracing::warn;
     use what_the_path::shell::Shell;
+
+    #[cfg(target_os = "linux")]
+    {
+        match try_symlink_shim_to_local_bin(installation_dir).await {
+            Ok(true) => {
+                cleanup_stale_rc_entries(config).await;
+                info!("Added {installation_dir} to system PATH via ~/.local/bin symlink");
+                return Ok(());
+            }
+            Ok(false) => {}
+            Err(error) => {
+                warn!("Failed to set up ~/.local/bin symlink: {error}");
+                return Ok(());
+            }
+        }
+    }
 
     let shell = match Shell::detect_by_shell_var() {
         Ok(shell) => shell,
@@ -471,7 +598,7 @@ async fn modify_path(config: &ConfigFile, installation_dir: &str) -> Result<()> 
                 .first()
                 .ok_or_else(|| {
                     warn!("No fish rc files found");
-                    anyhow!("No fish rc files found")
+                    eyre!("No fish rc files found")
                 })?
                 .as_ref()
                 .join("bob.fish");
@@ -522,7 +649,7 @@ fn get_rc_files_from_shell(
     Ok(match shell.get_rcfiles() {
         Ok(files) => files,
         Err(error) => {
-            return Err(anyhow::anyhow!(error).context("Failed to get rc files"));
+            bail!(eyre!(error).wrap_err("Failed to get rc files"));
         }
     })
 }
@@ -546,7 +673,7 @@ where
     let mut opened_file = File::create(file_path).await?;
 
     opened_file
-        .write_all(format!("source \"{}\"\n", &env_path).as_bytes())
+        .write_all(format!("source \"{}\"\n", env_path).as_bytes())
         .await?;
     opened_file.flush().await?;
 
@@ -646,6 +773,32 @@ mod use_handler_tests {
     //                                         V- to binary
     // `cargo test --bin bob use_handler_tests -- --no-capture`
 
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn path_contains_entry_test() {
+        assert!(path_contains_entry(
+            "/usr/local/bin:/home/tester/.local/bin",
+            Path::new("/home/tester/.local/bin")
+        ));
+
+        assert!(path_contains_entry(
+            "/opt/tools/:/home/tester/.local/bin/",
+            Path::new("/home/tester/.local/bin")
+        ));
+
+        assert!(!path_contains_entry(
+            "/home/tester/.local/bin-extra",
+            Path::new("/home/tester/.local/bin")
+        ));
+
+        assert!(!path_contains_entry(
+            "/usr/local/bin:/opt/bin",
+            Path::new("/home/tester/.local/bin")
+        ));
+
+        assert!(!path_contains_entry("", Path::new("/usr/bin")));
+    }
+
     #[tokio::test]
     async fn copy_env_files_test() {
         let config = ConfigFile::get().await.unwrap();
@@ -681,7 +834,7 @@ mod use_handler_tests {
 
         let fish_file = fish_files
             .first()
-            .ok_or_else(|| anyhow::anyhow!("No fish rc files found"))
+            .ok_or_else(|| eyre::eyre!("No fish rc files found"))
             .unwrap()
             .as_ref()
             .join("bob.fish");

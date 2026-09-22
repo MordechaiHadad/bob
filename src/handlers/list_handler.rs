@@ -1,4 +1,4 @@
-use anyhow::Result;
+use eyre::Result;
 use std::{fs, path::PathBuf};
 use tracing::info;
 use yansi::Paint;

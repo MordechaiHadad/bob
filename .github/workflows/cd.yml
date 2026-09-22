@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Check version
         id: check_version
         run: |
@@ -62,24 +62,17 @@ jobs:
               PATH: target/optimized/bob,
               TARGET: "",
             }
-    runs-on: ${{matrix.os.OS}}
+    runs-on: ${{ matrix.os.OS }}
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
+        uses: dtolnay/rust-toolchain@stable
       - name: Add Rust target for cross-compilation
         if: matrix.os.TARGET != ''
         run: rustup target add ${{ matrix.os.TARGET }}
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
       - name: Build Bob
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --locked --profile optimized ${{ matrix.os.TARGET != '' && format('--target {0}', matrix.os.TARGET) || '' }}
+        run: cargo build --locked --profile optimized ${{ matrix.os.TARGET != '' && format('--target {0}', matrix.os.TARGET) || '' }}
       - name: Install AppImage tools & cargo-appimage
         if: matrix.os.NAME == 'linux'
         run: |
@@ -143,7 +136,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Download artifacts
@@ -166,7 +159,7 @@ jobs:
           echo "Prepared assets:"
           ls -l
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           generate_release_notes: true
@@ -177,11 +170,8 @@ jobs:
     needs: github-release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
       - uses: katyo/publish-crates@v2
         with:
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}

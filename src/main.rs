@@ -5,8 +5,8 @@ pub mod github_requests;
 mod handlers;
 mod helpers;
 
-use anyhow::Result;
 use config::ConfigFile;
+use eyre::Result;
 use helpers::{processes::handle_nvim_process, version};
 use std::{env, process::exit};
 use tracing::{error, warn};

@@ -2,14 +2,10 @@ pub mod nightly;
 pub mod types;
 
 use self::types::{ParsedVersion, VersionType};
-use crate::github_requests::get_upstream_stable;
+use crate::config::Config;
+use crate::github_requests::GitHubClient;
 use crate::helpers::directories;
-use crate::{
-    config::Config,
-    github_requests::{RepoCommit, deserialize_response},
-};
-use anyhow::{Context, Result, anyhow};
-use reqwest::Client;
+use eyre::{Context, Result, bail, eyre};
 use semver::Version;
 use std::path::{Path, PathBuf};
 use tokio::{
@@ -41,12 +37,12 @@ use tracing::info;
 /// # Example
 ///
 /// ```rust
-/// let client = Client::new();
+/// let github = GitHubClient::new().unwrap();
 /// let version = "nightly";
-/// let parsed_version = parse_version_type(&client, version).await.unwrap();
+/// let parsed_version = parse_version_type(&github, version).await.unwrap();
 /// println!("The parsed version is {:?}", parsed_version);
 /// ```
-pub async fn parse_version_type(client: &Client, version: &str) -> Result<ParsedVersion> {
+pub async fn parse_version_type(github: &GitHubClient, version: &str) -> Result<ParsedVersion> {
     match version {
         "nightly" => Ok(ParsedVersion {
             tag_name: version.to_string(),
@@ -56,7 +52,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
         }),
         "stable" | "latest" => {
             info!("Fetching latest version");
-            let stable_version = get_upstream_stable(client).await?;
+            let stable_version = github.get_latest_release().await?;
             let cloned_version = stable_version.tag_name.clone();
             Ok(ParsedVersion {
                 tag_name: stable_version.tag_name,
@@ -67,7 +63,7 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
         }
         "head" | "git" | "HEAD" => {
             info!("Fetching latest commit");
-            let latest_commit = get_latest_commit(client).await?;
+            let latest_commit = get_latest_commit(github).await?;
             Ok(ParsedVersion {
                 tag_name: latest_commit.chars().take(7).collect(),
                 version_type: VersionType::Hash,
@@ -91,6 +87,13 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                             .context("Unable to parse version string in parse_version_type")?,
                     ),
                 });
+            } else if crate::NIGHTLY_REGEX.is_match(version) {
+                return Ok(ParsedVersion {
+                    tag_name: version.to_string(),
+                    version_type: VersionType::NightlyRollback,
+                    non_parsed_string: version.to_string(),
+                    semver: None,
+                });
             } else if crate::HASH_REGEX.is_match(version) {
                 return Ok(ParsedVersion {
                     tag_name: version.to_string().chars().take(7).collect(),
@@ -100,22 +103,13 @@ pub async fn parse_version_type(client: &Client, version: &str) -> Result<Parsed
                 });
             }
 
-            if crate::NIGHTLY_REGEX.is_match(version) {
-                return Ok(ParsedVersion {
-                    tag_name: version.to_string(),
-                    version_type: VersionType::NightlyRollback,
-                    non_parsed_string: version.to_string(),
-                    semver: None,
-                });
-            }
-
-            Err(anyhow!(
+            bail!(
                 "Please provide a proper version string. Valid options are:
 
                     • stable|latest|nightly - Latest stable, most recent, or nightly build
                     • [v]x.x.x              - Specific version (e.g., 0.6.0 or v0.6.0)
                     • <commit-hash>         - Specific commit hash"
-            ))
+            )
         }
     }
 }
@@ -232,7 +226,7 @@ pub async fn get_current_version(config: &Config) -> Result<String> {
     let mut downloads_dir = directories::get_downloads_directory(config).await?;
     downloads_dir.push("used");
     fs::read_to_string(&downloads_dir).await
-        .map_err(|_| anyhow!("The used file required for bob could not be found. This could mean that Neovim is not installed through bob."))
+        .map_err(|_| eyre!("The used file required for bob could not be found. This could mean that Neovim is not installed through bob."))
 }
 
 /// Checks if a specific version is currently being used.
@@ -248,6 +242,11 @@ pub async fn get_current_version(config: &Config) -> Result<String> {
 ///
 /// * `bool` - Returns `true` if the specified version is currently being used, `false` otherwise.
 ///
+/// # Notes
+///
+/// The "used" file can hold a full commit hash while `version` is its short form, so a prefix match
+/// is allowed only when the stored value is itself a pure commit hash. Otherwise an exact match is required.
+///
 /// # Example
 ///
 /// ```rust
@@ -258,50 +257,21 @@ pub async fn get_current_version(config: &Config) -> Result<String> {
 /// ```
 pub async fn is_version_used(version: &str, config: &Config) -> bool {
     match get_current_version(config).await {
-        Ok(value) => value.starts_with(version),
+        Ok(value) => {
+            let value = value.trim();
+            if value == version {
+                return true;
+            }
+            value.len() > version.len()
+                && value.starts_with(version)
+                && value.chars().all(|character| character.is_ascii_hexdigit())
+        }
         Err(_) => false,
     }
 }
 
-/// Fetches the latest commit from the Neovim repository on GitHub.
-///
-/// This function sends a GET request to the GitHub API to fetch the latest commit from the master branch of the Neovim repository. It then deserializes the response into a `RepoCommit` object and returns the SHA of the commit.
-///
-/// # Arguments
-///
-/// * `client` - The HTTP client to use for the request.
-///
-/// # Returns
-///
-/// * `Result<String>` - Returns a `Result` that contains the SHA of the latest commit, or an error if the operation failed.
-///
-/// # Errors
-///
-/// This function will return an error if:
-///
-/// * The GET request to the GitHub API fails.
-/// * The response from the GitHub API cannot be deserialized into a `RepoCommit` object.
-///
-/// # Example
-///
-/// ```rust
-/// let client = Client::new();
-/// let latest_commit = get_latest_commit(&client).await.unwrap();
-/// println!("The latest commit is {}", latest_commit);
-/// ```
-async fn get_latest_commit(client: &Client) -> Result<String> {
-    let response = client
-        .get("https://api.github.com/repos/neovim/neovim/commits/master")
-        .header("user-agent", "bob")
-        .header("Accept", "application/vnd.github.v3+json")
-        .send()
-        .await?
-        .text()
-        .await?;
-
-    let commit: RepoCommit = deserialize_response(&response)?;
-
-    Ok(commit.sha)
+async fn get_latest_commit(github: &GitHubClient) -> Result<String> {
+    github.get_latest_commit_sha().await
 }
 
 #[cfg(test)]
