@@ -58,9 +58,10 @@ pub(crate) enum Cli {
     /// Install the specified version, can also be used to update
     /// out-of-date nightly version
     Install {
-        /// Version to be installed |nightly|stable|<version-string>|<commit-hash>|
+        /// Version to be installed |nightly|stable|<version-string>|<full-commit-hash>|
         ///
         /// A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
+        /// A commit-hash has to be the full 40 character hash, short hashes are rejected
         version: String,
     },
 

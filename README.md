@@ -136,6 +136,8 @@ A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0
 
 Switch to the specified version, by default will auto-invoke install command if the version is not installed already
 
+A short commit hash works for versions that are already installed, if the version has to be built first the full 40 character hash is required
+
 ---
 
 - `bob run |nightly|stable|latest|<version-string>|<commit-hash>| [args...]`
@@ -146,9 +148,11 @@ Example: `bob run nightly --clean my_file.txt`
 
 ---
 
-- `bob install |nightly|stable|latest|<version-string>|<commit-hash>|`
+- `bob install |nightly|stable|latest|<version-string>|<full-commit-hash>|`
 
 Install the specified version, can also be used to update out-of-date nightly version.
+
+Building from source requires the full 40 character commit hash, short hashes are rejected because git cannot fetch an abbreviated hash from the remote
 
 ---
 

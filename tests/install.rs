@@ -80,6 +80,52 @@ fn install_unsupported_version_errors() {
 }
 
 #[test]
+fn install_short_hash_errors() {
+    let workspace = TestWorkspace::new();
+    workspace
+        .bob()
+        .arg("install")
+        .arg("a9a4c27")
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("full commit hash"));
+}
+
+#[test]
+fn use_short_hash_errors_when_not_installed() {
+    let workspace = TestWorkspace::new();
+    workspace
+        .bob()
+        .arg("use")
+        .arg("a9a4c27")
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("full commit hash"));
+}
+
+#[test]
+fn use_short_hash_of_installed_build_succeeds() {
+    const FULL_HASH: &str = "a9a4c271b13fffba2a21567c86b0f40ae4c180a1";
+
+    let workspace = TestWorkspace::new();
+    workspace.fake_version("a9a4c27");
+    fs::write(
+        workspace
+            .downloads_dir
+            .join("a9a4c27")
+            .join("full-hash.txt"),
+        FULL_HASH,
+    )
+    .expect("failed to write full-hash.txt");
+
+    workspace.bob().arg("use").arg("a9a4c27").assert().success();
+
+    let used = fs::read_to_string(workspace.downloads_dir.join("used"))
+        .expect("used file should have been written");
+    assert_eq!(used.trim(), FULL_HASH);
+}
+
+#[test]
 fn use_installed_version() {
     let workspace = TestWorkspace::new();
     workspace
