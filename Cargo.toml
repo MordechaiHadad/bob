@@ -84,6 +84,10 @@ bin-dir = "bob-macos-arm/{ bin }"
 pkg-url = "{ repo }/releases/download/v{ version }/bob-macos-x86_64.{ archive-format }"
 bin-dir = "bob-macos-x86_64/{ bin }"
 
+[package.metadata.binstall.overrides.aarch64-unknown-linux-gnu]
+pkg-url = "{ repo }/releases/download/v{ version }/bob-linux-arm.{ archive-format }"
+bin-dir = "bob-linux-arm/{ bin }"
+
 [package.metadata.appimage]
 assets = ["resources"]
 icon = "resources/bob-icon.png"
