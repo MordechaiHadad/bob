@@ -138,6 +138,32 @@ fn unreadable_bob_config_falls_back_to_defaults() {
     );
 }
 
+#[cfg(target_os = "linux")]
+#[test]
+fn non_root_ignores_inherited_sudo_env() {
+    // `sudo -iu other` leaves the invoking user's SUDO_* vars in a non-root shell.
+    if unsafe { libc::geteuid() } == 0 {
+        eprintln!("skipping: only meaningful for a non-root effective user");
+        return;
+    }
+
+    let workspace = TestWorkspace::new();
+    let home = workspace.temp_dir.path();
+
+    workspace
+        .bob_sandboxed()
+        .env_remove("XDG_CONFIG_HOME")
+        .env_remove("XDG_DATA_HOME")
+        .env("SUDO_USER", "root")
+        .env("SUDO_UID", "0")
+        .arg("list")
+        .assert()
+        .success();
+
+    assert!(home.join(".config/bob/config.toml").is_file());
+    assert!(home.join(".local/share/bob").is_dir());
+}
+
 #[cfg(unix)]
 #[test]
 fn first_run_creates_config_at_default_location() {
