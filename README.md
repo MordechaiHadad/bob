@@ -148,7 +148,13 @@ Example: `bob run nightly --clean my_file.txt`
 
 ---
 
-- `bob install |nightly|stable|latest|<version-string>|<full-commit-hash>|`
+- `bob which [|nightly|stable|latest|<version-string>|<commit-hash>|]`
+
+Print the path to the selected Neovim executable, or the path for a specified installed version. This is the actual version-specific binary, not Bob's `nvim` proxy on `PATH`.
+
+---
+
+- `bob install |nightly|stable|latest|<version-string>|<commit-hash>|`
 
 Install the specified version, can also be used to update out-of-date nightly version.
 
