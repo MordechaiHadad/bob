@@ -3,6 +3,17 @@ mod common;
 use common::TestWorkspace;
 use predicates::prelude::*;
 use std::fs;
+use std::path::{Path, PathBuf};
+
+/// Matches stdout against a path, ignoring separator style.
+///
+/// Bob builds the printed path from the `downloads_location` config value
+/// (which tests write with forward slashes for portability) and then joins the
+/// version components, which use the platform separator. On Windows that makes
+/// the output mix `/` and `\`, so compare paths as paths instead of strings.
+fn stdout_is_path(expected: PathBuf) -> impl Predicate<str> {
+    predicate::function(move |stdout: &str| Path::new(stdout.trim()) == expected)
+}
 
 #[test]
 fn which_prints_the_current_version_executable() {
@@ -21,9 +32,7 @@ fn which_prints_the_current_version_executable() {
         .arg("which")
         .assert()
         .success()
-        .stdout(predicate::str::contains(
-            expected.to_string_lossy().as_ref(),
-        ));
+        .stdout(stdout_is_path(expected));
 }
 
 #[test]
@@ -41,9 +50,7 @@ fn which_prints_the_requested_version_executable() {
         .args(["which", "0.9.5"])
         .assert()
         .success()
-        .stdout(predicate::str::contains(
-            expected.to_string_lossy().as_ref(),
-        ));
+        .stdout(stdout_is_path(expected));
 }
 
 #[test]
