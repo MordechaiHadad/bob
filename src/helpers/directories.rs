@@ -4,8 +4,18 @@ use std::path::PathBuf;
 
 use crate::config::Config;
 
+/// Returns whether this process is root acting on behalf of a user via sudo.
+#[cfg(unix)]
+fn running_under_sudo() -> bool {
+    let euid = unsafe { libc::geteuid() };
+    euid == 0 && std::env::var_os("SUDO_USER").is_some()
+}
+
 #[cfg(unix)]
 fn get_sudo_user_home() -> Option<PathBuf> {
+    if !running_under_sudo() {
+        return None;
+    }
     let uid: libc::uid_t = std::env::var("SUDO_UID").ok()?.parse().ok()?;
 
     let buf_size = unsafe { libc::sysconf(libc::_SC_GETPW_R_SIZE_MAX) };
@@ -53,7 +63,7 @@ pub fn get_user_home() -> Option<PathBuf> {
 
 fn get_sudo_data_dir() -> Option<PathBuf> {
     #[cfg(unix)]
-    if std::env::var("SUDO_USER").is_ok() {
+    if running_under_sudo() {
         if let Ok(xdg) = std::env::var("XDG_DATA_HOME") {
             return Some(PathBuf::from(xdg));
         }
@@ -70,7 +80,7 @@ fn get_sudo_data_dir() -> Option<PathBuf> {
 
 fn get_sudo_config_dir() -> Option<PathBuf> {
     #[cfg(unix)]
-    if std::env::var("SUDO_USER").is_ok() {
+    if running_under_sudo() {
         if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
             return Some(PathBuf::from(xdg));
         }
