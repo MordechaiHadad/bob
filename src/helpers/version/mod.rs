@@ -274,6 +274,33 @@ async fn get_latest_commit(github: &GitHubClient) -> Result<String> {
     github.get_latest_commit_sha().await
 }
 
+/// Checks whether the given string is a complete 40 character commit hash.
+///
+/// Git refuses to fetch abbreviated hashes from a remote (`fatal: couldn't find remote ref`),
+/// so building from source only works with the full hash. Short hashes remain valid for
+/// already installed builds, they are simply rejected before a build is attempted.
+///
+/// # Arguments
+///
+/// * `version` - The candidate commit hash.
+///
+/// # Returns
+///
+/// * `bool` - `true` when the string is exactly 40 hexadecimal characters.
+///
+/// # Example
+///
+/// ```rust
+/// assert!(is_full_commit_hash("a9a4c271b13fffba2a21567c86b0f40ae4c180a1"));
+/// assert!(!is_full_commit_hash("a9a4c27"));
+/// ```
+pub fn is_full_commit_hash(version: &str) -> bool {
+    version.len() == 40
+        && version
+            .chars()
+            .all(|character| character.is_ascii_hexdigit())
+}
+
 #[cfg(test)]
 mod version_is_hash_tests {
 
@@ -339,5 +366,42 @@ mod version_is_hash_tests {
     fn test_is_hash_with_long_hash() {
         let version = "abc123abc123abc123abc123abc123abc123abc123";
         assert!(!is_hash(version));
+    }
+}
+
+#[cfg(test)]
+mod full_commit_hash_tests {
+    use super::is_full_commit_hash;
+
+    #[test]
+    fn accepts_full_sha1_hash() {
+        assert!(is_full_commit_hash(
+            "a9a4c271b13fffba2a21567c86b0f40ae4c180a1"
+        ));
+    }
+
+    #[test]
+    fn rejects_short_hashes() {
+        assert!(!is_full_commit_hash("a9a4c27"));
+        assert!(!is_full_commit_hash(
+            "a9a4c271b13fffba2a21567c86b0f40ae4c180a"
+        ));
+        assert!(!is_full_commit_hash(""));
+    }
+
+    #[test]
+    fn rejects_non_hex_characters() {
+        // 40 characters long but contains non hex digits
+        assert!(!is_full_commit_hash(
+            "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+        ));
+    }
+
+    #[test]
+    fn rejects_too_long_hash() {
+        // 64 characters, a SHA-256 digest is not a git commit hash
+        assert!(!is_full_commit_hash(
+            "a9a4c271b13fffba2a21567c86b0f40ae4c180a1a9a4c271b13fffba2a21567c"
+        ));
     }
 }

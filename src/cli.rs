@@ -3,7 +3,7 @@ use crate::{
     github_requests::GitHubClient,
     handlers::{
         self, InstallResult, erase_handler, list_handler, list_remote_handler, rollback_handler,
-        run_handler, sync_handler, uninstall_handler, update_handler,
+        run_handler, sync_handler, uninstall_handler, update_handler, which_handler,
     },
     helpers::processes::is_neovim_running,
     version::parse_version_type,
@@ -58,9 +58,10 @@ pub(crate) enum Cli {
     /// Install the specified version, can also be used to update
     /// out-of-date nightly version
     Install {
-        /// Version to be installed |nightly|stable|<version-string>|<commit-hash>|
+        /// Version to be installed |nightly|stable|<version-string>|<full-commit-hash>|
         ///
         /// A version-string can either be `vx.x.x` or `x.x.x` examples: `v0.6.1` and `0.6.0`
+        /// A commit-hash has to be the full 40 character hash, short hashes are rejected
         version: String,
     },
 
@@ -92,6 +93,12 @@ pub(crate) enum Cli {
 
     #[clap(visible_alias = "ls-remote")]
     ListRemote,
+
+    /// Print the path to an installed Neovim executable
+    Which {
+        /// Optional version; defaults to the currently selected version
+        version: Option<String>,
+    },
 
     /// Generate shell completion
     Complete {
@@ -342,6 +349,9 @@ pub async fn start(config: ConfigFile) -> Result<()> {
             update_handler::start(data, &github, config).await?;
         }
         Cli::ListRemote => list_remote_handler::start(config.config, &github).await?,
+        Cli::Which { version } => {
+            which_handler::start(version.as_deref(), &github, &config.config).await?;
+        }
         Cli::Run { version, args } => {
             run_handler::start(&version, &args, &github, &config.config).await?;
         }

@@ -63,6 +63,7 @@ jobs:
         run: cargo fmt --all -- --check
 
   build:
+    needs: [test, formatting, clippy]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

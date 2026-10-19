@@ -63,6 +63,19 @@ pub async fn start(
         return Ok(InstallResult::VersionAlreadyInstalled);
     }
 
+    // Git cannot fetch an abbreviated hash from a remote
+    // (`fatal: couldn't find remote ref <short-hash>`), so building from source is only
+    // possible with the complete hash. Short hashes are still accepted for versions that
+    // are already installed, the check above short circuits those before reaching here.
+    if version.version_type == VersionType::Hash
+        && !helpers::version::is_full_commit_hash(&version.non_parsed_string)
+    {
+        bail!(
+            "\"{}\" is not a full commit hash, git can only fetch a complete 40 character commit hash so building from source requires the full hash",
+            version.non_parsed_string
+        );
+    }
+
     let nightly_version = if version.version_type == VersionType::Nightly {
         Some(github.get_nightly_release().await?)
     } else {
