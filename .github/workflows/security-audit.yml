@@ -9,13 +9,29 @@ permissions:
   contents: read
   issues: write
 
+concurrency:
+  group: security-audit
+
 jobs:
   security_audit:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@cargo-audit
       - name: Run security audit
-        uses: rustsec/audit-check@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        id: audit
+        run: cargo audit --color never --quiet -D warnings > audit.txt 2>&1
+        continue-on-error: true
+      - name: Open summary issue
+        if: steps.audit.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo '```'
+            cat audit.txt
+            echo '```'
+          } > body.md
+          gh issue create --title "Security audit: $(date -u +%F)" --body-file body.md
