@@ -134,7 +134,7 @@ fn expand(downloaded_file: &LocalVersion) -> Result<()> {
 
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
-        let file_path = remove_base_parent(&file.mangled_name());
+        let file_path = remove_base_parent(&file.mangled_name()?);
         let outpath = Path::new(&downloaded_file.file_name).join(file_path);
 
         if file.is_dir() {
