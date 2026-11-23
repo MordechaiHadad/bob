@@ -1,5 +1,7 @@
-use chrono::{DateTime, Utc};
+use std::time::SystemTime;
+
 use eyre::{Result, eyre};
+use jiff::Timestamp;
 use octocrab::Octocrab;
 use octocrab::models::repos::{Release, Tag};
 use reqwest::StatusCode;
@@ -77,17 +79,20 @@ impl GitHubClient {
             .map_rate_limit()
     }
 
+    /// Fetches the commits published between `since` and `until`.
+    ///
+    /// octocrab expects chrono timestamps, so the bounds are bridged through `SystemTime`.
     pub async fn get_commits_between(
         &self,
-        since: &DateTime<Utc>,
-        until: &DateTime<Utc>,
+        since: &Timestamp,
+        until: &Timestamp,
     ) -> Result<Vec<octocrab::models::repos::RepoCommit>> {
         let page = self
             .octocrab
             .repos("neovim", "neovim")
             .list_commits()
-            .since(*since)
-            .until(*until)
+            .since(SystemTime::try_from(*since)?.into())
+            .until(SystemTime::try_from(*until)?.into())
             .per_page(100)
             .send()
             .await
@@ -133,7 +138,7 @@ impl GitHubClient {
 pub struct NightlyInfo {
     pub tag_name: String,
     pub target_commitish: Option<String>,
-    pub published_at: DateTime<Utc>,
+    pub published_at: Timestamp,
 }
 
 impl TryFrom<Release> for NightlyInfo {
@@ -146,7 +151,7 @@ impl TryFrom<Release> for NightlyInfo {
         Ok(Self {
             tag_name: release.tag_name,
             target_commitish: Some(release.target_commitish),
-            published_at,
+            published_at: Timestamp::try_from(SystemTime::from(published_at))?,
         })
     }
 }
@@ -154,7 +159,7 @@ impl TryFrom<Release> for NightlyInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::{Duration, Utc};
+    use jiff::SignedDuration;
 
     #[tokio::test]
     async fn get_latest_commit_sha_returns_full_sha() {
@@ -173,8 +178,8 @@ mod tests {
     #[tokio::test]
     async fn get_commits_between_returns_commits() {
         let github = GitHubClient::new().expect("failed to build GitHubClient");
-        let until = Utc::now();
-        let since = until - Duration::days(30);
+        let until = Timestamp::now();
+        let since = until - SignedDuration::from_hours(24 * 30);
         let commits = github
             .get_commits_between(&since, &until)
             .await

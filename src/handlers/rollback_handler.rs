@@ -1,7 +1,7 @@
 use crate::helpers::version::nightly::produce_nightly_vec;
-use chrono::{Duration, Utc};
 use dialoguer::{Select, console::Term, theme::ColorfulTheme};
 use eyre::Result;
+use jiff::{SignedDuration, Timestamp};
 use tracing::info;
 
 use crate::{
@@ -84,8 +84,7 @@ pub async fn start(config: Config) -> Result<()> {
             })
             .unwrap();
 
-        let now = Utc::now();
-        let since = now.signed_duration_since(find.data.published_at);
+        let since = Timestamp::now() - find.data.published_at;
         let humanized = humanize_duration(since);
         info!(
             "Successfully rolled back to version '{}' from {} ago",
@@ -98,29 +97,29 @@ pub async fn start(config: Config) -> Result<()> {
     Ok(())
 }
 
-/// Converts a `Duration` into a human-readable string.
+/// Converts a `SignedDuration` into a human-readable string.
 ///
-/// This function takes a `Duration` and converts it into a string that represents the duration in weeks, days, and hours.
+/// This function takes a `SignedDuration` and converts it into a string that represents the duration in weeks, days, and hours.
 ///
 /// # Arguments
 ///
-/// * `duration` - The `Duration` to be converted.
+/// * `duration` - The `SignedDuration` to be converted.
 ///
 /// # Returns
 ///
-/// * `Result<String>` - Returns a `Result` that contains a string representing the duration in a human-readable format, or an error if there is a failure in the conversion process.
+/// * `String` - A string representing the duration in a human-readable format.
 ///
 /// # Example
 ///
 /// ```rust
-/// let duration = Duration::hours(25);
-/// let humanized_duration = humanize_duration(duration).unwrap();
+/// let duration = SignedDuration::from_hours(25);
+/// let humanized_duration = humanize_duration(duration);
 /// assert_eq!(humanized_duration, "1 day, 1 hour");
 /// ```
-fn humanize_duration(duration: Duration) -> String {
+fn humanize_duration(duration: SignedDuration) -> String {
     let mut humanized_duration = String::new();
 
-    let total_hours = duration.num_hours();
+    let total_hours = duration.as_secs() / 3600;
 
     let weeks = total_hours / 24 / 7;
     let days = (total_hours / 24) % 7;

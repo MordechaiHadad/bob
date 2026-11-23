@@ -80,7 +80,7 @@ pub enum VersionType {
 /// let nightly_info = NightlyInfo {
 ///     tag_name: "nightly".to_string(),
 ///     target_commitish: Some("abc1234".to_string()),
-///     published_at: Utc::now(),
+///     published_at: Timestamp::now(),
 /// };
 /// let local_nightly = LocalNightly {
 ///     data: nightly_info,
